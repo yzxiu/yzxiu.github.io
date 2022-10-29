@@ -1,0 +1,15 @@
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title>所有文章 - Yuyu&#39;s Blog</title>
+        <link>http://yuyuuu.com/posts/</link>
+        <description>所有文章 | Yuyu&#39;s Blog</description>
+        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Sat, 29 Oct 2022 21:24:15 &#43;0800</lastBuildDate><atom:link href="http://yuyuuu.com/posts/" rel="self" type="application/rss+xml" /><item>
+    <title>My First Post</title>
+    <link>http://yuyuuu.com/my-first-post/</link>
+    <pubDate>Sat, 29 Oct 2022 21:24:15 &#43;0800</pubDate>
+    <author>yuyu</author>
+    <guid>http://yuyuuu.com/my-first-post/</guid>
+    <description><![CDATA[asdfasdf asdfasdf 阿斯顿法 阿斯顿咖啡机阿卡了解对方 asdfasdfasd asdfasdf asdfasdfasd]]></description>
+</item>
+</channel>
+</rss>
