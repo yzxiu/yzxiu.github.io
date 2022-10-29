@@ -61,4 +61,4 @@ Disallow: /
 User-agent: ZoominfoBot
 Disallow: /
 
-Sitemap: http://yuyuuu.com/sitemap.xml
+Sitemap: https://yzxiu.github.io/sitemap.xml
