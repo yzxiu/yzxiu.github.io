@@ -3,33 +3,54 @@
 
 
 
-## My First Post
+## 一、配置
 
-配置参考：[https://hugoloveit.com/zh-cn/posts/](https://hugoloveit.com/zh-cn/posts/)
-
-
-
-## Image Test
-
-<!-- {{< figure src="https://raw.githubusercontent.com/yzxiu/images/master/blog/graffiti-picture-id145122476" >}}  -->
-
-<!-- {{< figure src="https://raw.githubusercontent.com/yzxiu/images/master/blog/graffiti-569265_1280.jpg" link="https://raw.githubusercontent.com/yzxiu/images/master/blog/graffiti-569265_1280.jpg">}}  -->
-
-<!-- <img src="https://raw.githubusercontent.com/yzxiu/images/master/blog/graffiti-picture-id145122476" alt="Graffiti - 免版稅一組物體圖庫照片" style="zoom:;" />  -->
-
-![asd](https://raw.githubusercontent.com/yzxiu/images/master/blog/graffiti-picture-id145122476 "asdf")
+参考：[https://hugoloveit.com/zh-cn/posts/](https://hugoloveit.com/zh-cn/posts/)
 
 
 
-![asd](https://raw.githubusercontent.com/yzxiu/images/master/blog/graffiti-569265_1280.jpg "asdf")
+## 二、图片
+
+typora配置：
+
+![image-20221030223715217](https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221030-223715.png "typora setting")
+
+picgo-core插件：
+
+```bash
+# https://connor-sun.github.io/posts/38835.html
+picgo install super-prefix
+```
+
+picgo-core配置：
+
+```json
+{
+  "picBed": {
+    "github": {
+      "repo": "*****",
+      "token": "*****",
+      "path": "/",
+      "customUrl": "",
+      "branch": "blog"
+    },
+    "current": "github",
+    "uploader": "github"
+  },
+  "picgoPlugins": {
+    "picgo-plugin-super-prefix": true
+  },
+  "picgo-plugin-super-prefix": {
+    "prefixFormat": "YYYY-MM/",
+    "fileFormat": "YYYYMMDD-HHmmss"
+  }
+}
+
+```
 
 
 
-![v2-c867abd246634c4c13c0290b696144b5_r](https://raw.githubusercontent.com/yzxiu/images/master/blog/v2-c867abd246634c4c13c0290b696144b5_r.jpg "flo")
-
-
-
-## Code Test
+## 三、代码
 
 ```go
 package main
