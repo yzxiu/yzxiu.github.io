@@ -9,11 +9,22 @@
 
 
 
+
+
 ## 二、图片
 
 typora配置：
 
 ![image-20221030223715217](https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221030-223715.png "typora setting")
+
+图片插入：
+
+```markdown
+# 使用typora直接拖拽即可
+![image-20221030223715217](https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221030-223715.png "typora setting")
+```
+
+
 
 picgo-core插件：
 
