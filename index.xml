@@ -7,10 +7,10 @@
             <atom:link href="https://yzxiu.github.io/index.xml" rel="self" type="application/rss+xml" />
         <item>
     <title>My First Post</title>
-    <link>https://yzxiu.github.io/my-first-post/</link>
+    <link>https://yzxiu.github.io/2022-10-29-my-first-post/</link>
     <pubDate>Sat, 29 Oct 2022 21:24:15 &#43;0800</pubDate>
     <author>Yuyu</author>
-    <guid>https://yzxiu.github.io/my-first-post/</guid>
+    <guid>https://yzxiu.github.io/2022-10-29-my-first-post/</guid>
     <description><![CDATA[一、配置 参考：https://hugoloveit.com/zh-cn/posts/ 二、图片 typora配置： typora setting picgo-core插件：]]></description>
 </item>
 </channel>
