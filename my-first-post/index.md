@@ -9,7 +9,7 @@
 
 ## Image Test
 
-![Graffiti - 免版稅一組物體圖庫照片](https://raw.githubusercontent.com/yzxiu/images/master/blog/graffiti-picture-id145122476)
+<img src="https://raw.githubusercontent.com/yzxiu/images/master/blog/graffiti-picture-id145122476" alt="Graffiti - 免版稅一組物體圖庫照片" style="zoom:;" />
 
 ## Code Test
 
