@@ -11,7 +11,7 @@
     <pubDate>Sat, 29 Oct 2022 21:24:15 &#43;0800</pubDate>
     <author>Yuyu</author>
     <guid>https://yzxiu.github.io/my-first-post/</guid>
-    <description><![CDATA[My First Post 搞了一个下午，终于弄的差不多了，主要用了 LoveIt 这个主题，自己加了 photoswipe 用于浏览图片。 配置参考 图片 涂鸦 containerd 代码 1 2 3 4 5 6 7 8 9 10 11 12 13 package main import &#34;fmt&#34; func]]></description>
+    <description><![CDATA[My First Post Image Test asdf Code Test 1 2 3 4 5 6 7 8 9 10 11 12 13 package main import &#34;fmt&#34; func split(sum int) (x, y int) { x = sum * 4 / 9 y = sum - x return } func main() { fmt.Println(split(17)) }]]></description>
 </item>
 </channel>
 </rss>

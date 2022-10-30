@@ -1,27 +1,26 @@
 # My First Post
 
-{{< load-photoswipe >}}
 
 ## My First Post
 
-搞了一个下午，终于弄的差不多了，主要用了[ LoveIt](https://github.com/dillonzq/LoveIt) 这个主题，自己加了 `photoswipe` 用于浏览图片。
-
-[配置参考](https://hugoloveit.com/zh-cn/posts/)
-
-
-
-## 图片
-
-
-![涂鸦](https://raw.githubusercontent.com/yzxiu/images/master/blog/graffiti-569265_1280.jpg "涂鸦")
-
-![img](https://raw.githubusercontent.com/yzxiu/images/master/blog/architecture.png "containerd")
 
 
 
 
+## Image Test
 
-## 代码
+<!-- {{< figure src="https://raw.githubusercontent.com/yzxiu/images/master/blog/graffiti-picture-id145122476" >}} 
+
+{{< figure src="https://raw.githubusercontent.com/yzxiu/images/master/blog/graffiti-569265_1280.jpg" link="https://raw.githubusercontent.com/yzxiu/images/master/blog/graffiti-569265_1280.jpg">}} 
+
+<img src="https://raw.githubusercontent.com/yzxiu/images/master/blog/graffiti-picture-id145122476" alt="Graffiti - 免版稅一組物體圖庫照片" style="zoom:;" /> -->
+
+![asd](https://raw.githubusercontent.com/yzxiu/images/master/blog/graffiti-569265_1280.jpg "asdf")
+
+<!-- {{< figure src="https://raw.githubusercontent.com/yzxiu/images/master/blog/graffiti-569265_1280.jpg" link="https://raw.githubusercontent.com/yzxiu/images/master/blog/graffiti-569265_1280.jpg" >}}  -->
+
+
+## Code Test
 
 ```go
 package main
@@ -39,17 +38,4 @@ func main() {
 }
 ```
 
-
-
-## 流程图
-
-```markdown
-{{< mermaid >}}
-graph LR;
-    A[Hard edge] -->|Link text| B(Round edge)
-    B --> C{Decision}
-    C -->|One| D[Result one]
-    C -->|Two| E[Result two]
-{{< /mermaid >}}
-```
 
