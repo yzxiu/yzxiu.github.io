@@ -3,9 +3,27 @@
         <title>Yuyu&#39;s Blog</title>
         <link>https://yzxiu.github.io/</link>
         <description>Yuyu&#39;s Blog</description>
-        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Sat, 29 Oct 2022 21:24:15 &#43;0800</lastBuildDate>
+        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Wed, 02 Nov 2022 15:49:56 &#43;0800</lastBuildDate>
             <atom:link href="https://yzxiu.github.io/index.xml" rel="self" type="application/rss+xml" />
         <item>
+    <title>Containerd解析(2) - layer</title>
+    <link>https://yzxiu.github.io/2022-11-02-containerd-2-layer/</link>
+    <pubDate>Wed, 02 Nov 2022 15:49:56 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2022-11-02-containerd-2-layer/</guid>
+    <description><![CDATA[概述 本文只讨论containerd默认配置下的行为，不涉及docker。 参考：content-flow.md 执行 client.Pull(ctx, &quot;docker.io/library/redis:5.0.9&quot;, containerd.W]]></description>
+</item>
+<item>
+    <title>Containerd解析(1)</title>
+    <link>https://yzxiu.github.io/2022-10-30-containerd-1/</link>
+    <pubDate>Sun, 30 Oct 2022 21:48:08 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2022-10-30-containerd-1/</guid>
+    <description><![CDATA[<div class="featured-image">
+                <img src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221030-230138.png" referrerpolicy="no-referrer">
+            </div>概述 通过一个简单的例子，粗略了解containerd创建并运行一个容器的过程。 主要了解containerd怎样与containerd-shi]]></description>
+</item>
+<item>
     <title>My First Post</title>
     <link>https://yzxiu.github.io/2022-10-29-my-first-post/</link>
     <pubDate>Sat, 29 Oct 2022 21:24:15 &#43;0800</pubDate>
@@ -13,7 +31,7 @@
     <guid>https://yzxiu.github.io/2022-10-29-my-first-post/</guid>
     <description><![CDATA[<div class="featured-image">
                 <img src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221030-230547.jpg" referrerpolicy="no-referrer">
-            </div>一、配置 参考：https://hugoloveit.com/zh-cn/posts/ 二、图片 2.1 图片上传 typora配置： typora setting 图片插入： 1 2 #]]></description>
+            </div>1 配置 参考：https://hugoloveit.com/zh-cn/posts/ 2 图片 上传配置 typora配置： typora setting 图片插入： 1 2 # 使用t]]></description>
 </item>
 </channel>
 </rss>

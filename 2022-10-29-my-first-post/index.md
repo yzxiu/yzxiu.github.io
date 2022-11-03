@@ -3,7 +3,7 @@
 
 
 
-## 一、配置
+## 1 配置
 
 参考：[https://hugoloveit.com/zh-cn/posts/](https://hugoloveit.com/zh-cn/posts/)
 
@@ -11,9 +11,10 @@
 
 
 
-## 二、图片
+## 2 图片
 
-### 2.1 图片上传
+### 上传配置
+
 typora配置：
 
 ![image-20221030223715217](https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221030-223715.png "typora setting")
@@ -59,7 +60,8 @@ picgo-core配置：
 }
 ```
 
-### 2.2 小图展示
+### 小图展示
+
 小图片如果使用 `![image-20221030223715217](https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221030-235308.png "small image")`的方式插入，会拉伸宽屏，如下：
 
 ![image-20221030223715217](https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221030-235308.png "small image")
@@ -93,7 +95,7 @@ picgo-core配置：
 
 图文混排<img src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221030-235308.png" style="zoom: 30%;" />图文混排
 
-## 三、代码
+## 3 代码
 
 ```go
 package main
@@ -111,4 +113,103 @@ func main() {
 }
 ```
 
+## 4 横幅
+
+```
+{{</* admonition */>}}
+一个 **注意** 横幅
+{{</* /admonition */>}}
+
+{{</* admonition abstract */>}}
+一个 **摘要** 横幅
+{{</* /admonition */>}}
+
+{{</* admonition info */>}}
+一个 **信息** 横幅
+{{</* /admonition */>}}
+
+{{</* admonition tip */>}}
+一个 **技巧** 横幅
+{{</* /admonition */>}}
+
+{{</* admonition success */>}}
+一个 **成功** 横幅
+{{</* /admonition */>}}
+
+{{</* admonition question */>}}
+一个 **问题** 横幅
+{{</* /admonition */>}}
+
+{{</* admonition warning */>}}
+一个 **警告** 横幅
+{{</* /admonition */>}}
+
+{{</* admonition failure */>}}
+一个 **失败** 横幅
+{{</* /admonition */>}}
+
+{{</* admonition danger */>}}
+一个 **危险** 横幅
+{{</* /admonition */>}}
+
+{{</* admonition bug */>}}
+一个 **Bug** 横幅
+{{</* /admonition */>}}
+
+{{</* admonition example */>}}
+一个 **示例** 横幅
+{{</* /admonition */>}}
+
+{{</* admonition quote */>}}
+一个 **引用** 横幅
+{{</* /admonition */>}}
+```
+
+{{< admonition >}}
+一个 **注意** 横幅
+{{< /admonition >}}
+
+{{< admonition abstract >}}
+一个 **摘要** 横幅
+{{< /admonition >}}
+
+{{< admonition info >}}
+一个 **信息** 横幅
+{{< /admonition >}}
+
+{{< admonition tip >}}
+一个 **技巧** 横幅
+{{< /admonition >}}
+
+{{< admonition success >}}
+一个 **成功** 横幅
+{{< /admonition >}}
+
+{{< admonition question >}}
+一个 **问题** 横幅
+{{< /admonition >}}
+
+{{< admonition warning >}}
+一个 **警告** 横幅
+{{< /admonition >}}
+
+{{< admonition failure >}}
+一个 **失败** 横幅
+{{< /admonition >}}
+
+{{< admonition danger >}}
+一个 **危险** 横幅
+{{< /admonition >}}
+
+{{< admonition bug >}}
+一个 **Bug** 横幅
+{{< /admonition >}}
+
+{{< admonition example >}}
+一个 **示例** 横幅
+{{< /admonition >}}
+
+{{< admonition quote >}}
+一个 **引用** 横幅
+{{< /admonition >}}
 
