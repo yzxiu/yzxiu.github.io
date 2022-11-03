@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2022-10-30-containerd-1\/"
-        },"genre": "posts","keywords": "containerd, containerd-shim","wordcount":  10805 ,
+        },"genre": "posts","keywords": "containerd, containerd-shim","wordcount":  10945 ,
         "url": "https:\/\/yzxiu.github.io\/2022-10-30-containerd-1\/","datePublished": "2022-10-30T21:48:08+08:00","dateModified": "2022-10-30T21:48:08+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,7 +102,7 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Containerd解析(1)</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-10-30">2022-10-30</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 10805 字&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-10-30">2022-10-30</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 10945 字&nbsp;
                 <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 22 分钟&nbsp;</div>
         </div><div class="featured-image"><img
         class="lazyload"
@@ -120,7 +120,7 @@
   <ul>
     <li><a href="#概述">概述</a></li>
     <li><a href="#example">Example</a></li>
-    <li><a href="#clientpull">client.Pull()</a>
+    <li><a href="#client-clientpull">[client] client.Pull()</a>
       <ul>
         <li>
           <ul>
@@ -130,22 +130,23 @@
         </li>
       </ul>
     </li>
-    <li><a href="#clientnewcontainer">client.NewContainer()</a>
+    <li><a href="#client-clientnewcontainer">[client] client.NewContainer()</a>
       <ul>
-        <li>
+        <li><a href="#withimage">WithImage：</a></li>
+        <li><a href="#withnewspec">WithNewSpec：</a></li>
+        <li><a href="#withnewsnapshot">WithNewSnapshot:</a>
           <ul>
-            <li><a href="#withimage">WithImage：</a></li>
-            <li><a href="#withnewspec">WithNewSpec：</a></li>
-            <li><a href="#withnewsnapshot">WithNewSnapshot:</a></li>
-            <li><a href="#ccontainerservicecreate">c.ContainerService().Create()</a></li>
+            <li><a href="#containerd-clientprepare">[containerd] client.Prepare()</a></li>
           </ul>
         </li>
+        <li><a href="#containerd-ccontainerservicecreate">[containerd] c.ContainerService().Create()</a></li>
       </ul>
     </li>
-    <li><a href="#containernewtask">container.NewTask()</a>
+    <li><a href="#client-containernewtask">[client] container.NewTask()</a>
       <ul>
-        <li><a href="#rtimecreate">rtime.Create()</a>
+        <li><a href="#containerd-l-local-create">[containerd] (l *local) Create()</a>
           <ul>
+            <li><a href="#rtimecreate">rtime.Create()</a></li>
             <li><a href="#mmanagerstart">m.manager.Start()</a>
               <ul>
                 <li><a href="#newbundle">NewBundle()</a></li>
@@ -161,7 +162,7 @@
         </li>
       </ul>
     </li>
-    <li><a href="#containerd-shim-runc-v2-create">containerd-shim-runc-v2 Create()</a>
+    <li><a href="#containerd-shim-runc-v2-create">[containerd-shim-runc-v2] Create()</a>
       <ul>
         <li><a href="#runcnewcontainerctx-splatform-r">runc.NewContainer(ctx, s.platform, r)</a>
           <ul>
@@ -175,20 +176,20 @@
         </li>
       </ul>
     </li>
-    <li><a href="#client---taskstartctx">client - task.Start(ctx)</a>
+    <li><a href="#client-taskstartctx">[client] task.Start(ctx)</a>
       <ul>
-        <li><a href="#containerd---l-local-start">containerd - (l *local) Start()</a>
+        <li><a href="#containerd-l-local-start">[containerd] (l *local) Start()</a>
           <ul>
-            <li><a href="#containerd-shim-runc-v2---pstartctx">containerd-shim-runc-v2 - p.Start(ctx)</a></li>
+            <li><a href="#containerd-shim-runc-v2-pstartctx">[containerd-shim-runc-v2] p.Start(ctx)</a></li>
           </ul>
         </li>
       </ul>
     </li>
-    <li><a href="#client---taskkill">client - task.Kill()</a>
+    <li><a href="#client-taskkill">[client] task.Kill()</a>
       <ul>
-        <li><a href="#containerd---l-local-kill">containerd - (l *local) Kill()</a>
+        <li><a href="#containerd-l-local-kill">[containerd] (l *local) Kill()</a>
           <ul>
-            <li><a href="#containerd-shim-runc-v2---staskkill">containerd-shim-runc-v2 - s.task.Kill()</a></li>
+            <li><a href="#containerd-shim-runc-v2-staskkill">[containerd-shim-runc-v2] s.task.Kill()</a></li>
           </ul>
         </li>
       </ul>
@@ -389,7 +390,7 @@
 </span></span></code></pre></td></tr></table>
 </div>
 </div><br>
-<h2 id="clientpull">client.Pull()</h2>
+<h2 id="client-clientpull">[client] client.Pull()</h2>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -407,28 +408,59 @@
 </span></span></code></pre></td></tr></table>
 </div>
 </div><p>containerd启动时，初始文件夹如下</p>
-<p><figure><a class="lightgallery" href="https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221031-171250.png" title="image-20221031171249478" data-thumbnail="https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221031-171250.png" data-sub-html="<h2>/var/lib/containerd/</h2><p>image-20221031171249478</p>">
-        <img
-            class="lazyload"
-            src="/svg/loading.min.svg"
-            data-src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221031-171250.png"
-            data-srcset="https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221031-171250.png, https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221031-171250.png 1.5x, https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221031-171250.png 2x"
-            data-sizes="auto"
-            alt="https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221031-171250.png" />
-    </a><figcaption class="image-caption">/var/lib/containerd/</figcaption>
-    </figure></p>
-<p><figure><a class="lightgallery" href="https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221031-171338.png" title="image-20221031171337787" data-thumbnail="https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221031-171338.png" data-sub-html="<h2>/run/containerd/</h2><p>image-20221031171337787</p>">
-        <img
-            class="lazyload"
-            src="/svg/loading.min.svg"
-            data-src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221031-171338.png"
-            data-srcset="https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221031-171338.png, https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221031-171338.png 1.5x, https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221031-171338.png 2x"
-            data-sizes="auto"
-            alt="https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221031-171338.png" />
-    </a><figcaption class="image-caption">/run/containerd/</figcaption>
-    </figure></p>
-<p>Pull完整方法如下：</p>
 <div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">/var/lib/containerd/
+</span></span><span class="line"><span class="cl">├── io.containerd.content.v1.content
+</span></span><span class="line"><span class="cl">│   └── ingest
+</span></span><span class="line"><span class="cl">├── io.containerd.metadata.v1.bolt
+</span></span><span class="line"><span class="cl">│   └── meta.db
+</span></span><span class="line"><span class="cl">├── io.containerd.runtime.v1.linux
+</span></span><span class="line"><span class="cl">├── io.containerd.runtime.v2.task
+</span></span><span class="line"><span class="cl">├── io.containerd.snapshotter.v1.aufs
+</span></span><span class="line"><span class="cl">│   └── snapshots
+</span></span><span class="line"><span class="cl">├── io.containerd.snapshotter.v1.btrfs
+</span></span><span class="line"><span class="cl">├── io.containerd.snapshotter.v1.native
+</span></span><span class="line"><span class="cl">│   └── snapshots
+</span></span><span class="line"><span class="cl">├── io.containerd.snapshotter.v1.overlayfs
+</span></span><span class="line"><span class="cl">│   └── snapshots
+</span></span><span class="line"><span class="cl">└── tmpmounts
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">/run/containerd/
+</span></span><span class="line"><span class="cl">├── containerd.sock
+</span></span><span class="line"><span class="cl">├── containerd.sock.ttrpc
+</span></span><span class="line"><span class="cl">├── io.containerd.runtime.v1.linux
+</span></span><span class="line"><span class="cl">└── io.containerd.runtime.v2.tas
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
 </span><span class="lnt"> 2
@@ -1227,7 +1259,7 @@
         </div>
     </div>
 <br>
-<h2 id="clientnewcontainer">client.NewContainer()</h2>
+<h2 id="client-clientnewcontainer">[client] client.NewContainer()</h2>
 <p>NewContainer()方法如下：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -1303,7 +1335,7 @@
 </span></span></code></pre></td></tr></table>
 </div>
 </div><p>iredis-server为容器id，其他三个为初始化选项。</p>
-<h4 id="withimage">WithImage：</h4>
+<h3 id="withimage">WithImage：</h3>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -1326,7 +1358,7 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h4 id="withnewspec">WithNewSpec：</h4>
+</div><h3 id="withnewspec">WithNewSpec：</h3>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -1357,7 +1389,7 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h4 id="withnewsnapshot">WithNewSnapshot:</h4>
+</div><h3 id="withnewsnapshot">WithNewSnapshot:</h3>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -1468,7 +1500,8 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><p>/containerd/services/snapshots/service.go L88</p>
+</div><h4 id="containerd-clientprepare">[containerd] client.Prepare()</h4>
+<p>/containerd/services/snapshots/service.go L88</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -1583,7 +1616,7 @@
 </span></span></code></pre></td></tr></table>
 </div>
 </div><p>可以看到该snapshot的key是我们传进的参数<code>redis-server-snapshot</code>，parent是刚才提到的镜像的final layer：<code>33bd296ab7f37bdacff0cb4a5eb671bcb3a141887553ec4157b1e64d6641c1cd</code>。</p>
-<h4 id="ccontainerservicecreate">c.ContainerService().Create()</h4>
+<h3 id="containerd-ccontainerservicecreate">[containerd] c.ContainerService().Create()</h3>
 <p>接下来进入create流程，直接调用containerd的create接口。</p>
 <p>containerd/services/containers/local.go L116</p>
 <div class="highlight"><div class="chroma">
@@ -1672,7 +1705,7 @@
 </span></span></code></pre></td></tr></table>
 </div>
 </div><p>由上面分析可知，create操作只在数据库中插入了一条数据。</p>
-<h2 id="containernewtask">container.NewTask()</h2>
+<h2 id="client-containernewtask">[client] container.NewTask()</h2>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">  1
@@ -1778,6 +1811,7 @@
 </span><span class="lnt">101
 </span><span class="lnt">102
 </span><span class="lnt">103
+</span><span class="lnt">104
 </span></code></pre></td>
 <td class="lntd">
 <pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">container</span><span class="p">)</span> <span class="nf">NewTask</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">ioCreate</span> <span class="nx">cio</span><span class="p">.</span><span class="nx">Creator</span><span class="p">,</span> <span class="nx">opts</span> <span class="o">...</span><span class="nx">NewTaskOpts</span><span class="p">)</span> <span class="p">(</span><span class="nx">_</span> <span class="nx">Task</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
@@ -1876,7 +1910,8 @@
 </span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">info</span><span class="p">.</span><span class="nx">Checkpoint</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 </span></span><span class="line"><span class="cl">		<span class="nx">request</span><span class="p">.</span><span class="nx">Checkpoint</span> <span class="p">=</span> <span class="nx">info</span><span class="p">.</span><span class="nx">Checkpoint</span>
 </span></span><span class="line"><span class="cl">	<span class="p">}</span>
-</span></span><span class="line"><span class="cl">	<span class="nx">response</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">c</span><span class="p">.</span><span class="nx">client</span><span class="p">.</span><span class="nf">TaskService</span><span class="p">().</span><span class="nf">Create</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">request</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">response</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">c</span><span class="p">.</span><span class="nx">client</span><span class="p">.</span><span class="nf">TaskService</span><span class="p">().</span><span class="nf">Create</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">request</span><span class="p">)</span>
 </span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 </span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">errdefs</span><span class="p">.</span><span class="nf">FromGRPC</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
 </span></span><span class="line"><span class="cl">	<span class="p">}</span>
@@ -1897,6 +1932,7 @@
     </a><figcaption class="image-caption">task request</figcaption>
     </figure></p>
 <p>调用containerd TaskService().Create()接口。</p>
+<h3 id="containerd-l-local-create">[containerd] (l *local) Create()</h3>
 <p>containerd/services/tasks/local.go L164</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -2086,7 +2122,7 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h3 id="rtimecreate">rtime.Create()</h3>
+</div><h4 id="rtimecreate">rtime.Create()</h4>
 <p>rtime.Create(ctx, r.ContainerID, opts)是个比较重要的方法，终于看到和 shim 相关的内容了</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -2125,11 +2161,14 @@
 </span><span class="lnt">33
 </span><span class="lnt">34
 </span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
 </span></code></pre></td>
 <td class="lntd">
 <pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// Create launches new shim instance and creates new task
 </span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">TaskManager</span><span class="p">)</span> <span class="nf">Create</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">taskID</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">opts</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">CreateOpts</span><span class="p">)</span> <span class="p">(</span><span class="nx">runtime</span><span class="p">.</span><span class="nx">Task</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">   <span class="nx">shim</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">m</span><span class="p">.</span><span class="nx">manager</span><span class="p">.</span><span class="nf">Start</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">taskID</span><span class="p">,</span> <span class="nx">opts</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// 1
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">shim</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">m</span><span class="p">.</span><span class="nx">manager</span><span class="p">.</span><span class="nf">Start</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">taskID</span><span class="p">,</span> <span class="nx">opts</span><span class="p">)</span>
 </span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 </span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to start shim: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
 </span></span><span class="line"><span class="cl">   <span class="p">}</span>
@@ -2137,7 +2176,8 @@
 </span></span><span class="line"><span class="cl">   <span class="c1">// Cast to shim task and call task service to create a new container task instance.
 </span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// This will not be required once shim service / client implemented.
 </span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">shimTask</span> <span class="o">:=</span> <span class="nf">newShimTask</span><span class="p">(</span><span class="nx">shim</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">   <span class="nx">t</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">shimTask</span><span class="p">.</span><span class="nf">Create</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">opts</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// 2
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">t</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">shimTask</span><span class="p">.</span><span class="nf">Create</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">opts</span><span class="p">)</span>
 </span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 </span></span><span class="line"><span class="cl">      <span class="c1">// NOTE: ctx contains required namespace information.
 </span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="nx">m</span><span class="p">.</span><span class="nx">manager</span><span class="p">.</span><span class="nx">shims</span><span class="p">.</span><span class="nf">Delete</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">taskID</span><span class="p">)</span>
@@ -2843,7 +2883,7 @@
 <p>然后这里调用它的create方法</p>
 <p>这里我们可以调试 containerd-shim-runc-v2 的相关代码，看一下 containerd 调用 shim 的create方法之后，会发生哪些事情。</p>
 <p>下面进入 <code>containerd-shim-runc-v2</code> 的相关代码</p>
-<h2 id="containerd-shim-runc-v2-create">containerd-shim-runc-v2 Create()</h2>
+<h2 id="containerd-shim-runc-v2-create">[containerd-shim-runc-v2] Create()</h2>
 <p>containerd/runtime/v2/runc/task/service.go L118</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -3164,7 +3204,7 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><p>在 p.Create(ctx, config)之前，有一个比较重要的操作，就是 m.Mount(rootfs)</p>
+</div><p>在 <code>p.Create(ctx, config)</code>之前，有一个比较重要的操作，就是 <code>m.Mount(rootfs)</code></p>
 <h4 id="mmountrootfs">m.Mount(rootfs)</h4>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -3192,7 +3232,49 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><p>m.Mount(rootfs)执行了挂载。</p>
+</div><p><code>m.Mount(rootfs)</code>执行了挂载。</p>
+<p>相关参数如下：</p>
+<p><figure><a class="lightgallery" href="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221103-135750.png" title="image-20221103135749661" data-thumbnail="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221103-135750.png" data-sub-html="<h2>m</h2><p>image-20221103135749661</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221103-135750.png"
+            data-srcset="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221103-135750.png, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221103-135750.png 1.5x, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221103-135750.png 2x"
+            data-sizes="auto"
+            alt="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221103-135750.png" />
+    </a><figcaption class="image-caption">m</figcaption>
+    </figure></p>
+<p>其中，Options[3]的内容如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">lowerdir=
+</span></span><span class="line"><span class="cl">/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/6/fs:
+</span></span><span class="line"><span class="cl">/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/5/fs:
+</span></span><span class="line"><span class="cl">/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/4/fs:
+</span></span><span class="line"><span class="cl">/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/3/fs:
+</span></span><span class="line"><span class="cl">/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/2/fs:
+</span></span><span class="line"><span class="cl">/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1/fs
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><figure><a class="lightgallery" href="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221103-135823.png" title="image-20221103135822520" data-thumbnail="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221103-135823.png" data-sub-html="<h2>rootfs</h2><p>image-20221103135822520</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221103-135823.png"
+            data-srcset="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221103-135823.png, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221103-135823.png 1.5x, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221103-135823.png 2x"
+            data-sizes="auto"
+            alt="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221103-135823.png" />
+    </a><figcaption class="image-caption">rootfs</figcaption>
+    </figure></p>
 <p>执行完成后，/run/containerd/文件夹内容如下：</p>
 <img src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221103-095252.png" alt="image-20221103095250783" title="挂在 rootfs" style="zoom: 80%;" />
 <h4 id="pcreatectx-config">p.Create(ctx, config)</h4>
@@ -3543,7 +3625,7 @@
 </div>
 </div><p>容器现在处于 runc create 之后的created(runc init)状态。</p>
 <br>
-<h2 id="client---taskstartctx">client - task.Start(ctx)</h2>
+<h2 id="client-taskstartctx">[client] task.Start(ctx)</h2>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -3558,7 +3640,7 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h3 id="containerd---l-local-start">containerd - (l *local) Start()</h3>
+</div><h3 id="containerd-l-local-start">[containerd] (l *local) Start()</h3>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -3611,7 +3693,7 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h4 id="containerd-shim-runc-v2---pstartctx">containerd-shim-runc-v2 - p.Start(ctx)</h4>
+</div><h4 id="containerd-shim-runc-v2-pstartctx">[containerd-shim-runc-v2] p.Start(ctx)</h4>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -4074,7 +4156,7 @@
 </span></span></code></pre></td></tr></table>
 </div>
 </div><br>
-<h2 id="client---taskkill">client - task.Kill()</h2>
+<h2 id="client-taskkill">[client] task.Kill()</h2>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -4089,7 +4171,7 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h3 id="containerd---l-local-kill">containerd - (l *local) Kill()</h3>
+</div><h3 id="containerd-l-local-kill">[containerd] (l *local) Kill()</h3>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -4158,7 +4240,7 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h4 id="containerd-shim-runc-v2---staskkill">containerd-shim-runc-v2 - s.task.Kill()</h4>
+</div><h4 id="containerd-shim-runc-v2-staskkill">[containerd-shim-runc-v2] s.task.Kill()</h4>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1

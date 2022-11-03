@@ -107,7 +107,7 @@ func redisExample() error {
 
 <br>
 
-## client.Pull()
+##  [client] client.Pull()
 
 ```go
 // pull the redis image from DockerHub
@@ -119,11 +119,31 @@ if err != nil {
 
 containerd启动时，初始文件夹如下
 
-![image-20221031171249478](https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221031-171250.png "/var/lib/containerd/")
+```
+/var/lib/containerd/
+├── io.containerd.content.v1.content
+│   └── ingest
+├── io.containerd.metadata.v1.bolt
+│   └── meta.db
+├── io.containerd.runtime.v1.linux
+├── io.containerd.runtime.v2.task
+├── io.containerd.snapshotter.v1.aufs
+│   └── snapshots
+├── io.containerd.snapshotter.v1.btrfs
+├── io.containerd.snapshotter.v1.native
+│   └── snapshots
+├── io.containerd.snapshotter.v1.overlayfs
+│   └── snapshots
+└── tmpmounts
+```
 
-![image-20221031171337787](https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221031-171338.png "/run/containerd/")
-
-Pull完整方法如下：
+```
+/run/containerd/
+├── containerd.sock
+├── containerd.sock.ttrpc
+├── io.containerd.runtime.v1.linux
+└── io.containerd.runtime.v2.tas
+```
 
 ```go
 // Pull downloads the provided content into containerd's content store
@@ -540,7 +560,7 @@ pull方法运行后，文件夹内容变化如下：
 
 <br>
 
-## client.NewContainer()
+##  [client] client.NewContainer()
 
 NewContainer()方法如下：
 
@@ -584,7 +604,7 @@ containerd.WithNewSpec(oci.WithImageConfig(image)),
 
 iredis-server为容器id，其他三个为初始化选项。
 
-#### WithImage：
+### WithImage：
 
 ```go
 // WithImage sets the provided image as the base for the container
@@ -597,7 +617,7 @@ func WithImage(i Image) NewContainerOpts {
 }
 ```
 
-#### WithNewSpec：
+### WithNewSpec：
 
 ```go
 // WithNewSpec generates a new spec for a new container
@@ -614,7 +634,7 @@ func WithNewSpec(opts ...oci.SpecOpts) NewContainerOpts {
 }
 ```
 
-#### WithNewSnapshot:
+### WithNewSnapshot:
 
 ```go
 // WithNewSnapshot allocates a new snapshot to be used by the container as the
@@ -670,6 +690,8 @@ func (p *proxySnapshotter) Prepare(ctx context.Context, key, parent string, opts
 	return toMounts(resp.Mounts), nil
 }
 ```
+
+#### [containerd] client.Prepare()
 
 /containerd/services/snapshots/service.go L88
 
@@ -736,7 +758,7 @@ sha256:d0fe97fa8b8cefdffcef1d62b65aba51a6c87b6679628a2b50fc6a7a579f764c         
 
 
 
-#### c.ContainerService().Create()
+###  [containerd] c.ContainerService().Create()
 
 接下来进入create流程，直接调用containerd的create接口。
 
@@ -802,7 +824,7 @@ redis-server    docker.io/library/redis:5.0.9    "docker-entrypoint.s…"    8 m
 
 由上面分析可知，create操作只在数据库中插入了一条数据。
 
-## container.NewTask()
+##  [client] container.NewTask()
 
 ```go
 func (c *container) NewTask(ctx context.Context, ioCreate cio.Creator, opts ...NewTaskOpts) (_ Task, err error) {
@@ -901,6 +923,7 @@ func (c *container) NewTask(ctx context.Context, ioCreate cio.Creator, opts ...N
 	if info.Checkpoint != nil {
 		request.Checkpoint = info.Checkpoint
 	}
+    // 
 	response, err := c.client.TaskService().Create(ctx, request)
 	if err != nil {
 		return nil, errdefs.FromGRPC(err)
@@ -916,6 +939,8 @@ func (c *container) NewTask(ctx context.Context, ioCreate cio.Creator, opts ...N
 ![image-20221102204255754](https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221102-204256.png "task request")
 
 调用containerd TaskService().Create()接口。
+
+### [containerd] (l *local) Create()
 
 containerd/services/tasks/local.go L164
 
@@ -1013,13 +1038,14 @@ func (l *local) Create(ctx context.Context, r *api.CreateTaskRequest, _ ...grpc.
 }
 ```
 
-###  rtime.Create()
+####  rtime.Create()
 
 rtime.Create(ctx, r.ContainerID, opts)是个比较重要的方法，终于看到和 shim 相关的内容了
 
 ```go
 // Create launches new shim instance and creates new task
 func (m *TaskManager) Create(ctx context.Context, taskID string, opts runtime.CreateOpts) (runtime.Task, error) {
+   // 1
    shim, err := m.manager.Start(ctx, taskID, opts)
    if err != nil {
       return nil, fmt.Errorf("failed to start shim: %w", err)
@@ -1028,6 +1054,7 @@ func (m *TaskManager) Create(ctx context.Context, taskID string, opts runtime.Cr
    // Cast to shim task and call task service to create a new container task instance.
    // This will not be required once shim service / client implemented.
    shimTask := newShimTask(shim)
+   // 2
    t, err := shimTask.Create(ctx, opts)
    if err != nil {
       // NOTE: ctx contains required namespace information.
@@ -1418,7 +1445,7 @@ func (c *taskClient) Create(ctx context.Context, req *CreateTaskRequest) (*Creat
 
 下面进入 `containerd-shim-runc-v2` 的相关代码
 
-## containerd-shim-runc-v2 Create()
+## [containerd-shim-runc-v2] Create()
 
 containerd/runtime/v2/runc/task/service.go L118
 
@@ -1583,7 +1610,7 @@ func NewContainer(ctx context.Context, platform stdio.Platform, r *task.CreateTa
 }
 ```
 
-在 p.Create(ctx, config)之前，有一个比较重要的操作，就是 m.Mount(rootfs)
+在 `p.Create(ctx, config)`之前，有一个比较重要的操作，就是 `m.Mount(rootfs)`
 
 #### m.Mount(rootfs)
 
@@ -1600,7 +1627,25 @@ for _, rm := range mounts {
 }
 ```
 
-m.Mount(rootfs)执行了挂载。
+`m.Mount(rootfs)`执行了挂载。
+
+相关参数如下：
+
+![image-20221103135749661](https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221103-135750.png "m")
+
+其中，Options[3]的内容如下：
+
+```
+lowerdir=
+/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/6/fs:
+/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/5/fs:
+/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/4/fs:
+/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/3/fs:
+/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/2/fs:
+/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/1/fs
+```
+
+![image-20221103135822520](https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221103-135823.png "rootfs")
 
 执行完成后，/run/containerd/文件夹内容如下：
 
@@ -1787,7 +1832,7 @@ root       67705   63337  0 10:05 ?        00:00:00 runc init
 
 <br>
 
-## client - task.Start(ctx)
+## [client] task.Start(ctx)
 
 ```go
 // call start on the task to execute the redis server
@@ -1796,7 +1841,7 @@ if err := task.Start(ctx); err != nil {
 }
 ```
 
-### containerd - (l *local) Start()
+### [containerd] (l *local) Start()
 
 ```go
 func (l *local) Start(ctx context.Context, r *api.StartRequest, _ ...grpc.CallOption) (*api.StartResponse, error) {
@@ -1824,7 +1869,7 @@ func (l *local) Start(ctx context.Context, r *api.StartRequest, _ ...grpc.CallOp
 }
 ```
 
-#### containerd-shim-runc-v2 - p.Start(ctx)
+#### [containerd-shim-runc-v2] p.Start(ctx)
 
 ```go
 // Start a process
@@ -2066,7 +2111,7 @@ systemd+   75707   75685  0 11:04 ?        00:00:00 redis-server *:6379
 
 <br>
 
-## client - task.Kill()
+## [client] task.Kill()
 
 ```go
 // kill the process and get the exit status
@@ -2075,7 +2120,7 @@ if err := task.Kill(ctx, syscall.SIGTERM); err != nil {
 }
 ```
 
-### containerd - (l *local) Kill()
+### [containerd] (l *local) Kill()
 
 ```go
 func (l *local) Kill(ctx context.Context, r *api.KillRequest, _ ...grpc.CallOption) (*ptypes.Empty, error) {
@@ -2111,7 +2156,7 @@ func (s *shimTask) Kill(ctx context.Context, signal uint32, all bool) error {
 }
 ```
 
-#### containerd-shim-runc-v2 - s.task.Kill()
+####  [containerd-shim-runc-v2] s.task.Kill()
 
 ```go
 // Kill a process with the provided signal
