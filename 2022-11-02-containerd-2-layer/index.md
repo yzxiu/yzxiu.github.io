@@ -122,3 +122,9 @@ PASS
 创建容器的时候，需要可读写层。这个可读写层的parent就是这里提到的Final Layer
 
 
+
+## diff_ids
+
+// TODO config 配置文件中的 diff_ids 数组是如何生成的？
+
+

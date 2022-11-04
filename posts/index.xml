@@ -19,7 +19,7 @@
     <guid>https://yzxiu.github.io/2022-10-30-containerd-1/</guid>
     <description><![CDATA[<div class="featured-image">
                 <img src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221030-230138.png" referrerpolicy="no-referrer">
-            </div>概述 通过一个简单的例子，粗略了解containerd创建并运行一个容器的过程。 主要了解containerd怎样与containerd-shi]]></description>
+            </div>概述 通过一个简单的例子，粗略了解containerd创建并运行一个容器的过程。 本文使用containerd默认配置，不涉及docker。 主要]]></description>
 </item>
 <item>
     <title>My First Post</title>

@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="robots" content="noodp" />
         <title>Containerd解析(1) - Yuyu&#39;s Blog</title><meta name="Description" content=""><meta property="og:title" content="Containerd解析(1)" />
-<meta property="og:description" content="概述 通过一个简单的例子，粗略了解containerd创建并运行一个容器的过程。 主要了解containerd怎样与containerd-shi" />
+<meta property="og:description" content="概述 通过一个简单的例子，粗略了解containerd创建并运行一个容器的过程。 本文使用containerd默认配置，不涉及docker。 主要" />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://yzxiu.github.io/2022-10-30-containerd-1/" /><meta property="og:image" content="https://yzxiu.github.io/logo.png"/><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2022-10-30T21:48:08+08:00" />
@@ -15,7 +15,7 @@
 <meta name="twitter:image" content="https://yzxiu.github.io/logo.png"/>
 
 <meta name="twitter:title" content="Containerd解析(1)"/>
-<meta name="twitter:description" content="概述 通过一个简单的例子，粗略了解containerd创建并运行一个容器的过程。 主要了解containerd怎样与containerd-shi"/>
+<meta name="twitter:description" content="概述 通过一个简单的例子，粗略了解containerd创建并运行一个容器的过程。 本文使用containerd默认配置，不涉及docker。 主要"/>
 <meta name="application-name" content="Yuyu&#39;s Blog">
 <meta name="apple-mobile-web-app-title" content="Yuyu&#39;s Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="icon" href="/images/avataaars.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://yzxiu.github.io/2022-10-30-containerd-1/" /><link rel="prev" href="https://yzxiu.github.io/2022-10-29-my-first-post/" /><link rel="next" href="https://yzxiu.github.io/2022-11-02-containerd-2-layer/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"></noscript><link rel="preload" href="/lib/animate/animate.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2022-10-30-containerd-1\/"
-        },"genre": "posts","keywords": "containerd, containerd-shim","wordcount":  10945 ,
+        },"genre": "posts","keywords": "containerd, containerd-shim","wordcount":  11020 ,
         "url": "https:\/\/yzxiu.github.io\/2022-10-30-containerd-1\/","datePublished": "2022-10-30T21:48:08+08:00","dateModified": "2022-10-30T21:48:08+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,7 +102,7 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Containerd解析(1)</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-10-30">2022-10-30</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 10945 字&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-10-30">2022-10-30</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 11020 字&nbsp;
                 <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 22 分钟&nbsp;</div>
         </div><div class="featured-image"><img
         class="lazyload"
@@ -201,6 +201,7 @@
 </nav></div>
             </div><div class="content" id="content"><h2 id="概述">概述</h2>
 <p>通过一个简单的例子，粗略了解containerd创建并运行一个容器的过程。</p>
+<p>本文使用containerd默认配置，不涉及docker。</p>
 <p>主要了解<code>containerd</code>怎样与<code>containerd-shim-runc-v2</code>进行交互，以及<code>containerd-shim-runc-v2</code>怎样调用<code>runc</code>与监控容器。</p>
 <br>
 <h2 id="example">Example</h2>
@@ -4575,6 +4576,7 @@
 </div><h2 id="defer-taskdelete">defer task.Delete()</h2>
 <h2 id="defer-containerdelete">defer container.Delete()</h2>
 <h2 id="总结">总结</h2>
+<p>本文通过一个简单的例子，忽略了较多细节，了解一个容器在containerd中的主要启动过程。</p>
 </div><div class="post-footer" id="post-footer">
     <div class="post-info">
         <div class="post-info-line">
@@ -4615,5 +4617,5 @@
             </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
                 <i class="fas fa-comment fa-fw" aria-hidden="true"></i>
             </a>
-        </div><link rel="stylesheet" href="/lib/lightgallery/css/lightgallery-bundle.min.css"><link rel="stylesheet" href="/lib/katex/katex.min.css"><link rel="stylesheet" href="/css/86ccfb.min.css"><script type="text/javascript" src="/lib/autocomplete/autocomplete.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="/lib/lazysizes/lazysizes.min.js"></script><script type="text/javascript" src="/lib/lightgallery/lightgallery.min.js"></script><script type="text/javascript" src="/lib/lightgallery/plugins/thumbnail/lg-thumbnail.min.js"></script><script type="text/javascript" src="/lib/lightgallery/plugins/zoom/lg-zoom.min.js"></script><script type="text/javascript" src="/lib/clipboard/clipboard.min.js"></script><script type="text/javascript" src="/lib/sharer/sharer.min.js"></script><script type="text/javascript" src="/lib/katex/katex.min.js"></script><script type="text/javascript" src="/lib/katex/contrib/auto-render.min.js"></script><script type="text/javascript" src="/lib/katex/contrib/copy-tex.min.js"></script><script type="text/javascript" src="/lib/katex/contrib/mhchem.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":50},"comment":{"giscus":{"category":"Announcements","categoryId":"DIC_kwDOIVYpIs4CSRHk","darkTheme":"dark","emitMetadata":"0","inputPosition":"bottom","lang":"zh-CN","lazyLoading":false,"lightTheme":"light","mapping":"pathname","reactionsEnabled":"1","repo":"yzxiu/yzxiu.github.io","repoId":"R_kgDOIVYpIg"}},"lightgallery":true,"math":{"delimiters":[{"display":true,"left":"$$","right":"$$"},{"display":true,"left":"\\[","right":"\\]"},{"display":true,"left":"\\begin{equation}","right":"\\end{equation}"},{"display":true,"left":"\\begin{equation*}","right":"\\end{equation*}"},{"display":true,"left":"\\begin{align}","right":"\\end{align}"},{"display":true,"left":"\\begin{align*}","right":"\\end{align*}"},{"display":true,"left":"\\begin{alignat}","right":"\\end{alignat}"},{"display":true,"left":"\\begin{alignat*}","right":"\\end{alignat*}"},{"display":true,"left":"\\begin{gather}","right":"\\end{gather}"},{"display":true,"left":"\\begin{CD}","right":"\\end{CD}"},{"display":false,"left":"$","right":"$"},{"display":false,"left":"\\(","right":"\\)"}],"strict":false},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+        </div><link rel="stylesheet" href="/lib/lightgallery/css/lightgallery-bundle.min.css"><link rel="stylesheet" href="/lib/katex/katex.min.css"><link rel="stylesheet" href="/css/86ccfb.min.css"><script type="text/javascript" src="/lib/autocomplete/autocomplete.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="/lib/lazysizes/lazysizes.min.js"></script><script type="text/javascript" src="/lib/lightgallery/lightgallery.min.js"></script><script type="text/javascript" src="/lib/lightgallery/plugins/thumbnail/lg-thumbnail.min.js"></script><script type="text/javascript" src="/lib/lightgallery/plugins/zoom/lg-zoom.min.js"></script><script type="text/javascript" src="/lib/clipboard/clipboard.min.js"></script><script type="text/javascript" src="/lib/sharer/sharer.min.js"></script><script type="text/javascript" src="/lib/katex/katex.min.js"></script><script type="text/javascript" src="/lib/katex/contrib/auto-render.min.js"></script><script type="text/javascript" src="/lib/katex/contrib/copy-tex.min.js"></script><script type="text/javascript" src="/lib/katex/contrib/mhchem.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":75},"comment":{"giscus":{"category":"Announcements","categoryId":"DIC_kwDOIVYpIs4CSRHk","darkTheme":"dark","emitMetadata":"0","inputPosition":"bottom","lang":"zh-CN","lazyLoading":false,"lightTheme":"light","mapping":"pathname","reactionsEnabled":"1","repo":"yzxiu/yzxiu.github.io","repoId":"R_kgDOIVYpIg"}},"lightgallery":true,"math":{"delimiters":[{"display":true,"left":"$$","right":"$$"},{"display":true,"left":"\\[","right":"\\]"},{"display":true,"left":"\\begin{equation}","right":"\\end{equation}"},{"display":true,"left":"\\begin{equation*}","right":"\\end{equation*}"},{"display":true,"left":"\\begin{align}","right":"\\end{align}"},{"display":true,"left":"\\begin{align*}","right":"\\end{align*}"},{"display":true,"left":"\\begin{alignat}","right":"\\end{alignat}"},{"display":true,"left":"\\begin{alignat*}","right":"\\end{alignat*}"},{"display":true,"left":"\\begin{gather}","right":"\\end{gather}"},{"display":true,"left":"\\begin{CD}","right":"\\end{CD}"},{"display":false,"left":"$","right":"$"},{"display":false,"left":"\\(","right":"\\)"}],"strict":false},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
 </html>
