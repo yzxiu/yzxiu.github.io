@@ -3,7 +3,15 @@
         <title>所有文章 - Yuyu&#39;s Blog</title>
         <link>https://yzxiu.github.io/posts/</link>
         <description>所有文章 | Yuyu&#39;s Blog</description>
-        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Wed, 02 Nov 2022 15:49:56 &#43;0800</lastBuildDate><atom:link href="https://yzxiu.github.io/posts/" rel="self" type="application/rss+xml" /><item>
+        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Wed, 02 Nov 2022 21:50:04 &#43;0800</lastBuildDate><atom:link href="https://yzxiu.github.io/posts/" rel="self" type="application/rss+xml" /><item>
+    <title>Containerd解析(2) - shim</title>
+    <link>https://yzxiu.github.io/2022-11-02-containerd-3-shim-start/</link>
+    <pubDate>Wed, 02 Nov 2022 21:50:04 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2022-11-02-containerd-3-shim-start/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
     <title>Containerd解析(2) - layer</title>
     <link>https://yzxiu.github.io/2022-11-02-containerd-2-layer/</link>
     <pubDate>Wed, 02 Nov 2022 15:49:56 &#43;0800</pubDate>
@@ -19,7 +27,7 @@
     <guid>https://yzxiu.github.io/2022-10-30-containerd-1/</guid>
     <description><![CDATA[<div class="featured-image">
                 <img src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221030-230138.png" referrerpolicy="no-referrer">
-            </div>概述 通过一个简单的例子，粗略了解containerd创建并运行一个容器的过程。 本文使用containerd默认配置，不涉及docker。 主要]]></description>
+            </div>概述 本文使用containerd默认配置，不涉及docker。 通过一个简单的例子，粗略了解containerd创建并运行一个容器的过程。 主要]]></description>
 </item>
 <item>
     <title>My First Post</title>

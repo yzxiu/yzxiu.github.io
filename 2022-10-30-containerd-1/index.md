@@ -3,9 +3,9 @@
 
 ## 概述
 
-通过一个简单的例子，粗略了解containerd创建并运行一个容器的过程。
-
 本文使用containerd默认配置，不涉及docker。
+
+通过一个简单的例子，粗略了解containerd创建并运行一个容器的过程。
 
 主要了解`containerd`怎样与`containerd-shim-runc-v2`进行交互，以及`containerd-shim-runc-v2`怎样调用`runc`与监控容器。
 
