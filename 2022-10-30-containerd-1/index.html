@@ -160,16 +160,16 @@
             </li>
           </ul>
         </li>
-      </ul>
-    </li>
-    <li><a href="#containerd-shim-runc-v2-create">[containerd-shim-runc-v2] Create()</a>
-      <ul>
-        <li><a href="#runcnewcontainerctx-splatform-r">runc.NewContainer(ctx, s.platform, r)</a>
+        <li><a href="#containerd-shim-runc-v2-create">[containerd-shim-runc-v2] Create()</a>
           <ul>
-            <li><a href="#mmountrootfs">m.Mount(rootfs)</a></li>
-            <li><a href="#pcreatectx-config">p.Create(ctx, config)</a>
+            <li><a href="#runcnewcontainerctx-splatform-r">runc.NewContainer(ctx, s.platform, r)</a>
               <ul>
-                <li><a href="#pruntimecreate">p.runtime.Create()</a></li>
+                <li><a href="#mmountrootfs">m.Mount(rootfs)</a></li>
+                <li><a href="#pcreatectx-config">p.Create(ctx, config)</a>
+                  <ul>
+                    <li><a href="#pruntimecreate">p.runtime.Create()</a></li>
+                  </ul>
+                </li>
               </ul>
             </li>
           </ul>
@@ -2885,7 +2885,7 @@
 <p>然后这里调用它的create方法</p>
 <p>这里我们可以调试 containerd-shim-runc-v2 的相关代码，看一下 containerd 调用 shim 的create方法之后，会发生哪些事情。</p>
 <p>下面进入 <code>containerd-shim-runc-v2</code> 的相关代码</p>
-<h2 id="containerd-shim-runc-v2-create">[containerd-shim-runc-v2] Create()</h2>
+<h3 id="containerd-shim-runc-v2-create">[containerd-shim-runc-v2] Create()</h3>
 <p>containerd/runtime/v2/runc/task/service.go L118</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -2953,7 +2953,7 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h3 id="runcnewcontainerctx-splatform-r">runc.NewContainer(ctx, s.platform, r)</h3>
+</div><h4 id="runcnewcontainerctx-splatform-r">runc.NewContainer(ctx, s.platform, r)</h4>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">  1
@@ -3207,7 +3207,7 @@
 </span></span></code></pre></td></tr></table>
 </div>
 </div><p>在 <code>p.Create(ctx, config)</code>之前，有一个比较重要的操作，就是 <code>m.Mount(rootfs)</code></p>
-<h4 id="mmountrootfs">m.Mount(rootfs)</h4>
+<h5 id="mmountrootfs">m.Mount(rootfs)</h5>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -3279,7 +3279,7 @@
     </figure></p>
 <p>执行完成后，/run/containerd/文件夹内容如下：</p>
 <img src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221103-095252.png" alt="image-20221103095250783" title="挂在 rootfs" style="zoom: 80%;" />
-<h4 id="pcreatectx-config">p.Create(ctx, config)</h4>
+<h5 id="pcreatectx-config">p.Create(ctx, config)</h5>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -3443,7 +3443,7 @@
             alt="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221102-223959.png" />
     </a><figcaption class="image-caption">config</figcaption>
     </figure></p>
-<h5 id="pruntimecreate">p.runtime.Create()</h5>
+<h6 id="pruntimecreate">p.runtime.Create()</h6>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1

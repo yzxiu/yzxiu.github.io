@@ -1449,7 +1449,7 @@ func (c *taskClient) Create(ctx context.Context, req *CreateTaskRequest) (*Creat
 
 下面进入 `containerd-shim-runc-v2` 的相关代码
 
-## [containerd-shim-runc-v2] Create()
+### [containerd-shim-runc-v2] Create()
 
 containerd/runtime/v2/runc/task/service.go L118
 
@@ -1486,7 +1486,7 @@ func (s *service) Create(ctx context.Context, r *taskAPI.CreateTaskRequest) (_ *
 }
 ```
 
-### runc.NewContainer(ctx, s.platform, r)
+#### runc.NewContainer(ctx, s.platform, r)
 
 ```go
 // NewContainer returns a new runc container
@@ -1616,7 +1616,7 @@ func NewContainer(ctx context.Context, platform stdio.Platform, r *task.CreateTa
 
 在 `p.Create(ctx, config)`之前，有一个比较重要的操作，就是 `m.Mount(rootfs)`
 
-#### m.Mount(rootfs)
+##### m.Mount(rootfs)
 
 ```go
 for _, rm := range mounts {
@@ -1655,7 +1655,7 @@ lowerdir=
 
 <img src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221103-095252.png" alt="image-20221103095250783" title="挂在 rootfs" style="zoom: 80%;" />
 
-#### p.Create(ctx, config)
+##### p.Create(ctx, config)
 
 ```go
 // Create the process with the provided config
@@ -1734,7 +1734,7 @@ func (p *Init) Create(ctx context.Context, r *CreateConfig) error {
 
 ![image-20221102223958607](https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221102-223959.png "config")
 
-##### p.runtime.Create()
+###### p.runtime.Create()
 
 ```go
 // Create creates a new container and returns its pid if it was created successfully
