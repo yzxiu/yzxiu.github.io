@@ -23,9 +23,9 @@ default:
 
 
 
-但是在 docker，或这nerdctl 中，都存在 restart 命令。
+但是在 `docker`、`nerdctl` 中，都存在 `restart` 命令。
 
-解析来以 nerdctl 为例，看一下restart命令的实现。
+接下来以 nerdctl 为例，看一下restart命令的实现。
 
 ```go
 if err := stopContainer(ctx, found.Container, timeout); err != nil {
@@ -65,7 +65,39 @@ func startContainer(ctx context.Context, container containerd.Container, flagA b
 
 nerdctl  -> containerd -> shim
 
-
+```go
+func (p *Init) delete(ctx context.Context) error {
+   waitTimeout(ctx, &p.wg, 2*time.Second)
+   // 1 runc delete
+   err := p.runtime.Delete(ctx, p.id, nil)
+   // ignore errors if a runtime has already deleted the process
+   // but we still hold metadata and pipes
+   //
+   // this is common during a checkpoint, runc will delete the container state
+   // after a checkpoint and the container will no longer exist within runc
+   if err != nil {
+      if strings.Contains(err.Error(), "does not exist") {
+         err = nil
+      } else {
+         err = p.runtimeError(err, "failed to delete task")
+      }
+   }
+   if p.io != nil {
+      for _, c := range p.closers {
+         c.Close()
+      }
+      p.io.Close()
+   }
+   // 取消rootfs挂载
+   if err2 := mount.UnmountAll(p.Rootfs, 0); err2 != nil {
+      log.G(ctx).WithError(err2).Warn("failed to cleanup rootfs mount")
+      if err == nil {
+         err = fmt.Errorf("failed rootfs umount: %w", err2)
+      }
+   }
+   return err
+}
+```
 
 #### 通过runc删除容器
 
@@ -88,16 +120,11 @@ if err2 := mount.UnmountAll(p.Rootfs, 0); err2 != nil {
 }
 ```
 
-接下来通过 NewTask 重新创建容器，Start 启动容器，完成了容器的restart过程。
+接下来通过 `NewTask` 重新创建容器，`Start` 启动容器，完成了容器的restart过程。
 
 
 
 ## 总结
 
-从`runc`的角度来看，restart 过程是删除了容器，再重新创建了一个同名容器。
-
-
-
-
-
+从`runc`的角度来看，restart过程是删除了容器，再重新创建了一个同名容器。
 

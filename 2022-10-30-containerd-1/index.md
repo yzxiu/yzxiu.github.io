@@ -566,6 +566,17 @@ pull方法运行后，文件夹内容变化如下：
 
 ##  [client] client.NewContainer()
 
+```go
+// create a container
+container, err := client.NewContainer(
+	ctx,
+	"redis-server",
+	containerd.WithImage(image),
+	containerd.WithNewSnapshot("redis-server-snapshot", image),
+	containerd.WithNewSpec(oci.WithImageConfig(image)),
+)
+```
+
 NewContainer()方法如下：
 
 ```go
@@ -1840,7 +1851,9 @@ root       67705   63337  0 10:05 ?        00:00:00 runc init
 
 `containerd`创建task相关文件夹(也就是runc所需要的bundle)，并创建spec(也就是config.json)。
 
-`shim`根据配置挂载rootfs，然后调用`runc -b ... create`创建容器。
+`shim`根据配置挂载rootfs，然后调用`runc -b ... create`创建容器，等待`runc start`启动容器。
+
+
 
 <br>
 

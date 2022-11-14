@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2022-10-30-containerd-1\/"
-        },"genre": "posts","keywords": "containerd, containerd-shim","wordcount":  11186 ,
+        },"genre": "posts","keywords": "containerd, containerd-shim","wordcount":  11225 ,
         "url": "https:\/\/yzxiu.github.io\/2022-10-30-containerd-1\/","datePublished": "2022-10-30T21:48:08+08:00","dateModified": "2022-10-30T21:48:08+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,7 +102,7 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Containerd解析(1)</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-10-30">2022-10-30</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 11186 字&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-10-30">2022-10-30</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 11225 字&nbsp;
                 <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 23 分钟&nbsp;</div>
         </div><div class="featured-image"><img
         class="lazyload"
@@ -1263,7 +1263,29 @@
     </div>
 <br>
 <h2 id="client-clientnewcontainer">[client] client.NewContainer()</h2>
-<p>NewContainer()方法如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// create a container
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">container</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">client</span><span class="p">.</span><span class="nf">NewContainer</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">ctx</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;redis-server&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">containerd</span><span class="p">.</span><span class="nf">WithImage</span><span class="p">(</span><span class="nx">image</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">containerd</span><span class="p">.</span><span class="nf">WithNewSnapshot</span><span class="p">(</span><span class="s">&#34;redis-server-snapshot&#34;</span><span class="p">,</span> <span class="nx">image</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">containerd</span><span class="p">.</span><span class="nf">WithNewSpec</span><span class="p">(</span><span class="nx">oci</span><span class="p">.</span><span class="nf">WithImageConfig</span><span class="p">(</span><span class="nx">image</span><span class="p">)),</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>NewContainer()方法如下：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -3630,7 +3652,7 @@
 <h3 id="containernewtask小结">container.NewTask()小结</h3>
 <p>从上文的分析可以看出，NewTask()完成了容器启动前的所有准备工作。</p>
 <p><code>containerd</code>创建task相关文件夹(也就是runc所需要的bundle)，并创建spec(也就是config.json)。</p>
-<p><code>shim</code>根据配置挂载rootfs，然后调用<code>runc -b ... create</code>创建容器。</p>
+<p><code>shim</code>根据配置挂载rootfs，然后调用<code>runc -b ... create</code>创建容器，等待<code>runc start</code>启动容器。</p>
 <br>
 <h2 id="client-taskstartctx">[client] task.Start(ctx)</h2>
 <div class="highlight"><div class="chroma">

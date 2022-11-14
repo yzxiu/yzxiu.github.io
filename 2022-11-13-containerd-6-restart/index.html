@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2022-11-13-containerd-6-restart\/"
-        },"genre": "posts","wordcount":  467 ,
+        },"genre": "posts","wordcount":  645 ,
         "url": "https:\/\/yzxiu.github.io\/2022-11-13-containerd-6-restart\/","datePublished": "2022-11-13T11:55:58+08:00","dateModified": "2022-11-13T11:55:58+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,8 +102,8 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Containerd解析(6) - restart</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-11-13">2022-11-13</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 467 字&nbsp;
-                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 1 分钟&nbsp;</div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-11-13">2022-11-13</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 645 字&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 2 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
                     <span>目录</span>
@@ -156,8 +156,8 @@
 </span></span></code></pre></td></tr></table>
 </div>
 </div><p>说明已经 <code>Stopped</code> 的容器<code>runc</code>是不支持重新启动的。</p>
-<p>但是在 docker，或这nerdctl 中，都存在 restart 命令。</p>
-<p>解析来以 nerdctl 为例，看一下restart命令的实现。</p>
+<p>但是在 <code>docker</code>、<code>nerdctl</code> 中，都存在 <code>restart</code> 命令。</p>
+<p>接下来以 nerdctl 为例，看一下restart命令的实现。</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -225,7 +225,75 @@
 </div><p>先oldTask.Delete，然后NewTask。</p>
 <h2 id="oldtaskdelete">oldTask.Delete</h2>
 <p>nerdctl  -&gt; containerd -&gt; shim</p>
-<h4 id="通过runc删除容器">通过runc删除容器</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">Init</span><span class="p">)</span> <span class="nb">delete</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nf">waitTimeout</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">p</span><span class="p">.</span><span class="nx">wg</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// 1 runc delete
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">err</span> <span class="o">:=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">runtime</span><span class="p">.</span><span class="nf">Delete</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">p</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// ignore errors if a runtime has already deleted the process
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// but we still hold metadata and pipes
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">//
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// this is common during a checkpoint, runc will delete the container state
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// after a checkpoint and the container will no longer exist within runc
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Contains</span><span class="p">(</span><span class="nx">err</span><span class="p">.</span><span class="nf">Error</span><span class="p">(),</span> <span class="s">&#34;does not exist&#34;</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">err</span> <span class="p">=</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">err</span> <span class="p">=</span> <span class="nx">p</span><span class="p">.</span><span class="nf">runtimeError</span><span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="s">&#34;failed to delete task&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">p</span><span class="p">.</span><span class="nx">io</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">c</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">p</span><span class="p">.</span><span class="nx">closers</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">c</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">p</span><span class="p">.</span><span class="nx">io</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// 取消rootfs挂载
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">if</span> <span class="nx">err2</span> <span class="o">:=</span> <span class="nx">mount</span><span class="p">.</span><span class="nf">UnmountAll</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">Rootfs</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="nx">err2</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">log</span><span class="p">.</span><span class="nf">G</span><span class="p">(</span><span class="nx">ctx</span><span class="p">).</span><span class="nf">WithError</span><span class="p">(</span><span class="nx">err2</span><span class="p">).</span><span class="nf">Warn</span><span class="p">(</span><span class="s">&#34;failed to cleanup rootfs mount&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">err</span> <span class="p">=</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed rootfs umount: %w&#34;</span><span class="p">,</span> <span class="nx">err2</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="通过runc删除容器">通过runc删除容器</h4>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -263,9 +331,9 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><p>接下来通过 NewTask 重新创建容器，Start 启动容器，完成了容器的restart过程。</p>
+</div><p>接下来通过 <code>NewTask</code> 重新创建容器，<code>Start</code> 启动容器，完成了容器的restart过程。</p>
 <h2 id="总结">总结</h2>
-<p>从<code>runc</code>的角度来看，restart 过程是删除了容器，再重新创建了一个同名容器。</p>
+<p>从<code>runc</code>的角度来看，restart过程是删除了容器，再重新创建了一个同名容器。</p>
 </div><div class="post-footer" id="post-footer">
     <div class="post-info">
         <div class="post-info-line">
