@@ -9,6 +9,8 @@
 
 主要了解`containerd`怎样与`containerd-shim-runc-v2`进行交互，以及`containerd-shim-runc-v2`怎样调用`runc`与监控容器。
 
+代码版本： [1c90a442489720eec95342e1789ee8a5e1b9536f](https://github.com/containerd/containerd/tree/1c90a442489720eec95342e1789ee8a5e1b9536f)
+
 <br>
 
 ## Example

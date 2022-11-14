@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2022-10-30-containerd-1\/"
-        },"genre": "posts","keywords": "containerd, containerd-shim","wordcount":  11020 ,
+        },"genre": "posts","keywords": "containerd, containerd-shim","wordcount":  11026 ,
         "url": "https:\/\/yzxiu.github.io\/2022-10-30-containerd-1\/","datePublished": "2022-10-30T21:48:08+08:00","dateModified": "2022-10-30T21:48:08+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,8 +102,8 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Containerd解析(1)</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-10-30">2022-10-30</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 11020 字&nbsp;
-                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 22 分钟&nbsp;</div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-10-30">2022-10-30</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 11026 字&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 23 分钟&nbsp;</div>
         </div><div class="featured-image"><img
         class="lazyload"
         src="/svg/loading.min.svg"
@@ -203,6 +203,7 @@
 <p>本文使用containerd默认配置，不涉及docker。</p>
 <p>通过一个简单的例子，粗略了解containerd创建并运行一个容器的过程。</p>
 <p>主要了解<code>containerd</code>怎样与<code>containerd-shim-runc-v2</code>进行交互，以及<code>containerd-shim-runc-v2</code>怎样调用<code>runc</code>与监控容器。</p>
+<p>代码版本： <a href="https://github.com/containerd/containerd/tree/1c90a442489720eec95342e1789ee8a5e1b9536f" target="_blank" rel="noopener noreffer ">1c90a442489720eec95342e1789ee8a5e1b9536f</a></p>
 <br>
 <h2 id="example">Example</h2>
 <p>使用官方的<a href="https://github.com/containerd/containerd/blob/main/docs/getting-started.md#full-example" target="_blank" rel="noopener noreffer ">例子</a>，对<a href="https://github.com/containerd/containerd" target="_blank" rel="noopener noreffer ">containerd</a>，<a href="https://github.com/containerd/containerd/tree/main/cmd/containerd-shim-runc-v2" target="_blank" rel="noopener noreffer ">containerd-shim-runc-v2</a> 的代码进行debug</p>
