@@ -1834,6 +1834,14 @@ root       67705   63337  0 10:05 ?        00:00:00 runc init
 
 容器现在处于 runc create 之后的created(runc init)状态。
 
+### container.NewTask()小结
+
+从上文的分析可以看出，NewTask()完成了容器启动前的所有准备工作。
+
+`containerd`创建task相关文件夹(也就是runc所需要的bundle)，并创建spec(也就是config.json)。
+
+`shim`根据配置挂载rootfs，然后调用`runc -b ... create`创建容器。
+
 <br>
 
 ## [client] task.Start(ctx)
