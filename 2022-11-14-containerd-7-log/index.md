@@ -820,6 +820,25 @@ cmd.Stderr = pio.err.w
 
 启动应用程序，日志驱动将应用程序日志，以 `json` 的形式，写入到 `app.log` 文件中。
 
+```
+[xiu-desktop] nerdctl-log-example git:(master) ./shim-example
+log drive start!!!
+ERRO[0005] failed to read line from "stderr"             error=EOF
+ERRO[0005] failed to read line from "stdout"             error=EOF
+log drive exit 0
+[xiu-desktop] nerdctl-log-example git:(master) cat app.log         
+{"log":"2022-11-16 22:32:15.465213291 +0800 CST m=+0.000014187\n","stream":"stdout","time":"2022-11-16T14:32:15.46528788Z"}
+{"log":"2022-11-16 22:32:16.466022681 +0800 CST m=+1.000823617\n","stream":"stdout","time":"2022-11-16T14:32:16.466197357Z"}
+{"log":"2022-11-16 22:32:17.467090879 +0800 CST m=+2.001891785\n","stream":"stdout","time":"2022-11-16T14:32:17.467138819Z"}
+{"log":"2022-11-16 22:32:18.467998254 +0800 CST m=+3.002799190\n","stream":"stdout","time":"2022-11-16T14:32:18.468071711Z"}
+{"log":"2022-11-16 22:32:19.468046521 +0800 CST m=+4.002847457\n","stream":"stdout","time":"2022-11-16T14:32:19.468104589Z"}
+
+```
+
+
+
+
+
 nerdctl中日志处理方式大致如此。
 
 [github地址](https://github.com/yzxiu/nerdctl-log-example)

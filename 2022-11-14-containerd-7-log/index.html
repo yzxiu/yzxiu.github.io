@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2022-11-14-containerd-7-log\/"
-        },"genre": "posts","keywords": "shim, log, pipe","wordcount":  3739 ,
+        },"genre": "posts","keywords": "shim, log, pipe","wordcount":  3807 ,
         "url": "https:\/\/yzxiu.github.io\/2022-11-14-containerd-7-log\/","datePublished": "2022-11-14T11:14:42+08:00","dateModified": "2022-11-14T11:14:42+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,7 +102,7 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Containerd解析(7) - log</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-11-14">2022-11-14</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 3739 字&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-11-14">2022-11-14</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 3807 字&nbsp;
                 <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 8 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
@@ -1634,7 +1634,35 @@
 </span></span></code></pre></td></tr></table>
 </div>
 </div><p>启动应用程序，日志驱动将应用程序日志，以 <code>json</code> 的形式，写入到 <code>app.log</code> 文件中。</p>
-<p>nerdctl中日志处理方式大致如此。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">[xiu-desktop] nerdctl-log-example git:(master) ./shim-example
+</span></span><span class="line"><span class="cl">log drive start!!!
+</span></span><span class="line"><span class="cl">ERRO[0005] failed to read line from &#34;stderr&#34;             error=EOF
+</span></span><span class="line"><span class="cl">ERRO[0005] failed to read line from &#34;stdout&#34;             error=EOF
+</span></span><span class="line"><span class="cl">log drive exit 0
+</span></span><span class="line"><span class="cl">[xiu-desktop] nerdctl-log-example git:(master) cat app.log         
+</span></span><span class="line"><span class="cl">{&#34;log&#34;:&#34;2022-11-16 22:32:15.465213291 +0800 CST m=+0.000014187\n&#34;,&#34;stream&#34;:&#34;stdout&#34;,&#34;time&#34;:&#34;2022-11-16T14:32:15.46528788Z&#34;}
+</span></span><span class="line"><span class="cl">{&#34;log&#34;:&#34;2022-11-16 22:32:16.466022681 +0800 CST m=+1.000823617\n&#34;,&#34;stream&#34;:&#34;stdout&#34;,&#34;time&#34;:&#34;2022-11-16T14:32:16.466197357Z&#34;}
+</span></span><span class="line"><span class="cl">{&#34;log&#34;:&#34;2022-11-16 22:32:17.467090879 +0800 CST m=+2.001891785\n&#34;,&#34;stream&#34;:&#34;stdout&#34;,&#34;time&#34;:&#34;2022-11-16T14:32:17.467138819Z&#34;}
+</span></span><span class="line"><span class="cl">{&#34;log&#34;:&#34;2022-11-16 22:32:18.467998254 +0800 CST m=+3.002799190\n&#34;,&#34;stream&#34;:&#34;stdout&#34;,&#34;time&#34;:&#34;2022-11-16T14:32:18.468071711Z&#34;}
+</span></span><span class="line"><span class="cl">{&#34;log&#34;:&#34;2022-11-16 22:32:19.468046521 +0800 CST m=+4.002847457\n&#34;,&#34;stream&#34;:&#34;stdout&#34;,&#34;time&#34;:&#34;2022-11-16T14:32:19.468104589Z&#34;}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>nerdctl中日志处理方式大致如此。</p>
 <p><a href="https://github.com/yzxiu/nerdctl-log-example" target="_blank" rel="noopener noreffer ">github地址</a></p>
 <br>
 <br>
