@@ -257,7 +257,7 @@ runc启动方式为：`Pass-Through & Detached`
 
 注意，这里的 Stdio 与上面的区别。
 
-在 `-it` 模式中，有Stdin, Stdout,没有Stderr，是因为我们使用终端模式打开，需要输入，并且Stdout和Stderr会统一输出到终端，所以合并在Stdout中
+在 `-it` 模式中，有Stdin, Stdout,没有Stderr，是因为我们使用终端模式运行，需要输入，并且Stdout和Stderr会统一输出到终端，所以合并在Stdout中
 
 在`-d`模式中，因为进程是后台运行，所以不需要Stdin，Stdout和Stderr可以分开传输。
 

@@ -4,7 +4,7 @@
         <link>https://yzxiu.github.io/tags/io/</link>
         <description>io - 标签 - Yuyu&#39;s Blog</description>
         <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Tue, 15 Nov 2022 17:04:35 &#43;0800</lastBuildDate><atom:link href="https://yzxiu.github.io/tags/io/" rel="self" type="application/rss+xml" /><item>
-    <title>2022 11 15 Containerd解析(8) - Runc Modes</title>
+    <title>Containerd解析(8) - Runc Modes</title>
     <link>https://yzxiu.github.io/2022-11-15-containerd-8-runc-modes/</link>
     <pubDate>Tue, 15 Nov 2022 17:04:35 &#43;0800</pubDate>
     <author>Yuyu</author>

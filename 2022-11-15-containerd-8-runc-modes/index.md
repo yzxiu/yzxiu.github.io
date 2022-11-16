@@ -1,4 +1,4 @@
-# 2022 11 15 Containerd解析(8) - Runc Modes
+# Containerd解析(8) - Runc Modes
 
 
 ## 概述
