@@ -247,7 +247,7 @@ func (p *linuxPlatform) CopyConsole(ctx context.Context, console console.Console
 
 ### nerdctl run -d --name runcdev1 q946666800/runcdev
 
-`Pass-Through & Detached` ，与上面的方式类似，简单看一下。
+runc启动方式为：`Pass-Through & Detached`
 
 首先，查看shim，create的请求参数：
 

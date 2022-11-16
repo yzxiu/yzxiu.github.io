@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2022-11-14-containerd-7-log\/"
-        },"genre": "posts","keywords": "shim, log, pipe","wordcount":  3734 ,
+        },"genre": "posts","keywords": "shim, log, pipe","wordcount":  3739 ,
         "url": "https:\/\/yzxiu.github.io\/2022-11-14-containerd-7-log\/","datePublished": "2022-11-14T11:14:42+08:00","dateModified": "2022-11-14T11:14:42+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,7 +102,7 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Containerd解析(7) - log</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-11-14">2022-11-14</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 3734 字&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-11-14">2022-11-14</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 3739 字&nbsp;
                 <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 8 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
@@ -532,7 +532,7 @@
 <p>与创建socket相关联，将容器的 stdio 传输至 nerdctl 进程</p>
 <br>
 <h3 id="nerdctl-run--d---name-runcdev1-q946666800runcdev">nerdctl run -d &ndash;name runcdev1 q946666800/runcdev</h3>
-<p><code>Pass-Through &amp; Detached</code> ，与上面的方式类似，简单看一下。</p>
+<p>runc启动方式为：<code>Pass-Through &amp; Detached</code></p>
 <p>首先，查看shim，create的请求参数：</p>
 <p><img
         class="lazyload"
