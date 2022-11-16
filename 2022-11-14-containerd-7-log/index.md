@@ -841,7 +841,7 @@ log drive exit 0
 
 nerdctl中日志处理方式大致如此。
 
-[github地址](https://github.com/yzxiu/nerdctl-log-example)
+[demo](https://github.com/yzxiu/nerdctl-log-example)
 
 
 
