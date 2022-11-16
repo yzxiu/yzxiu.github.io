@@ -391,7 +391,7 @@ func inheritStdio(process *libcontainer.Process) {
 
 ### Pass-Through & Foreground
 
-
+略
 
 
 
