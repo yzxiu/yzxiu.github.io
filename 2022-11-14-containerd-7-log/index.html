@@ -1,0 +1,1684 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <title>Containerd解析(7) - log - Yuyu&#39;s Blog</title><meta name="Description" content=""><meta property="og:title" content="Containerd解析(7) - log" />
+<meta property="og:description" content="概述 了解 nerdctl 是怎样处理容器日志的，后续再分析kubelet的处理方式。 nerdctl 中的日志处理 容器日志处理，其实就是处理runc程序的标准输出，标准错误" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://yzxiu.github.io/2022-11-14-containerd-7-log/" /><meta property="og:image" content="https://yzxiu.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2022-11-14T11:14:42+08:00" />
+<meta property="article:modified_time" content="2022-11-14T11:14:42+08:00" /><meta property="og:site_name" content="Yuyu&#39;s Blog" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://yzxiu.github.io/logo.png"/>
+
+<meta name="twitter:title" content="Containerd解析(7) - log"/>
+<meta name="twitter:description" content="概述 了解 nerdctl 是怎样处理容器日志的，后续再分析kubelet的处理方式。 nerdctl 中的日志处理 容器日志处理，其实就是处理runc程序的标准输出，标准错误"/>
+<meta name="application-name" content="Yuyu&#39;s Blog">
+<meta name="apple-mobile-web-app-title" content="Yuyu&#39;s Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="icon" href="/images/avataaars.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://yzxiu.github.io/2022-11-14-containerd-7-log/" /><link rel="prev" href="https://yzxiu.github.io/2022-11-13-containerd-6-restart/" /><link rel="next" href="https://yzxiu.github.io/2022-11-15-containerd-8-runc-modes/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"></noscript><link rel="preload" href="/lib/animate/animate.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="/lib/animate/animate.min.css"></noscript><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "Containerd解析(7) - log",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/yzxiu.github.io\/2022-11-14-containerd-7-log\/"
+        },"genre": "posts","keywords": "shim, log, pipe","wordcount":  3734 ,
+        "url": "https:\/\/yzxiu.github.io\/2022-11-14-containerd-7-log\/","datePublished": "2022-11-14T11:14:42+08:00","dateModified": "2022-11-14T11:14:42+08:00","publisher": {
+            "@type": "Organization",
+            "name": ""},"author": {
+                "@type": "Person",
+                "name": "Yuyu"
+            },"description": ""
+    }
+    </script></head>
+    <body data-header-desktop="fixed" data-header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="Yuyu&#39;s Blog">Yuyu&#39;s Blog</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin" aria-hidden="true"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw" aria-hidden="true"></i>
+                </a></div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="Yuyu&#39;s Blog">Yuyu&#39;s Blog</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin" aria-hidden="true"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw" aria-hidden="true"></i>
+            </a></div>
+    </div>
+</header><div class="search-dropdown desktop">
+        <div id="search-dropdown-desktop"></div>
+    </div>
+    <div class="search-dropdown mobile">
+        <div id="search-dropdown-mobile"></div>
+    </div><main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content always-active" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Containerd解析(7) - log</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-11-14">2022-11-14</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 3734 字&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 8 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  data-kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right" aria-hidden="true"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#概述">概述</a></li>
+    <li><a href="#nerdctl-中的日志处理">nerdctl 中的日志处理</a>
+      <ul>
+        <li><a href="#nerdctl-run--t---name-runcdev1-q946666800runcdev">nerdctl run -t &ndash;name runcdev1 q946666800/runcdev</a></li>
+        <li><a href="#nerdctl-run--d---name-runcdev1-q946666800runcdev">nerdctl run -d &ndash;name runcdev1 q946666800/runcdev</a></li>
+        <li><a href="#nerdctl-log-example">nerdctl-log-example</a></li>
+      </ul>
+    </li>
+    <li><a href="#kubelet中的日志处理">kubelet中的日志处理</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><h2 id="概述">概述</h2>
+<p>了解 nerdctl 是怎样处理容器日志的，后续再分析kubelet的处理方式。</p>
+<h2 id="nerdctl-中的日志处理">nerdctl 中的日志处理</h2>
+<p>容器日志处理，其实就是处理runc程序的标准输出，标准错误。</p>
+<p>分析两种常用的情况。</p>
+<h3 id="nerdctl-run--t---name-runcdev1-q946666800runcdev">nerdctl run -t &ndash;name runcdev1 q946666800/runcdev</h3>
+<p>runc启动命令：</p>
+<p><figure><a class="lightgallery" href="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-152107.png" title="image-20221116152106606" data-thumbnail="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-152107.png" data-sub-html="<h2>runc启动命令</h2><p>image-20221116152106606</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-152107.png"
+            data-srcset="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-152107.png, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-152107.png 1.5x, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-152107.png 2x"
+            data-sizes="auto"
+            alt="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-152107.png" />
+    </a><figcaption class="image-caption">runc启动命令</figcaption>
+    </figure></p>
+<p>查看config.json配置</p>
+<p><figure><a class="lightgallery" href="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-152355.png" title="image-20221116152354617" data-thumbnail="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-152355.png" data-sub-html="<h2>terminal: true</h2><p>image-20221116152354617</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-152355.png"
+            data-srcset="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-152355.png, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-152355.png 1.5x, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-152355.png 2x"
+            data-sizes="auto"
+            alt="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-152355.png" />
+    </a><figcaption class="image-caption">terminal: true</figcaption>
+    </figure></p>
+<p>可知该模式为 <code>New Terminal &amp; Detached</code> ，需要外部传入 <code>--console-socket</code></p>
+<p>从runc启动参数可以看到</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">12 = {string} &#34;--console-socket&#34;
+</span></span><span class="line"><span class="cl">13 = {string} &#34;/run/user/1000/pty4072274856/pty.sock&#34;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看如何创建并监听 <code>/run/user/1000/pty4072274856/pty.sock</code> ？？？</p>
+<p>查看代码，可以看到在shim的 runc.NewContainer()  -&gt;  p.Create() 代码中，创建了 pty.sock</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="k">if</span> <span class="nx">r</span><span class="p">.</span><span class="nx">Terminal</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">socket</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">runc</span><span class="p">.</span><span class="nf">NewTempConsoleSocket</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to create OCI runtime console socket: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="nx">socket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">pio</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nf">createIO</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">p</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span> <span class="nx">p</span><span class="p">.</span><span class="nx">IoUID</span><span class="p">,</span> <span class="nx">p</span><span class="p">.</span><span class="nx">IoGID</span><span class="p">,</span> <span class="nx">p</span><span class="p">.</span><span class="nx">stdio</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to create init process I/O: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">p</span><span class="p">.</span><span class="nx">io</span> <span class="p">=</span> <span class="nx">pio</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>NewTempConsoleSocket()创建了 pty.sock，并将sock的路径参数传递给runc。</p>
+<p>接下来查看 shim 创建的<code>pty.sock</code>怎样与<code>nerdctl</code>关联起来？？？</p>
+<p>查看 <code>nerdctl run -it</code> 相关代码，</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// 
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">var</span> <span class="nx">con</span> <span class="nx">console</span><span class="p">.</span><span class="nx">Console</span>
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="nx">flagT</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">con</span> <span class="p">=</span> <span class="nx">console</span><span class="p">.</span><span class="nf">Current</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="k">defer</span> <span class="nx">con</span><span class="p">.</span><span class="nf">Reset</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">con</span><span class="p">.</span><span class="nf">SetRaw</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// nerdctl/pkg/taskutil/taskutil.go
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 注意， cio.WithStreams(in, con, nil)这里传入了 in，con
+</span></span></span><span class="line"><span class="cl"><span class="c1">// con是nertctl进程本身的终端。
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">ioCreator</span> <span class="p">=</span> <span class="nx">cio</span><span class="p">.</span><span class="nf">NewCreator</span><span class="p">(</span><span class="nx">cio</span><span class="p">.</span><span class="nf">WithStreams</span><span class="p">(</span><span class="nx">in</span><span class="p">,</span> <span class="nx">con</span><span class="p">,</span> <span class="kc">nil</span><span class="p">),</span> <span class="nx">cio</span><span class="p">.</span><span class="nx">WithTerminal</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// WithTerminal sets the terminal option
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">WithTerminal</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">Streams</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">opt</span><span class="p">.</span><span class="nx">Terminal</span> <span class="p">=</span> <span class="kc">true</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// WithStreams sets the stream options to the specified Reader and Writers
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">WithStreams</span><span class="p">(</span><span class="nx">stdin</span> <span class="nx">io</span><span class="p">.</span><span class="nx">Reader</span><span class="p">,</span> <span class="nx">stdout</span><span class="p">,</span> <span class="nx">stderr</span> <span class="nx">io</span><span class="p">.</span><span class="nx">Writer</span><span class="p">)</span> <span class="nx">Opt</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kd">func</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">Streams</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">opt</span><span class="p">.</span><span class="nx">Stdin</span> <span class="p">=</span> <span class="nx">stdin</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">opt</span><span class="p">.</span><span class="nx">Stdout</span> <span class="p">=</span> <span class="nx">stdout</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">opt</span><span class="p">.</span><span class="nx">Stderr</span> <span class="p">=</span> <span class="nx">stderr</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// NewCreator returns an IO creator from the options
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">NewCreator</span><span class="p">(</span><span class="nx">opts</span> <span class="o">...</span><span class="nx">Opt</span><span class="p">)</span> <span class="nx">Creator</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">streams</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">Streams</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">opt</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">opts</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">opt</span><span class="p">(</span><span class="nx">streams</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">streams</span><span class="p">.</span><span class="nx">FIFODir</span> <span class="o">==</span> <span class="s">&#34;&#34;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">streams</span><span class="p">.</span><span class="nx">FIFODir</span> <span class="p">=</span> <span class="nx">defaults</span><span class="p">.</span><span class="nx">DefaultFIFODir</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 所以，在这里的时候
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">return</span> <span class="kd">func</span><span class="p">(</span><span class="nx">id</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="nx">IO</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="c1">// 将 stdio 转换为字符串路径
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nx">fifos</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">NewFIFOSetInDir</span><span class="p">(</span><span class="nx">streams</span><span class="p">.</span><span class="nx">FIFODir</span><span class="p">,</span> <span class="nx">id</span><span class="p">,</span> <span class="nx">streams</span><span class="p">.</span><span class="nx">Terminal</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">streams</span><span class="p">.</span><span class="nx">Stdin</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">fifos</span><span class="p">.</span><span class="nx">Stdin</span> <span class="p">=</span> <span class="s">&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">streams</span><span class="p">.</span><span class="nx">Stdout</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">fifos</span><span class="p">.</span><span class="nx">Stdout</span> <span class="p">=</span> <span class="s">&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="c1">// 这里会执行
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="k">if</span> <span class="nx">streams</span><span class="p">.</span><span class="nx">Stderr</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">fifos</span><span class="p">.</span><span class="nx">Stderr</span> <span class="p">=</span> <span class="s">&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nf">copyIO</span><span class="p">(</span><span class="nx">fifos</span><span class="p">,</span> <span class="nx">streams</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>最终在 copyIO 中，会创建 /run/containerd/fifo/392418153 路径下创建相关sock，并与nerdctl终端相关联，如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">root@xiu-desktop:/run/containerd/fifo/7416553# tree
+</span></span><span class="line"><span class="cl">.
+</span></span><span class="line"><span class="cl">├── 2e8e9f34cedc5bcca69af8e0e98afae4452463a3b5094b03b71a970f9d88eefa-stdin
+</span></span><span class="line"><span class="cl">└── 2e8e9f34cedc5bcca69af8e0e98afae4452463a3b5094b03b71a970f9d88eefa-stdout
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>随后，nerdctl将这两个路径传递给containerd，containerd传递给shim。</p>
+<p>在shim中，接收到的请求如下：</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-210238.png"
+        data-srcset="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-210238.png, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-210238.png 1.5x, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-210238.png 2x"
+        data-sizes="auto"
+        alt="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-210238.png"
+        title="image-20221116210237546" /></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="k">if</span> <span class="nx">socket</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">console</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">socket</span><span class="p">.</span><span class="nf">ReceiveMaster</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to retrieve console master: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">console</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">Platform</span><span class="p">.</span><span class="nf">CopyConsole</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">console</span><span class="p">,</span> <span class="nx">p</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">Stdin</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">Stdout</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">Stderr</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">p</span><span class="p">.</span><span class="nx">wg</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to start console copy: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">p</span><span class="p">.</span><span class="nx">console</span> <span class="p">=</span> <span class="nx">console</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pio</span><span class="p">.</span><span class="nf">Copy</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">p</span><span class="p">.</span><span class="nx">wg</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to start io pipe copy: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">linuxPlatform</span><span class="p">)</span> <span class="nf">CopyConsole</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">console</span> <span class="nx">console</span><span class="p">.</span><span class="nx">Console</span><span class="p">,</span> <span class="nx">id</span><span class="p">,</span> <span class="nx">stdin</span><span class="p">,</span> <span class="nx">stdout</span><span class="p">,</span> <span class="nx">stderr</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">wg</span> <span class="o">*</span><span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span><span class="p">)</span> <span class="p">(</span><span class="nx">cons</span> <span class="nx">c驱动onsole</span><span class="p">.</span><span class="nx">Console</span><span class="p">,</span> <span class="nx">retErr</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">p</span><span class="p">.</span><span class="nx">epoller</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;uninitialized epoller&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">epollConsole</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">epoller</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="nx">console</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="kd">var</span> <span class="nx">cwg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">stdin</span> <span class="o">!=</span> <span class="s">&#34;&#34;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">in</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">fifo</span><span class="p">.</span><span class="nf">OpenFifo</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">stdin</span><span class="p">,</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">O_RDONLY</span><span class="p">|</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">O_NONBLOCK</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">cwg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">cwg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">bp</span> <span class="o">:=</span> <span class="nx">bufPool</span><span class="p">.</span><span class="nf">Get</span><span class="p">().(</span><span class="o">*</span><span class="p">[]</span><span class="kt">byte</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="k">defer</span> <span class="nx">bufPool</span><span class="p">.</span><span class="nf">Put</span><span class="p">(</span><span class="nx">bp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">io</span><span class="p">.</span><span class="nf">CopyBuffer</span><span class="p">(</span><span class="nx">epollConsole</span><span class="p">,</span> <span class="nx">in</span><span class="p">,</span> <span class="o">*</span><span class="nx">bp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="c1">// we need to shutdown epollConsole when pipe broken
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>         <span class="nx">epollConsole</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">epoller</span><span class="p">.</span><span class="nx">CloseConsole</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">epollConsole</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}()</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">uri</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">url</span><span class="p">.</span><span class="nf">Parse</span><span class="p">(</span><span class="nx">stdout</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;unable to parse stdout uri: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// uri.Scheme = &#34;&#34;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">switch</span> <span class="nx">uri</span><span class="p">.</span><span class="nx">Scheme</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="k">case</span> <span class="s">&#34;binary&#34;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="o">...</span>
+</span></span><span class="line"><span class="cl">      <span class="o">...</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">default</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">// 
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="nx">outw</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">fifo</span><span class="p">.</span><span class="nf">OpenFifo</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">stdout</span><span class="p">,</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">O_WRONLY</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">outr</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">fifo</span><span class="p">.</span><span class="nf">OpenFifo</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">stdout</span><span class="p">,</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">O_RDONLY</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">cwg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">cwg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">buf</span> <span class="o">:=</span> <span class="nx">bufPool</span><span class="p">.</span><span class="nf">Get</span><span class="p">().(</span><span class="o">*</span><span class="p">[]</span><span class="kt">byte</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="k">defer</span> <span class="nx">bufPool</span><span class="p">.</span><span class="nf">Put</span><span class="p">(</span><span class="nx">buf</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">io</span><span class="p">.</span><span class="nf">CopyBuffer</span><span class="p">(</span><span class="nx">outw</span><span class="p">,</span> <span class="nx">epollConsole</span><span class="p">,</span> <span class="o">*</span><span class="nx">buf</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">         <span class="nx">outw</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">outr</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}()</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">cwg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="nx">epollConsole</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>在shim中，通过 传递进来的</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-210507.png"
+        data-srcset="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-210507.png, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-210507.png 1.5x, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-210507.png 2x"
+        data-sizes="auto"
+        alt="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-210507.png"
+        title="image-20221116210506511" /></p>
+<p>与创建socket相关联，将容器的 stdio 传输至 nerdctl 进程</p>
+<br>
+<h3 id="nerdctl-run--d---name-runcdev1-q946666800runcdev">nerdctl run -d &ndash;name runcdev1 q946666800/runcdev</h3>
+<p><code>Pass-Through &amp; Detached</code> ，与上面的方式类似，简单看一下。</p>
+<p>首先，查看shim，create的请求参数：</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-211251.png"
+        data-srcset="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-211251.png, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-211251.png 1.5x, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-211251.png 2x"
+        data-sizes="auto"
+        alt="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-211251.png"
+        title="image-20221116211250529" /></p>
+<div class="details admonition info open">
+        <div class="details-summary admonition-title">
+            <i class="icon fas fa-info-circle fa-fw" aria-hidden="true"></i>信息<i class="details-icon fas fa-angle-right fa-fw" aria-hidden="true"></i>
+        </div>
+        <div class="details-content">
+            <div class="admonition-content"><p>注意，这里的 Stdio 与上面的区别。</p>
+<p>在 <code>-it</code> 模式中，有Stdin, Stdout,没有Stderr，是因为我们使用终端模式打开，需要输入，并且Stdout和Stderr会统一输出到终端，所以合并在Stdout中</p>
+<p>在<code>-d</code>模式中，因为进程是后台运行，所以不需要Stdin，Stdout和Stderr可以分开传输。</p>
+</div>
+        </div>
+    </div>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="k">if</span> <span class="nx">r</span><span class="p">.</span><span class="nx">Terminal</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">socket</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">runc</span><span class="p">.</span><span class="nf">NewTempConsoleSocket</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to create OCI runtime console socket: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">defer</span> <span class="nx">socket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">pio</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nf">createIO</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">p</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span> <span class="nx">p</span><span class="p">.</span><span class="nx">IoUID</span><span class="p">,</span> <span class="nx">p</span><span class="p">.</span><span class="nx">IoGID</span><span class="p">,</span> <span class="nx">p</span><span class="p">.</span><span class="nx">stdio</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to create init process I/O: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">p</span><span class="p">.</span><span class="nx">io</span> <span class="p">=</span> <span class="nx">pio</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这回执行的是 <code>createIO</code></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">createIO</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">id</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">ioUID</span><span class="p">,</span> <span class="nx">ioGID</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">stdio</span> <span class="nx">stdio</span><span class="p">.</span><span class="nx">Stdio</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">processIO</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">pio</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">processIO</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">stdio</span><span class="p">:</span> <span class="nx">stdio</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">stdio</span><span class="p">.</span><span class="nf">IsNull</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">i</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">runc</span><span class="p">.</span><span class="nf">NewNullIO</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">pio</span><span class="p">.</span><span class="nx">io</span> <span class="p">=</span> <span class="nx">i</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">pio</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">u</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">url</span><span class="p">.</span><span class="nf">Parse</span><span class="p">(</span><span class="nx">stdio</span><span class="p">.</span><span class="nx">Stdout</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;unable to parse stdout uri: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">u</span><span class="p">.</span><span class="nx">Scheme</span> <span class="o">==</span> <span class="s">&#34;&#34;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">u</span><span class="p">.</span><span class="nx">Scheme</span> <span class="p">=</span> <span class="s">&#34;fifo&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">pio</span><span class="p">.</span><span class="nx">uri</span> <span class="p">=</span> <span class="nx">u</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// u.scheme = &#34;binary&#34;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">switch</span> <span class="nx">u</span><span class="p">.</span><span class="nx">Scheme</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">case</span> <span class="s">&#34;fifo&#34;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">pio</span><span class="p">.</span><span class="nx">copy</span> <span class="p">=</span> <span class="kc">true</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">pio</span><span class="p">.</span><span class="nx">io</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">runc</span><span class="p">.</span><span class="nf">NewPipeIO</span><span class="p">(</span><span class="nx">ioUID</span><span class="p">,</span> <span class="nx">ioGID</span><span class="p">,</span> <span class="nf">withConditionalIO</span><span class="p">(</span><span class="nx">stdio</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="k">case</span> <span class="s">&#34;binary&#34;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">pio</span><span class="p">.</span><span class="nx">io</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nf">NewBinaryIO</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">id</span><span class="p">,</span> <span class="nx">u</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">case</span> <span class="s">&#34;file&#34;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">filePath</span> <span class="o">:=</span> <span class="nx">u</span><span class="p">.</span><span class="nx">Path</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">MkdirAll</span><span class="p">(</span><span class="nx">filepath</span><span class="p">.</span><span class="nf">Dir</span><span class="p">(</span><span class="nx">filePath</span><span class="p">),</span> <span class="mo">0755</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="kd">var</span> <span class="nx">f</span> <span class="o">*</span><span class="nx">os</span><span class="p">.</span><span class="nx">File</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">f</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">OpenFile</span><span class="p">(</span><span class="nx">filePath</span><span class="p">,</span> <span class="nx">os</span><span class="p">.</span><span class="nx">O_APPEND</span><span class="p">|</span><span class="nx">os</span><span class="p">.</span><span class="nx">O_CREATE</span><span class="p">|</span><span class="nx">os</span><span class="p">.</span><span class="nx">O_WRONLY</span><span class="p">,</span> <span class="mo">0644</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">f</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">pio</span><span class="p">.</span><span class="nx">stdio</span><span class="p">.</span><span class="nx">Stdout</span> <span class="p">=</span> <span class="nx">filePath</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">pio</span><span class="p">.</span><span class="nx">stdio</span><span class="p">.</span><span class="nx">Stderr</span> <span class="p">=</span> <span class="nx">filePath</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">pio</span><span class="p">.</span><span class="nx">copy</span> <span class="p">=</span> <span class="kc">true</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">pio</span><span class="p">.</span><span class="nx">io</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">runc</span><span class="p">.</span><span class="nf">NewPipeIO</span><span class="p">(</span><span class="nx">ioUID</span><span class="p">,</span> <span class="nx">ioGID</span><span class="p">,</span> <span class="nf">withConditionalIO</span><span class="p">(</span><span class="nx">stdio</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="k">default</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;unknown STDIO scheme %s&#34;</span><span class="p">,</span> <span class="nx">u</span><span class="p">.</span><span class="nx">Scheme</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">pio</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// NewBinaryIO runs a custom binary process for pluggable shim logging
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">NewBinaryIO</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">id</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">uri</span> <span class="o">*</span><span class="nx">url</span><span class="p">.</span><span class="nx">URL</span><span class="p">)</span> <span class="p">(</span><span class="nx">_</span> <span class="nx">runc</span><span class="p">.</span><span class="nx">IO</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">ns</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">namespaces</span><span class="p">.</span><span class="nf">NamespaceRequired</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="kd">var</span> <span class="nx">closers</span> <span class="p">[]</span><span class="kd">func</span><span class="p">()</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">   <span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">result</span> <span class="o">:=</span> <span class="nx">multierror</span><span class="p">.</span><span class="nf">Append</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">fn</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">closers</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">result</span> <span class="p">=</span> <span class="nx">multierror</span><span class="p">.</span><span class="nf">Append</span><span class="p">(</span><span class="nx">result</span><span class="p">,</span> <span class="nf">fn</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">err</span> <span class="p">=</span> <span class="nx">multierror</span><span class="p">.</span><span class="nf">Flatten</span><span class="p">(</span><span class="nx">result</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">out</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">newPipe</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to create stdout pipes: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">closers</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">closers</span><span class="p">,</span> <span class="nx">out</span><span class="p">.</span><span class="nx">Close</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">serr</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">newPipe</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to create stderr pipes: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">closers</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">closers</span><span class="p">,</span> <span class="nx">serr</span><span class="p">.</span><span class="nx">Close</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">r</span><span class="p">,</span> <span class="nx">w</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">Pipe</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">closers</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">closers</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">Close</span><span class="p">,</span> <span class="nx">w</span><span class="p">.</span><span class="nx">Close</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// 1, 配置日志驱动子进程
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">cmd</span> <span class="o">:=</span> <span class="nf">NewBinaryCmd</span><span class="p">(</span><span class="nx">uri</span><span class="p">,</span> <span class="nx">id</span><span class="p">,</span> <span class="nx">ns</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// 2, 配置子进程额外文件描述符
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">cmd</span><span class="p">.</span><span class="nx">ExtraFiles</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">ExtraFiles</span><span class="p">,</span> <span class="nx">out</span><span class="p">.</span><span class="nx">r</span><span class="p">,</span> <span class="nx">serr</span><span class="p">.</span><span class="nx">r</span><span class="p">,</span> <span class="nx">w</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// don&#39;t need to register this with the reaper or wait when
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// running inside a shim
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">cmd</span><span class="p">.</span><span class="nf">Start</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to start binary process: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">closers</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">closers</span><span class="p">,</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span> <span class="k">return</span> <span class="nx">cmd</span><span class="p">.</span><span class="nx">Process</span><span class="p">.</span><span class="nf">Kill</span><span class="p">()</span> <span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// close our side of the pipe after start
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">w</span><span class="p">.</span><span class="nf">Close</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to close write pipe after start: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// wait for the logging binary to be ready
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">b</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">r</span><span class="p">.</span><span class="nf">Read</span><span class="p">(</span><span class="nx">b</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nx">err</span> <span class="o">!=</span> <span class="nx">io</span><span class="p">.</span><span class="nx">EOF</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to read from logging binary: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="o">&amp;</span><span class="nx">binaryIO</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">cmd</span><span class="p">:</span> <span class="nx">cmd</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">out</span><span class="p">:</span> <span class="nx">out</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">err</span><span class="p">:</span> <span class="nx">serr</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="p">},</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>日志驱动cmd信息如下：</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-214344.png"
+        data-srcset="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-214344.png, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-214344.png 1.5x, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-214344.png 2x"
+        data-sizes="auto"
+        alt="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-214344.png"
+        title="image-20221116214343939" /></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-GO" data-lang="GO"><span class="line"><span class="cl"><span class="k">if</span> <span class="nx">opts</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">IO</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">opts</span><span class="p">.</span><span class="nf">Set</span><span class="p">(</span><span class="nx">cmd</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 将上面的文件描述符，传递给容器进程
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">b</span> <span class="o">*</span><span class="nx">binaryIO</span><span class="p">)</span> <span class="nf">Set</span><span class="p">(</span><span class="nx">cmd</span> <span class="o">*</span><span class="nx">exec</span><span class="p">.</span><span class="nx">Cmd</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">b</span><span class="p">.</span><span class="nx">out</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">cmd</span><span class="p">.</span><span class="nx">Stdout</span> <span class="p">=</span> <span class="nx">b</span><span class="p">.</span><span class="nx">out</span><span class="p">.</span><span class="nx">w</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">b</span><span class="p">.</span><span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">cmd</span><span class="p">.</span><span class="nx">Stderr</span> <span class="p">=</span> <span class="nx">b</span><span class="p">.</span><span class="nx">err</span><span class="p">.</span><span class="nx">w</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看日志驱动，</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// nerdctl/pkg/logging/logging.go
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">Main</span><span class="p">(</span><span class="nx">argv2</span> <span class="kt">string</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fn</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">getLoggerFunc</span><span class="p">(</span><span class="nx">argv2</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 从代码可以看出，所谓日志驱动，就是编写处理日志的fn函数，然后传递给 logging.Run
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">logging</span><span class="p">.</span><span class="nf">Run</span><span class="p">(</span><span class="nx">fn</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// github.com/containerd/containerd@v1.7.0-beta.0/runtime/v2/logging/logging_unix.go
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">config</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">Config</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">ID</span><span class="p">:</span>        <span class="nx">os</span><span class="p">.</span><span class="nf">Getenv</span><span class="p">(</span><span class="s">&#34;CONTAINER_ID&#34;</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">Namespace</span><span class="p">:</span> <span class="nx">os</span><span class="p">.</span><span class="nf">Getenv</span><span class="p">(</span><span class="s">&#34;CONTAINER_NAMESPACE&#34;</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">Stdout</span><span class="p">:</span>    <span class="nx">os</span><span class="p">.</span><span class="nf">NewFile</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="s">&#34;CONTAINER_STDOUT&#34;</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">Stderr</span><span class="p">:</span>    <span class="nx">os</span><span class="p">.</span><span class="nf">NewFile</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="s">&#34;CONTAINER_STDERR&#34;</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">sigCh</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Signal</span><span class="p">,</span> <span class="mi">32</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">errCh</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">error</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">wait</span>  <span class="p">=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">NewFile</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="s">&#34;CONTAINER_WAIT&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nx">signal</span><span class="p">.</span><span class="nf">Notify</span><span class="p">(</span><span class="nx">sigCh</span><span class="p">,</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">SIGTERM</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">errCh</span> <span class="o">&lt;-</span> <span class="nf">fn</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">config</span><span class="p">,</span> <span class="nx">wait</span><span class="p">.</span><span class="nx">Close</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}()</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 通过文件描述符获取 shim 传递过来的文件句柄。
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 然后将配置传递至 自定义的fn函数。查看fn
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// nerdctl/pkg/logging/logging.go
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">getLoggerFunc</span><span class="p">(</span><span class="nx">dataStore</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="nx">logging</span><span class="p">.</span><span class="nx">LoggerFunc</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">dataStore</span> <span class="o">==</span> <span class="s">&#34;&#34;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;got empty data store&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kd">func</span><span class="p">(</span><span class="nx">_</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">config</span> <span class="o">*</span><span class="nx">logging</span><span class="p">.</span><span class="nx">Config</span><span class="p">,</span> <span class="nx">ready</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">error</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">config</span><span class="p">.</span><span class="nx">Namespace</span> <span class="o">==</span> <span class="s">&#34;&#34;</span> <span class="o">||</span> <span class="nx">config</span><span class="p">.</span><span class="nx">ID</span> <span class="o">==</span> <span class="s">&#34;&#34;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;got invalid config&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">logConfigFilePath</span> <span class="o">:=</span> <span class="nf">LogConfigFilePath</span><span class="p">(</span><span class="nx">dataStore</span><span class="p">,</span> <span class="nx">config</span><span class="p">.</span><span class="nx">Namespace</span><span class="p">,</span> <span class="nx">config</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">Stat</span><span class="p">(</span><span class="nx">logConfigFilePath</span><span class="p">);</span> <span class="nx">err</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">logConfig</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">LoadLogConfig</span><span class="p">(</span><span class="nx">dataStore</span><span class="p">,</span> <span class="nx">config</span><span class="p">.</span><span class="nx">Namespace</span><span class="p">,</span> <span class="nx">config</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">driver</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">GetDriver</span><span class="p">(</span><span class="nx">logConfig</span><span class="p">.</span><span class="nx">Driver</span><span class="p">,</span> <span class="nx">logConfig</span><span class="p">.</span><span class="nx">Opts</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">ready</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">driver</span><span class="p">.</span><span class="nf">Process</span><span class="p">(</span><span class="nx">dataStore</span><span class="p">,</span> <span class="nx">config</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">!</span><span class="nx">errors</span><span class="p">.</span><span class="nf">Is</span><span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">os</span><span class="p">.</span><span class="nx">ErrNotExist</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// the file does not exist if the container was created with nerdctl &lt; 0.20
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">	<span class="p">},</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">jsonLogger</span> <span class="o">*</span><span class="nx">JSONLogger</span><span class="p">)</span> <span class="nf">Process</span><span class="p">(</span><span class="nx">dataStore</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">config</span> <span class="o">*</span><span class="nx">logging</span><span class="p">.</span><span class="nx">Config</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">jsonFilePath</span> <span class="kt">string</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">logPath</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">jsonLogger</span><span class="p">.</span><span class="nx">Opts</span><span class="p">[</span><span class="nx">LogPath</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">jsonFilePath</span> <span class="p">=</span> <span class="nx">logPath</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">jsonFilePath</span> <span class="p">=</span> <span class="nx">jsonfile</span><span class="p">.</span><span class="nf">Path</span><span class="p">(</span><span class="nx">dataStore</span><span class="p">,</span> <span class="nx">config</span><span class="p">.</span><span class="nx">Namespace</span><span class="p">,</span> <span class="nx">config</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">l</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">logrotate</span><span class="p">.</span><span class="nx">Logger</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">Filename</span><span class="p">:</span> <span class="nx">jsonFilePath</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">//maxSize Defaults to unlimited.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="kd">var</span> <span class="nx">capVal</span> <span class="kt">int64</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">capVal</span> <span class="p">=</span> <span class="o">-</span><span class="mi">1</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">capacity</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">jsonLogger</span><span class="p">.</span><span class="nx">Opts</span><span class="p">[</span><span class="nx">MaxSize</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">capVal</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">units</span><span class="p">.</span><span class="nf">FromHumanSize</span><span class="p">(</span><span class="nx">capacity</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">capVal</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;max-size must be a positive number&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">l</span><span class="p">.</span><span class="nx">MaxBytes</span> <span class="p">=</span> <span class="nx">capVal</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">maxFile</span> <span class="o">:=</span> <span class="mi">1</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">maxFileString</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">jsonLogger</span><span class="p">.</span><span class="nx">Opts</span><span class="p">[</span><span class="nx">MaxFile</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">maxFile</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">strconv</span><span class="p">.</span><span class="nf">Atoi</span><span class="p">(</span><span class="nx">maxFileString</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">maxFile</span> <span class="p">&lt;</span> <span class="mi">1</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;max-file cannot be less than 1&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// MaxBackups does not include file to write logs to
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">l</span><span class="p">.</span><span class="nx">MaxBackups</span> <span class="p">=</span> <span class="nx">maxFile</span> <span class="o">-</span> <span class="mi">1</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">jsonfile</span><span class="p">.</span><span class="nf">Encode</span><span class="p">(</span><span class="nx">l</span><span class="p">,</span> <span class="nx">config</span><span class="p">.</span><span class="nx">Stdout</span><span class="p">,</span> <span class="nx">config</span><span class="p">.</span><span class="nx">Stderr</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>最终的日志处理，是使用 <code>jsonfile</code> 框架，将日志保存到 <code>jsonFilePath</code> 路径中。</p>
+<h3 id="nerdctl-log-example">nerdctl-log-example</h3>
+<p>下面通过简单的代码，模拟 <code>nerdctl run -d --name runcdev1 q946666800/runcdev</code>日志的搜集过程。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// app.go
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;time&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">i</span> <span class="o">:=</span> <span class="mi">5</span>
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="nx">i</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Now</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">i</span><span class="o">--</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span><span class="lnt">110
+</span><span class="lnt">111
+</span><span class="lnt">112
+</span><span class="lnt">113
+</span><span class="lnt">114
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// drive.go
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">   <span class="s">&#34;bufio&#34;</span>
+</span></span><span class="line"><span class="cl">   <span class="s">&#34;context&#34;</span>
+</span></span><span class="line"><span class="cl">   <span class="s">&#34;encoding/json&#34;</span>
+</span></span><span class="line"><span class="cl">   <span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">   <span class="s">&#34;io&#34;</span>
+</span></span><span class="line"><span class="cl">   <span class="s">&#34;os&#34;</span>
+</span></span><span class="line"><span class="cl">   <span class="s">&#34;os/signal&#34;</span>
+</span></span><span class="line"><span class="cl">   <span class="s">&#34;sync&#34;</span>
+</span></span><span class="line"><span class="cl">   <span class="s">&#34;time&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="s">&#34;github.com/fahedouch/go-logrotate&#34;</span>
+</span></span><span class="line"><span class="cl">   <span class="s">&#34;github.com/sirupsen/logrus&#34;</span>
+</span></span><span class="line"><span class="cl">   <span class="s">&#34;golang.org/x/sys/unix&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;log drive start!!!&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">ctx</span><span class="p">,</span> <span class="nx">cancel</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">WithCancel</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">   <span class="k">defer</span> <span class="nf">cancel</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="kd">var</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">sigCh</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Signal</span><span class="p">,</span> <span class="mi">32</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">errCh</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">error</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">signal</span><span class="p">.</span><span class="nf">Notify</span><span class="p">(</span><span class="nx">sigCh</span><span class="p">,</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">SIGTERM</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// cmd.ExtraFiles = append(cmd.ExtraFiles, out.r, serr.r, w)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">out</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">NewFile</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="s">&#34;CONTAINER_STDOUT&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">serr</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">NewFile</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="s">&#34;CONTAINER_STDERR&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">wait</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">NewFile</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="s">&#34;CONTAINER_WAIT&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">errCh</span> <span class="o">&lt;-</span> <span class="nf">logger</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">out</span><span class="p">,</span> <span class="nx">serr</span><span class="p">,</span> <span class="nx">wait</span><span class="p">.</span><span class="nx">Close</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">select</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">case</span> <span class="o">&lt;-</span><span class="nx">sigCh</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">         <span class="nf">cancel</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">      <span class="k">case</span> <span class="nx">err</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">errCh</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">         <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">fmt</span><span class="p">.</span><span class="nf">Fprintln</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Stderr</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">os</span><span class="p">.</span><span class="nf">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="p">}</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;log drive exit 0&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">os</span><span class="p">.</span><span class="nf">Exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">logger</span><span class="p">(</span><span class="nx">_</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">out</span> <span class="o">*</span><span class="nx">os</span><span class="p">.</span><span class="nx">File</span><span class="p">,</span> <span class="nx">serr</span> <span class="o">*</span><span class="nx">os</span><span class="p">.</span><span class="nx">File</span><span class="p">,</span> <span class="nx">ready</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">error</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// Notify the shim that it is ready
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// call wait.Close
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// r will receive io.EOF error
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">ready</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// log path
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">jsonFilePath</span> <span class="o">:=</span> <span class="s">&#34;app.log&#34;</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">l</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">logrotate</span><span class="p">.</span><span class="nx">Logger</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">Filename</span><span class="p">:</span> <span class="nx">jsonFilePath</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="nf">Encode</span><span class="p">(</span><span class="nx">l</span><span class="p">,</span> <span class="nx">out</span><span class="p">,</span> <span class="nx">serr</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Entry is compatible with Docker &#34;json-file&#34; logs
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">Entry</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">Log</span>    <span class="kt">string</span>    <span class="s">`json:&#34;log,omitempty&#34;`</span>    <span class="c1">// line, including &#34;\r\n&#34;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">Stream</span> <span class="kt">string</span>    <span class="s">`json:&#34;stream,omitempty&#34;`</span> <span class="c1">// &#34;stdout&#34; or &#34;stderr&#34;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">Time</span>   <span class="nx">time</span><span class="p">.</span><span class="nx">Time</span> <span class="s">`json:&#34;time&#34;`</span>             <span class="c1">// e.g. &#34;2020-12-11T20:29:41.939902251Z&#34;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">Encode</span><span class="p">(</span><span class="nx">w</span> <span class="nx">io</span><span class="p">.</span><span class="nx">WriteCloser</span><span class="p">,</span> <span class="nx">stdout</span><span class="p">,</span> <span class="nx">stderr</span> <span class="nx">io</span><span class="p">.</span><span class="nx">Reader</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">enc</span> <span class="o">:=</span> <span class="nx">json</span><span class="p">.</span><span class="nf">NewEncoder</span><span class="p">(</span><span class="nx">w</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="kd">var</span> <span class="nx">encMu</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
+</span></span><span class="line"><span class="cl">   <span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">f</span> <span class="o">:=</span> <span class="kd">func</span><span class="p">(</span><span class="nx">r</span> <span class="nx">io</span><span class="p">.</span><span class="nx">Reader</span><span class="p">,</span> <span class="nx">name</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">br</span> <span class="o">:=</span> <span class="nx">bufio</span><span class="p">.</span><span class="nf">NewReader</span><span class="p">(</span><span class="nx">r</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">e</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">Entry</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">Stream</span><span class="p">:</span> <span class="nx">name</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">line</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">br</span><span class="p">.</span><span class="nf">ReadString</span><span class="p">(</span><span class="nb">byte</span><span class="p">(</span><span class="sc">&#39;\n&#39;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">         <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">logrus</span><span class="p">.</span><span class="nf">WithError</span><span class="p">(</span><span class="nx">err</span><span class="p">).</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to read line from %q&#34;</span><span class="p">,</span> <span class="nx">name</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="k">return</span>
+</span></span><span class="line"><span class="cl">         <span class="p">}</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">e</span><span class="p">.</span><span class="nx">Log</span> <span class="p">=</span> <span class="nx">line</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">e</span><span class="p">.</span><span class="nx">Time</span> <span class="p">=</span> <span class="nx">time</span><span class="p">.</span><span class="nf">Now</span><span class="p">().</span><span class="nf">UTC</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">encMu</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">encErr</span> <span class="o">:=</span> <span class="nx">enc</span><span class="p">.</span><span class="nf">Encode</span><span class="p">(</span><span class="nx">e</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">encMu</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">         <span class="k">if</span> <span class="nx">encErr</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">logrus</span><span class="p">.</span><span class="nf">WithError</span><span class="p">(</span><span class="nx">err</span><span class="p">).</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to encode JSON&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="k">return</span>
+</span></span><span class="line"><span class="cl">         <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">go</span> <span class="nf">f</span><span class="p">(</span><span class="nx">stdout</span><span class="p">,</span> <span class="s">&#34;stdout&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">go</span> <span class="nf">f</span><span class="p">(</span><span class="nx">stderr</span><span class="p">,</span> <span class="s">&#34;stderr&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span><span class="lnt">110
+</span><span class="lnt">111
+</span><span class="lnt">112
+</span><span class="lnt">113
+</span><span class="lnt">114
+</span><span class="lnt">115
+</span><span class="lnt">116
+</span><span class="lnt">117
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// shim.go
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;io&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;log&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;os&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;os/exec&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// start log driver
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">pio</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">driveIO</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// start app
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">cmd</span> <span class="o">:=</span> <span class="nx">exec</span><span class="p">.</span><span class="nf">Command</span><span class="p">(</span><span class="s">&#34;./app-example&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cmd</span><span class="p">.</span><span class="nx">Stdout</span> <span class="p">=</span> <span class="nx">pio</span><span class="p">.</span><span class="nx">out</span><span class="p">.</span><span class="nx">w</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cmd</span><span class="p">.</span><span class="nx">Stderr</span> <span class="p">=</span> <span class="nx">pio</span><span class="p">.</span><span class="nx">err</span><span class="p">.</span><span class="nx">w</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">err</span> <span class="p">=</span> <span class="nx">cmd</span><span class="p">.</span><span class="nf">Start</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">err</span> <span class="p">=</span> <span class="nx">cmd</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">newPipe</span><span class="p">()</span> <span class="p">(</span><span class="o">*</span><span class="nx">pipe</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">r</span><span class="p">,</span> <span class="nx">w</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">Pipe</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">pipe</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">r</span><span class="p">:</span> <span class="nx">r</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">w</span><span class="p">:</span> <span class="nx">w</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="p">},</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">pipe</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">r</span> <span class="o">*</span><span class="nx">os</span><span class="p">.</span><span class="nx">File</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">w</span> <span class="o">*</span><span class="nx">os</span><span class="p">.</span><span class="nx">File</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">binaryIO</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cmd</span>      <span class="o">*</span><span class="nx">exec</span><span class="p">.</span><span class="nx">Cmd</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">out</span><span class="p">,</span> <span class="nx">err</span> <span class="o">*</span><span class="nx">pipe</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">pipe</span><span class="p">)</span> <span class="nf">Close</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">w</span><span class="p">.</span><span class="nf">Close</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">r</span><span class="p">.</span><span class="nf">Close</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;pipe close error&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">driveIO</span><span class="p">()</span> <span class="p">(</span><span class="nx">_</span> <span class="o">*</span><span class="nx">binaryIO</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">closers</span> <span class="p">[]</span><span class="kd">func</span><span class="p">()</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// app out pipe
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">out</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">newPipe</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">closers</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">closers</span><span class="p">,</span> <span class="nx">out</span><span class="p">.</span><span class="nx">Close</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// app err pipe
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">serr</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">newPipe</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">closers</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">closers</span><span class="p">,</span> <span class="nx">serr</span><span class="p">.</span><span class="nx">Close</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// drive ready pipe
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">r</span><span class="p">,</span> <span class="nx">w</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">Pipe</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">closers</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">closers</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">Close</span><span class="p">,</span> <span class="nx">w</span><span class="p">.</span><span class="nx">Close</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">cmd</span> <span class="o">:=</span> <span class="nx">exec</span><span class="p">.</span><span class="nf">Command</span><span class="p">(</span><span class="s">&#34;./drive-example&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cmd</span><span class="p">.</span><span class="nx">Stdout</span> <span class="p">=</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Stdout</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cmd</span><span class="p">.</span><span class="nx">Stderr</span> <span class="p">=</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Stderr</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">cmd</span><span class="p">.</span><span class="nx">ExtraFiles</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">ExtraFiles</span><span class="p">,</span> <span class="nx">out</span><span class="p">.</span><span class="nx">r</span><span class="p">,</span> <span class="nx">serr</span><span class="p">.</span><span class="nx">r</span><span class="p">,</span> <span class="nx">w</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">cmd</span><span class="p">.</span><span class="nf">Start</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">closers</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">closers</span><span class="p">,</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span> <span class="k">return</span> <span class="nx">cmd</span><span class="p">.</span><span class="nx">Process</span><span class="p">.</span><span class="nf">Kill</span><span class="p">()</span> <span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// close our side of the pipe after start
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">w</span><span class="p">.</span><span class="nf">Close</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to close write pipe after start: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// wait for the logging binary to be ready
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">b</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">r</span><span class="p">.</span><span class="nf">Read</span><span class="p">(</span><span class="nx">b</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nx">err</span> <span class="o">!=</span> <span class="nx">io</span><span class="p">.</span><span class="nx">EOF</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to read from logging binary: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">binaryIO</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">cmd</span><span class="p">:</span> <span class="nx">cmd</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">out</span><span class="p">:</span> <span class="nx">out</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">err</span><span class="p">:</span> <span class="nx">serr</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="p">},</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>模拟 <code>nerdctl run -d --name runcdev1 q946666800/runcdev</code> 的日志收集过程。</p>
+<p>运行 <code>./shim-example</code>,
+首先启动驱动程序，返回相关pio，</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">pio</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">driveIO</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>配置应用程序，将stdio传递给上面的pio</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// start app
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">cmd</span> <span class="o">:=</span> <span class="nx">exec</span><span class="p">.</span><span class="nf">Command</span><span class="p">(</span><span class="s">&#34;./app-example&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nx">cmd</span><span class="p">.</span><span class="nx">Stdout</span> <span class="p">=</span> <span class="nx">pio</span><span class="p">.</span><span class="nx">out</span><span class="p">.</span><span class="nx">w</span>
+</span></span><span class="line"><span class="cl"><span class="nx">cmd</span><span class="p">.</span><span class="nx">Stderr</span> <span class="p">=</span> <span class="nx">pio</span><span class="p">.</span><span class="nx">err</span><span class="p">.</span><span class="nx">w</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>启动应用程序，日志驱动将应用程序日志，以 <code>json</code> 的形式，写入到 <code>app.log</code> 文件中。</p>
+<p>nerdctl中日志处理方式大致如此。</p>
+<p><a href="https://github.com/yzxiu/nerdctl-log-example" target="_blank" rel="noopener noreffer ">github地址</a></p>
+<br>
+<br>
+<h2 id="kubelet中的日志处理">kubelet中的日志处理</h2>
+<p>待补充</p>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2022-11-14</span>
+            </div></div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/2022-11-14-containerd-7-log/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://yzxiu.github.io/2022-11-14-containerd-7-log/" data-title="Containerd解析(7) - log" data-via="xxxx" data-hashtags="shim,log,pipe"><i class="fab fa-twitter fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://yzxiu.github.io/2022-11-14-containerd-7-log/" data-hashtag="shim"><i class="fab fa-facebook-square fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://yzxiu.github.io/2022-11-14-containerd-7-log/" data-title="Containerd解析(7) - log"><i class="fab fa-hacker-news fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://yzxiu.github.io/2022-11-14-containerd-7-log/" data-title="Containerd解析(7) - log"><i data-svg-src="/lib/simple-icons/icons/line.min.svg" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://yzxiu.github.io/2022-11-14-containerd-7-log/" data-title="Containerd解析(7) - log"><i class="fab fa-weibo fa-fw" aria-hidden="true"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/shim/">shim</a>,&nbsp;<a href="/tags/log/">log</a>,&nbsp;<a href="/tags/pipe/">pipe</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/2022-11-13-containerd-6-restart/" class="prev" rel="prev" title="Containerd解析(6) - restart"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>Containerd解析(6) - restart</a>
+            <a href="/2022-11-15-containerd-8-runc-modes/" class="next" rel="next" title="2022 11 15 Containerd解析(8) - Runc Modes">2022 11 15 Containerd解析(8) - Runc Modes<i class="fas fa-angle-right fa-fw" aria-hidden="true"></i></a></div>
+</div>
+<div id="comments"><div id="giscus" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://giscus.app">Giscus</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.105.0">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.11"><i class="far fa-kiss-wink-heart fa-fw" aria-hidden="true"></i> LoveIt</a>
+                </div><div class="footer-line" itemscope itemtype="http://schema.org/CreativeWork"><i class="far fa-copyright fa-fw" aria-hidden="true"></i><span itemprop="copyrightYear">2022</span><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">Yuyu</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw" aria-hidden="true"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw" aria-hidden="true"></i>
+            </a>
+        </div><link rel="stylesheet" href="/lib/lightgallery/css/lightgallery-bundle.min.css"><link rel="stylesheet" href="/lib/katex/katex.min.css"><script type="text/javascript" src="/lib/autocomplete/autocomplete.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="/lib/lazysizes/lazysizes.min.js"></script><script type="text/javascript" src="/lib/lightgallery/lightgallery.min.js"></script><script type="text/javascript" src="/lib/lightgallery/plugins/thumbnail/lg-thumbnail.min.js"></script><script type="text/javascript" src="/lib/lightgallery/plugins/zoom/lg-zoom.min.js"></script><script type="text/javascript" src="/lib/clipboard/clipboard.min.js"></script><script type="text/javascript" src="/lib/sharer/sharer.min.js"></script><script type="text/javascript" src="/lib/katex/katex.min.js"></script><script type="text/javascript" src="/lib/katex/contrib/auto-render.min.js"></script><script type="text/javascript" src="/lib/katex/contrib/copy-tex.min.js"></script><script type="text/javascript" src="/lib/katex/contrib/mhchem.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":75},"comment":{"giscus":{"category":"Announcements","categoryId":"DIC_kwDOIVYpIs4CSRHk","darkTheme":"dark","emitMetadata":"0","inputPosition":"bottom","lang":"zh-CN","lazyLoading":false,"lightTheme":"light","mapping":"pathname","reactionsEnabled":"1","repo":"yzxiu/yzxiu.github.io","repoId":"R_kgDOIVYpIg"}},"lightgallery":true,"math":{"delimiters":[{"display":true,"left":"$$","right":"$$"},{"display":true,"left":"\\[","right":"\\]"},{"display":true,"left":"\\begin{equation}","right":"\\end{equation}"},{"display":true,"left":"\\begin{equation*}","right":"\\end{equation*}"},{"display":true,"left":"\\begin{align}","right":"\\end{align}"},{"display":true,"left":"\\begin{align*}","right":"\\end{align*}"},{"display":true,"left":"\\begin{alignat}","right":"\\end{alignat}"},{"display":true,"left":"\\begin{alignat*}","right":"\\end{alignat*}"},{"display":true,"left":"\\begin{gather}","right":"\\end{gather}"},{"display":true,"left":"\\begin{CD}","right":"\\end{CD}"},{"display":false,"left":"$","right":"$"},{"display":false,"left":"\\(","right":"\\)"}],"strict":false},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

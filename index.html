@@ -98,6 +98,16 @@
         alt="/images/avataaars.svg"
         title="/images/avataaars.svg" /></a></div><div class="links"><a href="https://github.com/yzxiu" title="GitHub" target="_blank" rel="noopener noreffer me"><i class="fab fa-github fa-fw" aria-hidden="true"></i></a><a href="https://twitter.com/xxxx" title="Twitter" target="_blank" rel="noopener noreffer me"><i class="fab fa-twitter fa-fw" aria-hidden="true"></i></a><a href="https://www.instagram.com/xxxx" title="Instagram" target="_blank" rel="noopener noreffer me"><i class="fab fa-instagram fa-fw" aria-hidden="true"></i></a><a href="https://facebook.com/xxxx" title="facebook" target="_blank" rel="noopener noreffer me"><i class="fab fa-facebook fa-fw" aria-hidden="true"></i></a><a href="https://t.me/xxxx" title="Telegram" target="_blank" rel="noopener noreffer me"><i class="fab fa-telegram-plane fa-fw" aria-hidden="true"></i></a><a href="mailto:xxxx@xxxx.com" title="Email" rel="me"><i class="far fa-envelope fa-fw" aria-hidden="true"></i></a><a href="/index.xml" title="RSS" target="_blank" rel="noopener noreffer me"><i class="fas fa-rss fa-fw" aria-hidden="true"></i></a></div></div>
 <article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
+        <a href="/2022-11-15-containerd-8-runc-modes/">2022 11 15 Containerd解析(8) - Runc Modes</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2022-11-15">2022-11-15</time></span></div><div class="content">概述 在runc中，存在两种 Terminal Modes，分别是：New Terminal、Pass-Through ​ 存在两种 runc Modes，分别是：Foregr</div><div class="post-footer">
+        <a href="/2022-11-15-containerd-8-runc-modes/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/runc/">runc</a>,&nbsp;<a href="/tags/log/">log</a>,&nbsp;<a href="/tags/io/">io</a>,&nbsp;<a href="/tags/modes/">modes</a>,&nbsp;<a href="/tags/terminal/">terminal</a></div></div>
+</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
+        <a href="/2022-11-14-containerd-7-log/">Containerd解析(7) - log</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2022-11-14">2022-11-14</time></span></div><div class="content">概述 了解 nerdctl 是怎样处理容器日志的，后续再分析kubelet的处理方式。 nerdctl 中的日志处理 容器日志处理，其实就是处理runc程序的标准输出，标准错误</div><div class="post-footer">
+        <a href="/2022-11-14-containerd-7-log/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/shim/">shim</a>,&nbsp;<a href="/tags/log/">log</a>,&nbsp;<a href="/tags/pipe/">pipe</a></div></div>
+</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
         <a href="/2022-11-13-containerd-6-restart/">Containerd解析(6) - restart</a>
     </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2022-11-13">2022-11-13</time></span></div><div class="content">概述 在runc的start命令代码如下： 1 2 3 4 5 6 7 8 9 10 11 switch status { // 对于一个已经处于Created状态的容器，执行Exec case libcontainer.Created: return container.Exec() case libcontainer.Stopped: return errors.New(&#34;cannot</div><div class="post-footer">
         <a href="/2022-11-13-containerd-6-restart/">阅读全文</a></div>
@@ -115,7 +125,7 @@
         alt="https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221030-230138.png"
         title="https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221030-230138.png" /></a>
         </div><h1 class="single-title" itemprop="name headline">
-        <a href="/2022-10-30-containerd-1/">Containerd解析(1)</a>
+        <a href="/2022-10-30-containerd-1/">Containerd解析(1) - example</a>
     </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2022-10-30">2022-10-30</time></span></div><div class="content">概述 本文使用containerd默认配置，不涉及docker。 通过一个简单的例子，粗略了解containerd创建并运行一个容器的过程。 主要</div><div class="post-footer">
         <a href="/2022-10-30-containerd-1/">阅读全文</a><div class="post-tags">
                 <i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/containerd/">containerd</a>,&nbsp;<a href="/tags/containerd-shim/">containerd-shim</a></div></div>

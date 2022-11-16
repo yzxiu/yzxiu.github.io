@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <title>2022 11 15 Containerd解析(8) - Runc Modes - Yuyu&#39;s Blog</title><meta name="Description" content=""><meta property="og:title" content="2022 11 15 Containerd解析(8) - Runc Modes" />
+<meta property="og:description" content="概述 在runc中，存在两种 Terminal Modes，分别是：New Terminal、Pass-Through ​ 存在两种 runc Modes，分别是：Foregr" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://yzxiu.github.io/2022-11-15-containerd-8-runc-modes/" /><meta property="og:image" content="https://yzxiu.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2022-11-15T17:04:35+08:00" />
+<meta property="article:modified_time" content="2022-11-15T17:04:35+08:00" /><meta property="og:site_name" content="Yuyu&#39;s Blog" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://yzxiu.github.io/logo.png"/>
+
+<meta name="twitter:title" content="2022 11 15 Containerd解析(8) - Runc Modes"/>
+<meta name="twitter:description" content="概述 在runc中，存在两种 Terminal Modes，分别是：New Terminal、Pass-Through ​ 存在两种 runc Modes，分别是：Foregr"/>
+<meta name="application-name" content="Yuyu&#39;s Blog">
+<meta name="apple-mobile-web-app-title" content="Yuyu&#39;s Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="icon" href="/images/avataaars.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://yzxiu.github.io/2022-11-15-containerd-8-runc-modes/" /><link rel="prev" href="https://yzxiu.github.io/2022-11-14-containerd-7-log/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"></noscript><link rel="preload" href="/lib/animate/animate.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="/lib/animate/animate.min.css"></noscript><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "2022 11 15 Containerd解析(8) - Runc Modes",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/yzxiu.github.io\/2022-11-15-containerd-8-runc-modes\/"
+        },"genre": "posts","keywords": "runc, log, io, modes, terminal","wordcount":  1825 ,
+        "url": "https:\/\/yzxiu.github.io\/2022-11-15-containerd-8-runc-modes\/","datePublished": "2022-11-15T17:04:35+08:00","dateModified": "2022-11-15T17:04:35+08:00","publisher": {
+            "@type": "Organization",
+            "name": ""},"author": {
+                "@type": "Person",
+                "name": "Yuyu"
+            },"description": ""
+    }
+    </script></head>
+    <body data-header-desktop="fixed" data-header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="Yuyu&#39;s Blog">Yuyu&#39;s Blog</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin" aria-hidden="true"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw" aria-hidden="true"></i>
+                </a></div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="Yuyu&#39;s Blog">Yuyu&#39;s Blog</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin" aria-hidden="true"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw" aria-hidden="true"></i>
+            </a></div>
+    </div>
+</header><div class="search-dropdown desktop">
+        <div id="search-dropdown-desktop"></div>
+    </div>
+    <div class="search-dropdown mobile">
+        <div id="search-dropdown-mobile"></div>
+    </div><main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content always-active" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">2022 11 15 Containerd解析(8) - Runc Modes</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-11-15">2022-11-15</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 1825 字&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 4 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  data-kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right" aria-hidden="true"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#概述">概述</a></li>
+    <li><a href="#setupio">setupIO</a>
+      <ul>
+        <li><a href="#new-terminal--foreground">New Terminal &amp; Foreground</a></li>
+        <li><a href="#new-terminal--detached">New Terminal &amp; Detached</a></li>
+        <li><a href="#pass-through--detached">Pass-Through &amp; Detached</a></li>
+        <li><a href="#pass-through--foreground">Pass-Through &amp; Foreground</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><h2 id="概述">概述</h2>
+<p>在<a href="https://github.com/opencontainers/runc/blob/main/docs/terminals.md" target="_blank" rel="noopener noreffer ">runc</a>中，存在两种 Terminal Modes，分别是：<code>New Terminal</code>、<code>Pass-Through</code></p>
+<p>​                    存在两种 runc Modes，分别是：<code>Foreground、Detached</code></p>
+<p>接下来，通过runc中的代码，了解这几中 modes。</p>
+<h2 id="setupio">setupIO</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// setupIO modifies the given process config according to the options.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// Terminal Modes:
+</span></span></span><span class="line"><span class="cl"><span class="c1">//   New Terminal
+</span></span></span><span class="line"><span class="cl"><span class="c1">//   Pass-Through
+</span></span></span><span class="line"><span class="cl"><span class="c1">// runc Modes:
+</span></span></span><span class="line"><span class="cl"><span class="c1">//   Foreground
+</span></span></span><span class="line"><span class="cl"><span class="c1">//   Detached
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">setupIO</span><span class="p">(</span><span class="nx">process</span> <span class="o">*</span><span class="nx">libcontainer</span><span class="p">.</span><span class="nx">Process</span><span class="p">,</span> <span class="nx">rootuid</span><span class="p">,</span> <span class="nx">rootgid</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">createTTY</span><span class="p">,</span> <span class="nx">detach</span> <span class="kt">bool</span><span class="p">,</span> <span class="nx">sockpath</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">tty</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">createTTY</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">process</span><span class="p">.</span><span class="nx">Stdin</span> <span class="p">=</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">process</span><span class="p">.</span><span class="nx">Stdout</span> <span class="p">=</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">process</span><span class="p">.</span><span class="nx">Stderr</span> <span class="p">=</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">t</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">tty</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="p">!</span><span class="nx">detach</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// 1, New Terminal &amp; Foreground
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">t</span><span class="p">.</span><span class="nf">initHostConsole</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">parent</span><span class="p">,</span> <span class="nx">child</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">utils</span><span class="p">.</span><span class="nf">NewSockPair</span><span class="p">(</span><span class="s">&#34;console&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">process</span><span class="p">.</span><span class="nx">ConsoleSocket</span> <span class="p">=</span> <span class="nx">child</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">t</span><span class="p">.</span><span class="nx">postStart</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">t</span><span class="p">.</span><span class="nx">postStart</span><span class="p">,</span> <span class="nx">parent</span><span class="p">,</span> <span class="nx">child</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">t</span><span class="p">.</span><span class="nx">consoleC</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">error</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">t</span><span class="p">.</span><span class="nx">consoleC</span> <span class="o">&lt;-</span> <span class="nx">t</span><span class="p">.</span><span class="nf">recvtty</span><span class="p">(</span><span class="nx">parent</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}()</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// 2, New Terminal &amp; Detached
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// the caller of runc will handle receiving the console master
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="nx">conn</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">net</span><span class="p">.</span><span class="nf">Dial</span><span class="p">(</span><span class="s">&#34;unix&#34;</span><span class="p">,</span> <span class="nx">sockpath</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">uc</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">conn</span><span class="p">.(</span><span class="o">*</span><span class="nx">net</span><span class="p">.</span><span class="nx">UnixConn</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;casting to UnixConn failed&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">t</span><span class="p">.</span><span class="nx">postStart</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">t</span><span class="p">.</span><span class="nx">postStart</span><span class="p">,</span> <span class="nx">uc</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">socket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">uc</span><span class="p">.</span><span class="nf">File</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">t</span><span class="p">.</span><span class="nx">postStart</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">t</span><span class="p">.</span><span class="nx">postStart</span><span class="p">,</span> <span class="nx">socket</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">process</span><span class="p">.</span><span class="nx">ConsoleSocket</span> <span class="p">=</span> <span class="nx">socket</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">t</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// when runc will detach the caller provides the stdio to runc via runc&#39;s 0,1,2
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// and the container&#39;s process inherits runc&#39;s stdio.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// 3, Pass-Through &amp; Detached
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">if</span> <span class="nx">detach</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">inheritStdio</span><span class="p">(</span><span class="nx">process</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="o">&amp;</span><span class="nx">tty</span><span class="p">{},</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// 4, Pass-Through &amp; Foreground
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">return</span> <span class="nf">setupProcessPipes</span><span class="p">(</span><span class="nx">process</span><span class="p">,</span> <span class="nx">rootuid</span><span class="p">,</span> <span class="nx">rootgid</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="new-terminal--foreground">New Terminal &amp; Foreground</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">process</span><span class="p">.</span><span class="nx">Stdin</span> <span class="p">=</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="nx">process</span><span class="p">.</span><span class="nx">Stdout</span> <span class="p">=</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="nx">process</span><span class="p">.</span><span class="nx">Stderr</span> <span class="p">=</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="nx">t</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">tty</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">		
+</span></span><span class="line"><span class="cl"><span class="c1">// 1, New Terminal &amp; Foreground
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">t</span><span class="p">.</span><span class="nf">initHostConsole</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="nx">parent</span><span class="p">,</span> <span class="nx">child</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">utils</span><span class="p">.</span><span class="nf">NewSockPair</span><span class="p">(</span><span class="s">&#34;console&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="nx">process</span><span class="p">.</span><span class="nx">ConsoleSocket</span> <span class="p">=</span> <span class="nx">child</span>
+</span></span><span class="line"><span class="cl"><span class="nx">t</span><span class="p">.</span><span class="nx">postStart</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">t</span><span class="p">.</span><span class="nx">postStart</span><span class="p">,</span> <span class="nx">parent</span><span class="p">,</span> <span class="nx">child</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nx">t</span><span class="p">.</span><span class="nx">consoleC</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">error</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">t</span><span class="p">.</span><span class="nx">consoleC</span> <span class="o">&lt;-</span> <span class="nx">t</span><span class="p">.</span><span class="nf">recvtty</span><span class="p">(</span><span class="nx">parent</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}()</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">runc --root <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>/run/containerd/runc/default <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>run <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>-b <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>/home/xiu/CloudDrive/runcdev/mycontainer-terminal <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>demo
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>Foreground</code>模式下，runc进程会一直保留在前台，不会退出。</p>
+<p>这里调用 t.recvtty(parent)</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">t</span> <span class="o">*</span><span class="nx">tty</span><span class="p">)</span> <span class="nf">recvtty</span><span class="p">(</span><span class="nx">socket</span> <span class="o">*</span><span class="nx">os</span><span class="p">.</span><span class="nx">File</span><span class="p">)</span> <span class="p">(</span><span class="nx">Err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">f</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">utils</span><span class="p">.</span><span class="nf">RecvFd</span><span class="p">(</span><span class="nx">socket</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">cons</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">console</span><span class="p">.</span><span class="nf">ConsoleFromFile</span><span class="p">(</span><span class="nx">f</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">err</span> <span class="p">=</span> <span class="nx">console</span><span class="p">.</span><span class="nf">ClearONLCR</span><span class="p">(</span><span class="nx">cons</span><span class="p">.</span><span class="nf">Fd</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">epoller</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">console</span><span class="p">.</span><span class="nf">NewEpoller</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">epollConsole</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">epoller</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="nx">cons</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">Err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">_</span> <span class="p">=</span> <span class="nx">epollConsole</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}()</span>
+</span></span><span class="line"><span class="cl">   <span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span> <span class="nx">_</span> <span class="p">=</span> <span class="nx">epoller</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span> <span class="p">}()</span>
+</span></span><span class="line"><span class="cl">   <span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nx">io</span><span class="p">.</span><span class="nf">Copy</span><span class="p">(</span><span class="nx">epollConsole</span><span class="p">,</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Stdin</span><span class="p">)</span> <span class="p">}()</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">t</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">go</span> <span class="nx">t</span><span class="p">.</span><span class="nf">copyIO</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Stdout</span><span class="p">,</span> <span class="nx">epollConsole</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// Set raw mode for the controlling terminal.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">t</span><span class="p">.</span><span class="nx">hostConsole</span><span class="p">.</span><span class="nf">SetRaw</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to set the terminal from the stdin: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">go</span> <span class="nf">handleInterrupt</span><span class="p">(</span><span class="nx">t</span><span class="p">.</span><span class="nx">hostConsole</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">t</span><span class="p">.</span><span class="nx">epoller</span> <span class="p">=</span> <span class="nx">epoller</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">t</span><span class="p">.</span><span class="nx">console</span> <span class="p">=</span> <span class="nx">epollConsole</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">t</span><span class="p">.</span><span class="nx">closers</span> <span class="p">=</span> <span class="p">[]</span><span class="nx">io</span><span class="p">.</span><span class="nx">Closer</span><span class="p">{</span><span class="nx">epollConsole</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// 组装command 模版，生成init 命令，设置大量以 _xxx 这样格式的环境变量，即大量的extraFiles 文件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">cmd</span> <span class="o">:=</span> <span class="nx">c</span><span class="p">.</span><span class="nf">commandTemplate</span><span class="p">(</span><span class="nx">p</span><span class="p">,</span> <span class="nx">childInitPipe</span><span class="p">,</span> <span class="nx">childLogPipe</span><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Container</span><span class="p">)</span> <span class="nf">commandTemplate</span><span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">Process</span><span class="p">,</span> <span class="nx">childInitPipe</span> <span class="o">*</span><span class="nx">os</span><span class="p">.</span><span class="nx">File</span><span class="p">,</span> <span class="nx">childLogPipe</span> <span class="o">*</span><span class="nx">os</span><span class="p">.</span><span class="nx">File</span><span class="p">)</span> <span class="o">*</span><span class="nx">exec</span><span class="p">.</span><span class="nx">Cmd</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cmd</span> <span class="o">:=</span> <span class="nx">exec</span><span class="p">.</span><span class="nf">Command</span><span class="p">(</span><span class="s">&#34;/proc/self/exe&#34;</span><span class="p">,</span> <span class="s">&#34;init&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cmd</span><span class="p">.</span><span class="nx">Args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="p">=</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 当  New Terminal 模式时
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// p.Stdin、p.Stdout、p.Stderr都被设置为nil
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">cmd</span><span class="p">.</span><span class="nx">Stdin</span> <span class="p">=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">Stdin</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cmd</span><span class="p">.</span><span class="nx">Stdout</span> <span class="p">=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">Stdout</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cmd</span><span class="p">.</span><span class="nx">Stderr</span> <span class="p">=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">Stderr</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cmd</span><span class="p">.</span><span class="nx">Dir</span> <span class="p">=</span> <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">Rootfs</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">cmd</span><span class="p">.</span><span class="nx">SysProcAttr</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">cmd</span><span class="p">.</span><span class="nx">SysProcAttr</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">unix</span><span class="p">.</span><span class="nx">SysProcAttr</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cmd</span><span class="p">.</span><span class="nx">Env</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">Env</span><span class="p">,</span> <span class="s">&#34;GOMAXPROCS=&#34;</span><span class="o">+</span><span class="nx">os</span><span class="p">.</span><span class="nf">Getenv</span><span class="p">(</span><span class="s">&#34;GOMAXPROCS&#34;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cmd</span><span class="p">.</span><span class="nx">ExtraFiles</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">ExtraFiles</span><span class="p">,</span> <span class="nx">p</span><span class="p">.</span><span class="nx">ExtraFiles</span><span class="o">...</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">p</span><span class="p">.</span><span class="nx">ConsoleSocket</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">cmd</span><span class="p">.</span><span class="nx">ExtraFiles</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">ExtraFiles</span><span class="p">,</span> <span class="nx">p</span><span class="p">.</span><span class="nx">ConsoleSocket</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">cmd</span><span class="p">.</span><span class="nx">Env</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">Env</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">			<span class="s">&#34;_LIBCONTAINER_CONSOLE=&#34;</span><span class="o">+</span><span class="nx">strconv</span><span class="p">.</span><span class="nf">Itoa</span><span class="p">(</span><span class="nx">stdioFdCount</span><span class="o">+</span><span class="nb">len</span><span class="p">(</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">ExtraFiles</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">		<span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cmd</span><span class="p">.</span><span class="nx">ExtraFiles</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">ExtraFiles</span><span class="p">,</span> <span class="nx">childInitPipe</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cmd</span><span class="p">.</span><span class="nx">Env</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">Env</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="s">&#34;_LIBCONTAINER_INITPIPE=&#34;</span><span class="o">+</span><span class="nx">strconv</span><span class="p">.</span><span class="nf">Itoa</span><span class="p">(</span><span class="nx">stdioFdCount</span><span class="o">+</span><span class="nb">len</span><span class="p">(</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">ExtraFiles</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">		<span class="s">&#34;_LIBCONTAINER_STATEDIR=&#34;</span><span class="o">+</span><span class="nx">c</span><span class="p">.</span><span class="nx">root</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">cmd</span><span class="p">.</span><span class="nx">ExtraFiles</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">ExtraFiles</span><span class="p">,</span> <span class="nx">childLogPipe</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cmd</span><span class="p">.</span><span class="nx">Env</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">Env</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="s">&#34;_LIBCONTAINER_LOGPIPE=&#34;</span><span class="o">+</span><span class="nx">strconv</span><span class="p">.</span><span class="nf">Itoa</span><span class="p">(</span><span class="nx">stdioFdCount</span><span class="o">+</span><span class="nb">len</span><span class="p">(</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">ExtraFiles</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">		<span class="s">&#34;_LIBCONTAINER_LOGLEVEL=&#34;</span><span class="o">+</span><span class="nx">p</span><span class="p">.</span><span class="nx">LogLevel</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// NOTE: when running a container with no PID namespace and the parent process spawning the container is
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// PID1 the pdeathsig is being delivered to the container&#39;s init process by the kernel for some reason
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// even with the parent still running.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">if</span> <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">ParentDeathSignal</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">cmd</span><span class="p">.</span><span class="nx">SysProcAttr</span><span class="p">.</span><span class="nx">Pdeathsig</span> <span class="p">=</span> <span class="nx">unix</span><span class="p">.</span><span class="nf">Signal</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">ParentDeathSignal</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">cmd</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// runc/libcontainer/process_linux.go
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">err</span> <span class="o">:=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">cmd</span><span class="p">.</span><span class="nf">Start</span><span class="p">()</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><figure><a class="lightgallery" href="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-105003.png" title="image-20221116105003022" data-thumbnail="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-105003.png" data-sub-html="<h2>init process</h2><p>image-20221116105003022</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-105003.png"
+            data-srcset="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-105003.png, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-105003.png 1.5x, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-105003.png 2x"
+            data-sizes="auto"
+            alt="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-105003.png" />
+    </a><figcaption class="image-caption">init process</figcaption>
+    </figure></p>
+<p>容器初始化过程中，查看父进程发送给子进程的初始化数据：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// runc/libcontainer/process_linux.go
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">initProcess</span><span class="p">)</span> <span class="nf">sendConfig</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// send the config to the container&#39;s init process, we don&#39;t use JSON Encode
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// here because there might be a problem in JSON decoder in some cases, see:
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// https://github.com/docker/docker/issues/14203#issuecomment-174177790
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">return</span> <span class="nx">utils</span><span class="p">.</span><span class="nf">WriteJSON</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">messageSockPair</span><span class="p">.</span><span class="nx">parent</span><span class="p">,</span> <span class="nx">p</span><span class="p">.</span><span class="nx">config</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><figure><a class="lightgallery" href="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-105321.png" title="image-20221116105320570" data-thumbnail="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-105321.png" data-sub-html="<h2>p.config</h2><p>image-20221116105320570</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-105321.png"
+            data-srcset="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-105321.png, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-105321.png 1.5x, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-105321.png 2x"
+            data-sizes="auto"
+            alt="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-105321.png" />
+    </a><figcaption class="image-caption">p.config</figcaption>
+    </figure></p>
+<p>runc init 中：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// 设置console，这必须在我们已经finalize rootfs之前并且在用户有机会挂载它们想要的mount之后
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="k">if</span> <span class="nx">l</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">CreateConsole</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">setupConsole</span><span class="p">(</span><span class="nx">l</span><span class="p">.</span><span class="nx">consoleSocket</span><span class="p">,</span> <span class="nx">l</span><span class="p">.</span><span class="nx">config</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">system</span><span class="p">.</span><span class="nf">Setctty</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// setupConsole sets up the console from inside the container, and sends the
+</span></span></span><span class="line"><span class="cl"><span class="c1">// master pty fd to the config.Pipe (using cmsg). This is done to ensure that
+</span></span></span><span class="line"><span class="cl"><span class="c1">// consoles are scoped to a container properly (see runc#814 and the many
+</span></span></span><span class="line"><span class="cl"><span class="c1">// issues related to that). This has to be run *after* we&#39;ve pivoted to the new
+</span></span></span><span class="line"><span class="cl"><span class="c1">// rootfs (and the users&#39; configuration is entirely set up).
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">setupConsole</span><span class="p">(</span><span class="nx">socket</span> <span class="o">*</span><span class="nx">os</span><span class="p">.</span><span class="nx">File</span><span class="p">,</span> <span class="nx">config</span> <span class="o">*</span><span class="nx">initConfig</span><span class="p">,</span> <span class="nx">mount</span> <span class="kt">bool</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="nx">socket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// At this point, /dev/ptmx points to something that we would expect. We
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// used to change the owner of the slave path, but since the /dev/pts mount
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// can have gid=X set (at the users&#39; option). So touching the owner of the
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// slave PTY is not necessary, as the kernel will handle that for us. Note
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// however, that setupUser (specifically fixStdioPermissions) *will* change
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// the UID owner of the console to be the user the process will run as (so
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// they can actually control their console).
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">	<span class="nx">pty</span><span class="p">,</span> <span class="nx">slavePath</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">console</span><span class="p">.</span><span class="nf">NewPty</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// After we return from here, we don&#39;t need the console anymore.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">defer</span> <span class="nx">pty</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">config</span><span class="p">.</span><span class="nx">ConsoleHeight</span> <span class="o">!=</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="nx">config</span><span class="p">.</span><span class="nx">ConsoleWidth</span> <span class="o">!=</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">err</span> <span class="p">=</span> <span class="nx">pty</span><span class="p">.</span><span class="nf">Resize</span><span class="p">(</span><span class="nx">console</span><span class="p">.</span><span class="nx">WinSize</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">Height</span><span class="p">:</span> <span class="nx">config</span><span class="p">.</span><span class="nx">ConsoleHeight</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">Width</span><span class="p">:</span>  <span class="nx">config</span><span class="p">.</span><span class="nx">ConsoleWidth</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// Mount the console inside our rootfs.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">if</span> <span class="nx">mount</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">mountConsole</span><span class="p">(</span><span class="nx">slavePath</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// While we can access console.master, using the API is a good idea.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">utils</span><span class="p">.</span><span class="nf">SendFd</span><span class="p">(</span><span class="nx">socket</span><span class="p">,</span> <span class="nx">pty</span><span class="p">.</span><span class="nf">Name</span><span class="p">(),</span> <span class="nx">pty</span><span class="p">.</span><span class="nf">Fd</span><span class="p">());</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// Now, dup over all the things.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">return</span> <span class="nf">dupStdio</span><span class="p">(</span><span class="nx">slavePath</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// dupStdio opens the slavePath for the console and dups the fds to the current
+</span></span></span><span class="line"><span class="cl"><span class="c1">// processes stdio, fd 0,1,2.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">dupStdio</span><span class="p">(</span><span class="nx">slavePath</span> <span class="kt">string</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">fd</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">unix</span><span class="p">.</span><span class="nf">Open</span><span class="p">(</span><span class="nx">slavePath</span><span class="p">,</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">O_RDWR</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="o">&amp;</span><span class="nx">os</span><span class="p">.</span><span class="nx">PathError</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">Op</span><span class="p">:</span>   <span class="s">&#34;open&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">Path</span><span class="p">:</span> <span class="nx">slavePath</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">Err</span><span class="p">:</span>  <span class="nx">err</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// 打开控制台的 slavePath 并将 fds 复制到当前进程 stdio，fd 0,1,2。
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// 这里的 0 1 2 代表容器进程的标准输入，标准输出，标准错误
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// 如果这里把 1 2 去掉，那在前台运行的时候，将看不到容器输出内容
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">i</span> <span class="o">:=</span> <span class="k">range</span> <span class="p">[]</span><span class="kt">int</span><span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">}</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">unix</span><span class="p">.</span><span class="nf">Dup3</span><span class="p">(</span><span class="nx">fd</span><span class="p">,</span> <span class="nx">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="new-terminal--detached">New Terminal &amp; Detached</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// the caller of runc will handle receiving the console master
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">conn</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">net</span><span class="p">.</span><span class="nf">Dial</span><span class="p">(</span><span class="s">&#34;unix&#34;</span><span class="p">,</span> <span class="nx">sockpath</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="nx">uc</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">conn</span><span class="p">.(</span><span class="o">*</span><span class="nx">net</span><span class="p">.</span><span class="nx">UnixConn</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;casting to UnixConn failed&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="nx">t</span><span class="p">.</span><span class="nx">postStart</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">t</span><span class="p">.</span><span class="nx">postStart</span><span class="p">,</span> <span class="nx">uc</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nx">socket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">uc</span><span class="p">.</span><span class="nf">File</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="nx">t</span><span class="p">.</span><span class="nx">postStart</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">t</span><span class="p">.</span><span class="nx">postStart</span><span class="p">,</span> <span class="nx">socket</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nx">process</span><span class="p">.</span><span class="nx">ConsoleSocket</span> <span class="p">=</span> <span class="nx">socket</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="pass-through--detached">Pass-Through &amp; Detached</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="k">if</span> <span class="nx">detach</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"> <span class="nf">inheritStdio</span><span class="p">(</span><span class="nx">process</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"> <span class="k">return</span> <span class="o">&amp;</span><span class="nx">tty</span><span class="p">{},</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">inheritStdio</span><span class="p">(</span><span class="nx">process</span> <span class="o">*</span><span class="nx">libcontainer</span><span class="p">.</span><span class="nx">Process</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">process</span><span class="p">.</span><span class="nx">Stdin</span> <span class="p">=</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Stdin</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">process</span><span class="p">.</span><span class="nx">Stdout</span> <span class="p">=</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Stdout</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">process</span><span class="p">.</span><span class="nx">Stderr</span> <span class="p">=</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Stderr</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="pass-through--foreground">Pass-Through &amp; Foreground</h3>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2022-11-15</span>
+            </div></div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/2022-11-15-containerd-8-runc-modes/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://yzxiu.github.io/2022-11-15-containerd-8-runc-modes/" data-title="2022 11 15 Containerd解析(8) - Runc Modes" data-via="xxxx" data-hashtags="runc,log,io,modes,terminal"><i class="fab fa-twitter fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://yzxiu.github.io/2022-11-15-containerd-8-runc-modes/" data-hashtag="runc"><i class="fab fa-facebook-square fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://yzxiu.github.io/2022-11-15-containerd-8-runc-modes/" data-title="2022 11 15 Containerd解析(8) - Runc Modes"><i class="fab fa-hacker-news fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://yzxiu.github.io/2022-11-15-containerd-8-runc-modes/" data-title="2022 11 15 Containerd解析(8) - Runc Modes"><i data-svg-src="/lib/simple-icons/icons/line.min.svg" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://yzxiu.github.io/2022-11-15-containerd-8-runc-modes/" data-title="2022 11 15 Containerd解析(8) - Runc Modes"><i class="fab fa-weibo fa-fw" aria-hidden="true"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/runc/">runc</a>,&nbsp;<a href="/tags/log/">log</a>,&nbsp;<a href="/tags/io/">io</a>,&nbsp;<a href="/tags/modes/">modes</a>,&nbsp;<a href="/tags/terminal/">terminal</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/2022-11-14-containerd-7-log/" class="prev" rel="prev" title="Containerd解析(7) - log"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>Containerd解析(7) - log</a></div>
+</div>
+<div id="comments"><div id="giscus" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://giscus.app">Giscus</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.105.0">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.11"><i class="far fa-kiss-wink-heart fa-fw" aria-hidden="true"></i> LoveIt</a>
+                </div><div class="footer-line" itemscope itemtype="http://schema.org/CreativeWork"><i class="far fa-copyright fa-fw" aria-hidden="true"></i><span itemprop="copyrightYear">2022</span><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">Yuyu</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw" aria-hidden="true"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw" aria-hidden="true"></i>
+            </a>
+        </div><link rel="stylesheet" href="/lib/lightgallery/css/lightgallery-bundle.min.css"><link rel="stylesheet" href="/lib/katex/katex.min.css"><script type="text/javascript" src="/lib/autocomplete/autocomplete.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="/lib/lazysizes/lazysizes.min.js"></script><script type="text/javascript" src="/lib/lightgallery/lightgallery.min.js"></script><script type="text/javascript" src="/lib/lightgallery/plugins/thumbnail/lg-thumbnail.min.js"></script><script type="text/javascript" src="/lib/lightgallery/plugins/zoom/lg-zoom.min.js"></script><script type="text/javascript" src="/lib/clipboard/clipboard.min.js"></script><script type="text/javascript" src="/lib/sharer/sharer.min.js"></script><script type="text/javascript" src="/lib/katex/katex.min.js"></script><script type="text/javascript" src="/lib/katex/contrib/auto-render.min.js"></script><script type="text/javascript" src="/lib/katex/contrib/copy-tex.min.js"></script><script type="text/javascript" src="/lib/katex/contrib/mhchem.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":75},"comment":{"giscus":{"category":"Announcements","categoryId":"DIC_kwDOIVYpIs4CSRHk","darkTheme":"dark","emitMetadata":"0","inputPosition":"bottom","lang":"zh-CN","lazyLoading":false,"lightTheme":"light","mapping":"pathname","reactionsEnabled":"1","repo":"yzxiu/yzxiu.github.io","repoId":"R_kgDOIVYpIg"}},"lightgallery":true,"math":{"delimiters":[{"display":true,"left":"$$","right":"$$"},{"display":true,"left":"\\[","right":"\\]"},{"display":true,"left":"\\begin{equation}","right":"\\end{equation}"},{"display":true,"left":"\\begin{equation*}","right":"\\end{equation*}"},{"display":true,"left":"\\begin{align}","right":"\\end{align}"},{"display":true,"left":"\\begin{align*}","right":"\\end{align*}"},{"display":true,"left":"\\begin{alignat}","right":"\\end{alignat}"},{"display":true,"left":"\\begin{alignat*}","right":"\\end{alignat*}"},{"display":true,"left":"\\begin{gather}","right":"\\end{gather}"},{"display":true,"left":"\\begin{CD}","right":"\\end{CD}"},{"display":false,"left":"$","right":"$"},{"display":false,"left":"\\(","right":"\\)"}],"strict":false},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
