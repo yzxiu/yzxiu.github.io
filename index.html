@@ -113,6 +113,11 @@
         <a href="/2022-11-13-containerd-6-restart/">阅读全文</a><div class="post-tags">
                 <i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/restart/">restart</a></div></div>
 </article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
+        <a href="/2022-11-02-containerd-3-shim-start/">Containerd解析(3) - shim</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2022-11-02">2022-11-02</time></span></div><div class="content">概述 记录shim相关的疑问和分析 shim如何监控多个容器 在k8s中，创建一个pod，如： k run nginx --image=nginx 节点上会有两个容器，一个是 pause 容器（也称为sa</div><div class="post-footer">
+        <a href="/2022-11-02-containerd-3-shim-start/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/shim/">shim</a></div></div>
+</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
         <a href="/2022-11-02-containerd-2-layer/">Containerd解析(2) - layer</a>
     </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2022-11-02">2022-11-02</time></span></div><div class="content">概述 本文只讨论containerd默认配置下的行为，不涉及docker。 参考：content-flow.md 执行 client.Pull(ctx, &quot;docker.io/library/redis:5.0.9&quot;, containerd.W</div><div class="post-footer">
         <a href="/2022-11-02-containerd-2-layer/">阅读全文</a><div class="post-tags">
@@ -131,21 +136,15 @@
     </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2022-10-30">2022-10-30</time></span></div><div class="content">概述 本文使用containerd默认配置，不涉及docker。 通过一个简单的例子，粗略了解containerd创建并运行一个容器的过程。 主要</div><div class="post-footer">
         <a href="/2022-10-30-containerd-1/">阅读全文</a><div class="post-tags">
                 <i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/containerd/">containerd</a>,&nbsp;<a href="/tags/containerd-shim/">containerd-shim</a></div></div>
-</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><div class="featured-image-preview">
-            <a href="/2022-10-29-my-first-post/"><img
-        class="lazyload"
-        src="/svg/loading.min.svg"
-        data-src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221030-230547.jpg"
-        data-srcset="https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221030-230547.jpg, https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221030-230547.jpg 1.5x, https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221030-230547.jpg 2x"
-        data-sizes="auto"
-        alt="https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221030-230547.jpg"
-        title="https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221030-230547.jpg" /></a>
-        </div><h1 class="single-title" itemprop="name headline">
-        <a href="/2022-10-29-my-first-post/">My First Post</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2022-10-29">2022-10-29</time></span></div><div class="content">1 配置 参考：https://hugoloveit.com/zh-cn/posts/ 2 图片 上传配置 typora配置： typora setting 图片插入： 1 2 # 使用t</div><div class="post-footer">
-        <a href="/2022-10-29-my-first-post/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/test/">test</a></div></div>
-</article></div></div>
+</article><ul class="pagination"><li class="page-item active">
+                    <span class="page-link">
+                        <a href="/">1</a>
+                    </span>
+                </li><li class="page-item ">
+                    <span class="page-link">
+                        <a href="/page/2/">2</a>
+                    </span>
+                </li></ul></div></div>
             </main><footer class="footer">
         <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.105.0">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.11"><i class="far fa-kiss-wink-heart fa-fw" aria-hidden="true"></i> LoveIt</a>
                 </div><div class="footer-line" itemscope itemtype="http://schema.org/CreativeWork"><i class="far fa-copyright fa-fw" aria-hidden="true"></i><span itemprop="copyrightYear">2022</span><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">Yuyu</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>

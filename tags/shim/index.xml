@@ -11,5 +11,13 @@
     <guid>https://yzxiu.github.io/2022-11-14-containerd-7-log/</guid>
     <description><![CDATA[概述 了解 nerdctl 是怎样处理容器日志的，后续再分析kubelet的处理方式。 nerdctl 中的日志处理 容器日志处理，其实就是处理runc程序的标准输出，标准错误]]></description>
 </item>
+<item>
+    <title>Containerd解析(3) - shim</title>
+    <link>https://yzxiu.github.io/2022-11-02-containerd-3-shim-start/</link>
+    <pubDate>Wed, 02 Nov 2022 21:50:04 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2022-11-02-containerd-3-shim-start/</guid>
+    <description><![CDATA[概述 记录shim相关的疑问和分析 shim如何监控多个容器 在k8s中，创建一个pod，如： k run nginx --image=nginx 节点上会有两个容器，一个是 pause 容器（也称为sa]]></description>
+</item>
 </channel>
 </rss>

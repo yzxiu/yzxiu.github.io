@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="robots" content="noodp" />
         <title>Containerd解析(3) - shim - Yuyu&#39;s Blog</title><meta name="Description" content=""><meta property="og:title" content="Containerd解析(3) - shim" />
-<meta property="og:description" content="" />
+<meta property="og:description" content="概述 记录shim相关的疑问和分析 shim如何监控多个容器 在k8s中，创建一个pod，如： k run nginx --image=nginx 节点上会有两个容器，一个是 pause 容器（也称为sa" />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://yzxiu.github.io/2022-11-02-containerd-3-shim-start/" /><meta property="og:image" content="https://yzxiu.github.io/logo.png"/><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2022-11-02T21:50:04+08:00" />
@@ -15,9 +15,9 @@
 <meta name="twitter:image" content="https://yzxiu.github.io/logo.png"/>
 
 <meta name="twitter:title" content="Containerd解析(3) - shim"/>
-<meta name="twitter:description" content=""/>
+<meta name="twitter:description" content="概述 记录shim相关的疑问和分析 shim如何监控多个容器 在k8s中，创建一个pod，如： k run nginx --image=nginx 节点上会有两个容器，一个是 pause 容器（也称为sa"/>
 <meta name="application-name" content="Yuyu&#39;s Blog">
-<meta name="apple-mobile-web-app-title" content="Yuyu&#39;s Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="icon" href="/images/avataaars.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://yzxiu.github.io/2022-11-02-containerd-3-shim-start/" /><link rel="prev" href="https://yzxiu.github.io/2022-11-02-containerd-2-layer/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<meta name="apple-mobile-web-app-title" content="Yuyu&#39;s Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="icon" href="/images/avataaars.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://yzxiu.github.io/2022-11-02-containerd-3-shim-start/" /><link rel="prev" href="https://yzxiu.github.io/2022-11-02-containerd-2-layer/" /><link rel="next" href="https://yzxiu.github.io/2022-11-13-containerd-6-restart/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"></noscript><link rel="preload" href="/lib/animate/animate.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="/lib/animate/animate.min.css"></noscript><script type="application/ld+json">
     {
@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2022-11-02-containerd-3-shim-start\/"
-        },"genre": "posts","wordcount":  0 ,
+        },"genre": "posts","keywords": "shim","wordcount":  1573 ,
         "url": "https:\/\/yzxiu.github.io\/2022-11-02-containerd-3-shim-start\/","datePublished": "2022-11-02T21:50:04+08:00","dateModified": "2022-11-02T21:50:04+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -45,7 +45,7 @@
             <a href="/" title="Yuyu&#39;s Blog">Yuyu&#39;s Blog</a>
         </div>
         <div class="menu">
-            <div class="menu-inner"><a class="menu-item" href="/posts/"> 文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/about/"> 关于 </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
                         <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
                         <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
                             <i class="fas fa-search fa-fw" aria-hidden="true"></i>
@@ -87,7 +87,7 @@
                     <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
                         取消
                     </a>
-                </div><a class="menu-item" href="/posts/" title="">文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                </div><a class="menu-item" href="/posts/" title="">文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/about/" title="">关于</a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
                 <i class="fas fa-adjust fa-fw" aria-hidden="true"></i>
             </a></div>
     </div>
@@ -102,15 +102,475 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Containerd解析(3) - shim</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-11-02">2022-11-02</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 0 字&nbsp;
-                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 0 分钟&nbsp;</div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-11-02">2022-11-02</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 1573 字&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 4 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
                     <span>目录</span>
                     <span><i class="details-icon fas fa-angle-right" aria-hidden="true"></i></span>
                 </div>
-                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents"></nav></div>
-            </div><div class="content" id="content"></div><div class="post-footer" id="post-footer">
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#概述">概述</a></li>
+    <li><a href="#shim如何监控多个容器">shim如何监控多个容器</a>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#创建pause容器">创建<code>pause</code>容器</a></li>
+            <li><a href="#创建nginx容器">创建<code>nginx</code>容器</a></li>
+            <li><a href="#代码实现">代码实现</a></li>
+            <li><a href="#小结">小结</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><h2 id="概述">概述</h2>
+<p>记录shim相关的疑问和分析</p>
+<br>
+<h2 id="shim如何监控多个容器">shim如何监控多个容器</h2>
+<p>在k8s中，创建一个pod，如：</p>
+<p><code>k run nginx --image=nginx</code></p>
+<p>节点上会有两个容器，一个是 <code>pause</code> 容器（也称为<code>sandbox</code>容器），一个是<code>nginx</code>容器。</p>
+<p>这两个容器的父进程都是同一个shim，如下：</p>
+<p><figure><a class="lightgallery" href="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221117-172645.png" title="image-20221117172644477" data-thumbnail="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221117-172645.png" data-sub-html="<h2>ps -ef --forest</h2><p>image-20221117172644477</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221117-172645.png"
+            data-srcset="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221117-172645.png, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221117-172645.png 1.5x, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221117-172645.png 2x"
+            data-sizes="auto"
+            alt="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221117-172645.png" />
+    </a><figcaption class="image-caption">ps -ef --forest</figcaption>
+    </figure></p>
+<br>
+<p>接下来通过代码调试，了解这个过程：</p>
+<p>运行命令  <code>k run nginx --image=nginx</code></p>
+<h4 id="创建pause容器">创建<code>pause</code>容器</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">shim</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">m</span><span class="p">.</span><span class="nf">startShim</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">bundle</span><span class="p">,</span> <span class="nx">id</span><span class="p">,</span> <span class="nx">opts</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">...</span>
+</span></span><span class="line"><span class="cl"><span class="o">...</span>
+</span></span><span class="line"><span class="cl"><span class="nx">out</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">cmd</span><span class="p">.</span><span class="nf">CombinedOutput</span><span class="p">()</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221117-195623.png"
+        data-srcset="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221117-195623.png, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221117-195623.png 1.5x, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221117-195623.png 2x"
+        data-sizes="auto"
+        alt="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221117-195623.png"
+        title="image-20221117195622367" /></p>
+<p>out的值</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">unix:///run/containerd/s/a27575c24e27006499fdd59b050358b4db870446a64a857fa02abae7d096a9b6
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="创建nginx容器">创建<code>nginx</code>容器</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">shim</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">m</span><span class="p">.</span><span class="nf">startShim</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">bundle</span><span class="p">,</span> <span class="nx">id</span><span class="p">,</span> <span class="nx">opts</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="o">...</span>
+</span></span><span class="line"><span class="cl"><span class="o">...</span>
+</span></span><span class="line"><span class="cl"><span class="nx">out</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">cmd</span><span class="p">.</span><span class="nf">CombinedOutput</span><span class="p">()</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221117-195729.png"
+        data-srcset="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221117-195729.png, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221117-195729.png 1.5x, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221117-195729.png 2x"
+        data-sizes="auto"
+        alt="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221117-195729.png"
+        title="image-20221117195728875" /></p>
+<p>out的值</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">unix:///run/containerd/s/a27575c24e27006499fdd59b050358b4db870446a64a857fa02abae7d096a9b6
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>创建的容器如下：</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221117-200322.png"
+        data-srcset="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221117-200322.png, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221117-200322.png 1.5x, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221117-200322.png 2x"
+        data-sizes="auto"
+        alt="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221117-200322.png"
+        title="image-20221117200321363" /></p>
+<p>可以看到，虽然调用了两次 <code>shim, err := m.startShim(ctx, bundle, id, opts)</code>，但是返回了相同的shim服务地址，查看新增的shim进程，也只有一个，所以：</p>
+<div class="details admonition info open">
+        <div class="details-summary admonition-title">
+            <i class="icon fas fa-info-circle fa-fw" aria-hidden="true"></i>信息<i class="details-icon fas fa-angle-right fa-fw" aria-hidden="true"></i>
+        </div>
+        <div class="details-content">
+            <div class="admonition-content"><p>containerd为同一个pod创建容器时，只有<code>pause</code>容器启动了<code>shim</code>进程(shim服务端)，并返回一个shim的通信地址。</p>
+<p>后续启动同一个pod的其他容器时，虽然也调用了<code>m.startShim()</code>，但不会启动新的shim进程，而且返回<strong>相同</strong>的通信地址。</p>
+<p>所以，同一个pod下的容器，都是由同一个shim进程创建管理。</p>
+</div>
+        </div>
+    </div>
+<h4 id="代码实现">代码实现</h4>
+<p>查看<code>shim</code> <code>start</code>命令相关代码：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span><span class="lnt">110
+</span><span class="lnt">111
+</span><span class="lnt">112
+</span><span class="lnt">113
+</span><span class="lnt">114
+</span><span class="lnt">115
+</span><span class="lnt">116
+</span><span class="lnt">117
+</span><span class="lnt">118
+</span><span class="lnt">119
+</span><span class="lnt">120
+</span><span class="lnt">121
+</span><span class="lnt">122
+</span><span class="lnt">123
+</span><span class="lnt">124
+</span><span class="lnt">125
+</span><span class="lnt">126
+</span><span class="lnt">127
+</span><span class="lnt">128
+</span><span class="lnt">129
+</span><span class="lnt">130
+</span><span class="lnt">131
+</span><span class="lnt">132
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">manager</span><span class="p">)</span> <span class="nf">Start</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">id</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">opts</span> <span class="nx">shim</span><span class="p">.</span><span class="nx">StartOpts</span><span class="p">)</span> <span class="p">(</span><span class="nx">_</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">retErr</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 构建另一个shim cmd
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// 真正的 shim server是由这个cmd启动的
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// 当前cmd返回了 sock address
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">cmd</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">newCommand</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">id</span><span class="p">,</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">ContainerdBinary</span><span class="p">,</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">Address</span><span class="p">,</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">TTRPCAddress</span><span class="p">,</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">Debug</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// grouping 默认为 id
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">grouping</span> <span class="o">:=</span> <span class="nx">id</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">spec</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">readSpec</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 查看 config.json 中是否存在 groupID
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">group</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">groupLabels</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">groupID</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">spec</span><span class="p">.</span><span class="nx">Annotations</span><span class="p">[</span><span class="nx">group</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">grouping</span> <span class="p">=</span> <span class="nx">groupID</span>
+</span></span><span class="line"><span class="cl">			<span class="k">break</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 计算shim服务端的address地址
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// unix:///run/containerd/s/a27575c24e27006499fdd59b050358b4db870446a64a857fa02abae7d096a9b6
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">address</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">shim</span><span class="p">.</span><span class="nf">SocketAddress</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">Address</span><span class="p">,</span> <span class="nx">grouping</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	
+</span></span><span class="line"><span class="cl">    <span class="c1">// 尝试创建sock
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">socket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">shim</span><span class="p">.</span><span class="nf">NewSocket</span><span class="p">(</span><span class="nx">address</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// the only time where this would happen is if there is a bug and the socket
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="c1">// was not cleaned up in the cleanup method of the shim or we are using the
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="c1">// grouping functionality where the new process should be run with the same
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="c1">// shim as an existing container
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="k">if</span> <span class="p">!</span><span class="nx">shim</span><span class="p">.</span><span class="nf">SocketEaddrinuse</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;create new shim socket: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="c1">// 如果创建失败，可能已经创建过
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="c1">// 尝试连接，并直接返回 address
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="c1">// pod中除了pause容器，其他容器属于这种情况
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="k">if</span> <span class="nx">shim</span><span class="p">.</span><span class="nf">CanConnect</span><span class="p">(</span><span class="nx">address</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">shim</span><span class="p">.</span><span class="nf">WriteAddress</span><span class="p">(</span><span class="s">&#34;address&#34;</span><span class="p">,</span> <span class="nx">address</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;write existing socket for shim: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">address</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">shim</span><span class="p">.</span><span class="nf">RemoveSocket</span><span class="p">(</span><span class="nx">address</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;remove pre-existing socket: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">socket</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">shim</span><span class="p">.</span><span class="nf">NewSocket</span><span class="p">(</span><span class="nx">address</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;try create new shim socket 2x: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">retErr</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">socket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">_</span> <span class="p">=</span> <span class="nx">shim</span><span class="p">.</span><span class="nf">RemoveSocket</span><span class="p">(</span><span class="nx">address</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// make sure that reexec shim-v2 binary use the value if need
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">shim</span><span class="p">.</span><span class="nf">WriteAddress</span><span class="p">(</span><span class="s">&#34;address&#34;</span><span class="p">,</span> <span class="nx">address</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">f</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">socket</span><span class="p">.</span><span class="nf">File</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 将文件描述符传递给子进程
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">cmd</span><span class="p">.</span><span class="nx">ExtraFiles</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">ExtraFiles</span><span class="p">,</span> <span class="nx">f</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">goruntime</span><span class="p">.</span><span class="nf">LockOSThread</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">os</span><span class="p">.</span><span class="nf">Getenv</span><span class="p">(</span><span class="s">&#34;SCHED_CORE&#34;</span><span class="p">)</span> <span class="o">!=</span> <span class="s">&#34;&#34;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">schedcore</span><span class="p">.</span><span class="nf">Create</span><span class="p">(</span><span class="nx">schedcore</span><span class="p">.</span><span class="nx">ProcessGroup</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;enable sched core support: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">cmd</span><span class="p">.</span><span class="nf">Start</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">f</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">goruntime</span><span class="p">.</span><span class="nf">UnlockOSThread</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">retErr</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">cmd</span><span class="p">.</span><span class="nx">Process</span><span class="p">.</span><span class="nf">Kill</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}()</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// make sure to wait after start
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">go</span> <span class="nx">cmd</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">data</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">io</span><span class="p">.</span><span class="nf">ReadAll</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Stdin</span><span class="p">);</span> <span class="nx">err</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="kd">var</span> <span class="nx">any</span> <span class="nx">ptypes</span><span class="p">.</span><span class="nx">Any</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">proto</span><span class="p">.</span><span class="nf">Unmarshal</span><span class="p">(</span><span class="nx">data</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">any</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">typeurl</span><span class="p">.</span><span class="nf">UnmarshalAny</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">any</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">opts</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">v</span><span class="p">.(</span><span class="o">*</span><span class="nx">options</span><span class="p">.</span><span class="nx">Options</span><span class="p">);</span> <span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">if</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">ShimCgroup</span> <span class="o">!=</span> <span class="s">&#34;&#34;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">					<span class="k">if</span> <span class="nx">cgroups</span><span class="p">.</span><span class="nf">Mode</span><span class="p">()</span> <span class="o">==</span> <span class="nx">cgroups</span><span class="p">.</span><span class="nx">Unified</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">						<span class="nx">cg</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">cgroupsv2</span><span class="p">.</span><span class="nf">LoadManager</span><span class="p">(</span><span class="s">&#34;/sys/fs/cgroup&#34;</span><span class="p">,</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">ShimCgroup</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">						<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">							<span class="k">return</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to load cgroup %s: %w&#34;</span><span class="p">,</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">ShimCgroup</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">						<span class="p">}</span>
+</span></span><span class="line"><span class="cl">						<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">cg</span><span class="p">.</span><span class="nf">AddProc</span><span class="p">(</span><span class="nb">uint64</span><span class="p">(</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">Process</span><span class="p">.</span><span class="nx">Pid</span><span class="p">));</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">							<span class="k">return</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to join cgroup %s: %w&#34;</span><span class="p">,</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">ShimCgroup</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">						<span class="p">}</span>
+</span></span><span class="line"><span class="cl">					<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">						<span class="nx">cg</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">cgroups</span><span class="p">.</span><span class="nf">Load</span><span class="p">(</span><span class="nx">cgroups</span><span class="p">.</span><span class="nx">V1</span><span class="p">,</span> <span class="nx">cgroups</span><span class="p">.</span><span class="nf">StaticPath</span><span class="p">(</span><span class="nx">opts</span><span class="p">.</span><span class="nx">ShimCgroup</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">						<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">							<span class="k">return</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to load cgroup %s: %w&#34;</span><span class="p">,</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">ShimCgroup</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">						<span class="p">}</span>
+</span></span><span class="line"><span class="cl">						<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">cg</span><span class="p">.</span><span class="nf">AddProc</span><span class="p">(</span><span class="nb">uint64</span><span class="p">(</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">Process</span><span class="p">.</span><span class="nx">Pid</span><span class="p">));</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">							<span class="k">return</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to join cgroup %s: %w&#34;</span><span class="p">,</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">ShimCgroup</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">						<span class="p">}</span>
+</span></span><span class="line"><span class="cl">					<span class="p">}</span>
+</span></span><span class="line"><span class="cl">				<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">shim</span><span class="p">.</span><span class="nf">AdjustOOMScore</span><span class="p">(</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">Process</span><span class="p">.</span><span class="nx">Pid</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to adjust OOM score for shim: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">address</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="小结">小结</h4>
+<p><code>shim</code>执行<code>start</code>命令的时候，首先根据config.json的annotations字段，查看有没有<code>groupLabels</code>，如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">var</span> <span class="nx">groupLabels</span> <span class="p">=</span> <span class="p">[]</span><span class="kt">string</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="s">&#34;io.containerd.runc.v2.group&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="s">&#34;io.kubernetes.cri.sandbox-id&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="c1">// pause容器的 annotations
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="s2">&#34;annotations&#34;</span><span class="err">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;io.kubernetes.cri.container-type&#34;</span><span class="p">:</span> <span class="s2">&#34;sandbox&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;io.kubernetes.cri.sandbox-id&#34;</span><span class="p">:</span> <span class="s2">&#34;773f854a158825b6489ea0b90c4cbfe516ff1e4d302cda0ccd930d8237d16c0d&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;io.kubernetes.cri.sandbox-log-directory&#34;</span><span class="p">:</span> <span class="s2">&#34;/var/log/pods/default_nginx_d484032b-b35c-4511-8db9-42050023ac61&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;io.kubernetes.cri.sandbox-name&#34;</span><span class="p">:</span> <span class="s2">&#34;nginx&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;io.kubernetes.cri.sandbox-namespace&#34;</span><span class="p">:</span> <span class="s2">&#34;default&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="c1">// nginx容器的 annotations
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="s2">&#34;annotations&#34;</span><span class="err">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;io.kubernetes.cri.container-name&#34;</span><span class="p">:</span> <span class="s2">&#34;nginx&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;io.kubernetes.cri.container-type&#34;</span><span class="p">:</span> <span class="s2">&#34;container&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;io.kubernetes.cri.image-name&#34;</span><span class="p">:</span> <span class="s2">&#34;docker.io/library/nginx:latest&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;io.kubernetes.cri.sandbox-id&#34;</span><span class="p">:</span> <span class="s2">&#34;773f854a158825b6489ea0b90c4cbfe516ff1e4d302cda0ccd930d8237d16c0d&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;io.kubernetes.cri.sandbox-name&#34;</span><span class="p">:</span> <span class="s2">&#34;nginx&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;io.kubernetes.cri.sandbox-namespace&#34;</span><span class="p">:</span> <span class="s2">&#34;default&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果存在 groupLabels，则使用 groupID 替换 id。</p>
+<p>所以，pause 容器和 nginx容器，计算出来的 shim sock address 是一样的。</p>
+<p>第一次创建 pause 容器的时候，socket file不存在，使用cmd正常启动shim server，然后返回socket address。</p>
+<p>接下来创建nginx容器的时候，socket已存在，验证socket连接，成功则<strong>直接</strong>返回 socket address地址。</p>
+</div><div class="post-footer" id="post-footer">
     <div class="post-info">
         <div class="post-info-line">
             <div class="post-info-mod">
@@ -121,19 +581,20 @@
                             <a class="link-to-markdown" href="/2022-11-02-containerd-3-shim-start/index.md" target="_blank">阅读原始文档</a>
                         </span></div>
             <div class="post-info-share">
-                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://yzxiu.github.io/2022-11-02-containerd-3-shim-start/" data-title="Containerd解析(3) - shim" data-via="xxxx"><i class="fab fa-twitter fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://yzxiu.github.io/2022-11-02-containerd-3-shim-start/"><i class="fab fa-facebook-square fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://yzxiu.github.io/2022-11-02-containerd-3-shim-start/" data-title="Containerd解析(3) - shim"><i class="fab fa-hacker-news fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://yzxiu.github.io/2022-11-02-containerd-3-shim-start/" data-title="Containerd解析(3) - shim"><i data-svg-src="/lib/simple-icons/icons/line.min.svg" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://yzxiu.github.io/2022-11-02-containerd-3-shim-start/" data-title="Containerd解析(3) - shim"><i class="fab fa-weibo fa-fw" aria-hidden="true"></i></a></span>
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://yzxiu.github.io/2022-11-02-containerd-3-shim-start/" data-title="Containerd解析(3) - shim" data-via="xxxx" data-hashtags="shim"><i class="fab fa-twitter fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://yzxiu.github.io/2022-11-02-containerd-3-shim-start/" data-hashtag="shim"><i class="fab fa-facebook-square fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://yzxiu.github.io/2022-11-02-containerd-3-shim-start/" data-title="Containerd解析(3) - shim"><i class="fab fa-hacker-news fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://yzxiu.github.io/2022-11-02-containerd-3-shim-start/" data-title="Containerd解析(3) - shim"><i data-svg-src="/lib/simple-icons/icons/line.min.svg" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://yzxiu.github.io/2022-11-02-containerd-3-shim-start/" data-title="Containerd解析(3) - shim"><i class="fab fa-weibo fa-fw" aria-hidden="true"></i></a></span>
             </div>
         </div>
     </div>
 
     <div class="post-info-more">
-        <section class="post-tags"></section>
+        <section class="post-tags"><i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/shim/">shim</a></section>
         <section>
             <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
         </section>
     </div>
 
-    <div class="post-nav"><a href="/2022-11-02-containerd-2-layer/" class="prev" rel="prev" title="Containerd解析(2) - layer"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>Containerd解析(2) - layer</a></div>
+    <div class="post-nav"><a href="/2022-11-02-containerd-2-layer/" class="prev" rel="prev" title="Containerd解析(2) - layer"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>Containerd解析(2) - layer</a>
+            <a href="/2022-11-13-containerd-6-restart/" class="next" rel="next" title="Containerd解析(6) - restart">Containerd解析(6) - restart<i class="fas fa-angle-right fa-fw" aria-hidden="true"></i></a></div>
 </div>
 <div id="comments"><div id="giscus" class="comment"></div><noscript>
                 Please enable JavaScript to view the comments powered by <a href="https://giscus.app">Giscus</a>.

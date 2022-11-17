@@ -30,6 +30,14 @@
     <description><![CDATA[概述 在runc的start命令代码如下： 1 2 3 4 5 6 7 8 9 10 11 switch status { // 对于一个已经处于Created状态的容器，执行Exec case libcontainer.Created: return container.Exec() case libcontainer.Stopped: return errors.New(&#34;cannot]]></description>
 </item>
 <item>
+    <title>Containerd解析(3) - shim</title>
+    <link>https://yzxiu.github.io/2022-11-02-containerd-3-shim-start/</link>
+    <pubDate>Wed, 02 Nov 2022 21:50:04 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2022-11-02-containerd-3-shim-start/</guid>
+    <description><![CDATA[概述 记录shim相关的疑问和分析 shim如何监控多个容器 在k8s中，创建一个pod，如： k run nginx --image=nginx 节点上会有两个容器，一个是 pause 容器（也称为sa]]></description>
+</item>
+<item>
     <title>Containerd解析(2) - layer</title>
     <link>https://yzxiu.github.io/2022-11-02-containerd-2-layer/</link>
     <pubDate>Wed, 02 Nov 2022 15:49:56 &#43;0800</pubDate>
