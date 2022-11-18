@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="robots" content="noodp" />
         <title>Containerd解析(8) - Runc Modes - Yuyu&#39;s Blog</title><meta name="Description" content=""><meta property="og:title" content="Containerd解析(8) - Runc Modes" />
-<meta property="og:description" content="概述 在runc中，存在两种 Terminal Modes，分别是：New Terminal、Pass-Through ​ 存在两种 runc Modes，分别是：Foregr" />
+<meta property="og:description" content="概述 在runc中， 有两种 Terminal Modes，分别是：New Terminal、Pass-Through 有两种 Runc Modes，分别是：Foregroun" />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://yzxiu.github.io/2022-11-15-containerd-8-runc-modes/" /><meta property="og:image" content="https://yzxiu.github.io/logo.png"/><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2022-11-15T17:04:35+08:00" />
@@ -15,9 +15,9 @@
 <meta name="twitter:image" content="https://yzxiu.github.io/logo.png"/>
 
 <meta name="twitter:title" content="Containerd解析(8) - Runc Modes"/>
-<meta name="twitter:description" content="概述 在runc中，存在两种 Terminal Modes，分别是：New Terminal、Pass-Through ​ 存在两种 runc Modes，分别是：Foregr"/>
+<meta name="twitter:description" content="概述 在runc中， 有两种 Terminal Modes，分别是：New Terminal、Pass-Through 有两种 Runc Modes，分别是：Foregroun"/>
 <meta name="application-name" content="Yuyu&#39;s Blog">
-<meta name="apple-mobile-web-app-title" content="Yuyu&#39;s Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="icon" href="/images/avataaars.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://yzxiu.github.io/2022-11-15-containerd-8-runc-modes/" /><link rel="prev" href="https://yzxiu.github.io/2022-11-14-containerd-7-log/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<meta name="apple-mobile-web-app-title" content="Yuyu&#39;s Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="icon" href="/images/avataaars.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://yzxiu.github.io/2022-11-15-containerd-8-runc-modes/" /><link rel="prev" href="https://yzxiu.github.io/2022-11-14-containerd-7-log/" /><link rel="next" href="https://yzxiu.github.io/2022-11-18-containerd-9-containerd-containerd-shim-runc/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"></noscript><link rel="preload" href="/lib/animate/animate.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="/lib/animate/animate.min.css"></noscript><script type="application/ld+json">
     {
@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2022-11-15-containerd-8-runc-modes\/"
-        },"genre": "posts","keywords": "runc, log, io, modes, terminal","wordcount":  1826 ,
+        },"genre": "posts","keywords": "runc, log, io, modes, terminal","wordcount":  1823 ,
         "url": "https:\/\/yzxiu.github.io\/2022-11-15-containerd-8-runc-modes\/","datePublished": "2022-11-15T17:04:35+08:00","dateModified": "2022-11-15T17:04:35+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,7 +102,7 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Containerd解析(8) - Runc Modes</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-11-15">2022-11-15</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 1826 字&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-11-15">2022-11-15</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 1823 字&nbsp;
                 <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 4 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
@@ -123,8 +123,9 @@
   </ul>
 </nav></div>
             </div><div class="content" id="content"><h2 id="概述">概述</h2>
-<p>在<a href="https://github.com/opencontainers/runc/blob/main/docs/terminals.md" target="_blank" rel="noopener noreffer ">runc</a>中，存在两种 Terminal Modes，分别是：<code>New Terminal</code>、<code>Pass-Through</code></p>
-<p>​                    存在两种 runc Modes，分别是：<code>Foreground、Detached</code></p>
+<p>在<a href="https://github.com/opencontainers/runc/blob/main/docs/terminals.md" target="_blank" rel="noopener noreffer ">runc</a>中，</p>
+<p>有两种 <a href="https://github.com/opencontainers/runc/blob/main/docs/terminals.md#-terminal-modes" target="_blank" rel="noopener noreffer ">Terminal Modes</a>，分别是：<a href="https://github.com/opencontainers/runc/blob/main/docs/terminals.md#-new-terminal" target="_blank" rel="noopener noreffer ">New Terminal</a>、<a href="https://github.com/opencontainers/runc/blob/main/docs/terminals.md#-pass-through" target="_blank" rel="noopener noreffer ">Pass-Through</a></p>
+<p>有两种 <a href="https://github.com/opencontainers/runc/blob/main/docs/terminals.md#-runc-modes" target="_blank" rel="noopener noreffer ">Runc Modes</a>，分别是：<a href="https://github.com/opencontainers/runc/blob/main/docs/terminals.md#foreground" target="_blank" rel="noopener noreffer ">Foreground</a>、<a href="https://github.com/opencontainers/runc/blob/main/docs/terminals.md#detached" target="_blank" rel="noopener noreffer ">Detached</a></p>
 <p>接下来，通过runc中的代码，了解这几中 modes。</p>
 <h2 id="setupio">setupIO</h2>
 <div class="highlight"><div class="chroma">
@@ -823,7 +824,8 @@
         </section>
     </div>
 
-    <div class="post-nav"><a href="/2022-11-14-containerd-7-log/" class="prev" rel="prev" title="Containerd解析(7) - log"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>Containerd解析(7) - log</a></div>
+    <div class="post-nav"><a href="/2022-11-14-containerd-7-log/" class="prev" rel="prev" title="Containerd解析(7) - log"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>Containerd解析(7) - log</a>
+            <a href="/2022-11-18-containerd-9-containerd-containerd-shim-runc/" class="next" rel="next" title="Containerd解析(9) - Containerd,Containerd-shim,runc的依存关系">Containerd解析(9) - Containerd,Containerd-shim,runc的依存关系<i class="fas fa-angle-right fa-fw" aria-hidden="true"></i></a></div>
 </div>
 <div id="comments"><div id="giscus" class="comment"></div><noscript>
                 Please enable JavaScript to view the comments powered by <a href="https://giscus.app">Giscus</a>.

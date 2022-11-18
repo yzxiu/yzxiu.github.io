@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2022-10-30-containerd-1\/"
-        },"genre": "posts","keywords": "containerd, containerd-shim","wordcount":  11225 ,
+        },"genre": "posts","keywords": "containerd, containerd-shim","wordcount":  11358 ,
         "url": "https:\/\/yzxiu.github.io\/2022-10-30-containerd-1\/","datePublished": "2022-10-30T21:48:08+08:00","dateModified": "2022-10-30T21:48:08+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,7 +102,7 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Containerd解析(1) - example</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-10-30">2022-10-30</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 11225 字&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-10-30">2022-10-30</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 11358 字&nbsp;
                 <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 23 分钟&nbsp;</div>
         </div><div class="featured-image"><img
         class="lazyload"
@@ -146,16 +146,20 @@
       <ul>
         <li><a href="#containerd-l-local-create">[containerd] (l *local) Create()</a>
           <ul>
-            <li><a href="#rtimecreate">rtime.Create()</a></li>
-            <li><a href="#mmanagerstart">m.manager.Start()</a>
+            <li><a href="#rtimecreate">rtime.Create()</a>
               <ul>
-                <li><a href="#newbundle">NewBundle()</a></li>
-                <li><a href="#shim-err--mstartshim">shim, err := m.startShim()</a></li>
-              </ul>
-            </li>
-            <li><a href="#shimtaskcreate">shimTask.Create()</a>
-              <ul>
-                <li><a href="#staskcreate">s.task.Create()</a></li>
+                <li><a href="#mmanagerstart">m.manager.Start()</a>
+                  <ul>
+                    <li><a href="#newbundle">NewBundle()</a></li>
+                    <li><a href="#shim-err--mstartshim">shim, err := m.startShim()</a></li>
+                    <li><a href="#小结">小结</a></li>
+                  </ul>
+                </li>
+                <li><a href="#shimtaskcreate">shimTask.Create()</a>
+                  <ul>
+                    <li><a href="#staskcreate">s.task.Create()</a></li>
+                  </ul>
+                </li>
               </ul>
             </li>
           </ul>
@@ -174,7 +178,8 @@
             </li>
           </ul>
         </li>
-        <li><a href="#containernewtask小结">container.NewTask()小结</a></li>
+        <li><a href="#containerd-lmonitormonitorc-labels">[containerd] l.monitor.Monitor(c, labels)</a></li>
+        <li><a href="#小结-1">小结</a></li>
       </ul>
     </li>
     <li><a href="#client-taskstartctx">[client] task.Start(ctx)</a>
@@ -2229,7 +2234,7 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h4 id="mmanagerstart">m.manager.Start()</h4>
+</div><h5 id="mmanagerstart">m.manager.Start()</h5>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -2368,7 +2373,7 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h5 id="newbundle">NewBundle()</h5>
+</div><h6 id="newbundle">NewBundle()</h6>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -2538,7 +2543,7 @@
 </span></span><span class="line"><span class="cl">    └── work -&gt; /var/lib/containerd/io.containerd.runtime.v2.task/default/redis-server
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h5 id="shim-err--mstartshim">shim, err := m.startShim()</h5>
+</div><h6 id="shim-err--mstartshim">shim, err := m.startShim()</h6>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -2813,7 +2818,9 @@
 <p>实际上 containerd-shim-runc-v2 也是一个简单的rpc服务器，使用 <a href="https://github.com/containerd/ttrpc" target="_blank" rel="noopener noreffer ">ttrpc</a></p>
 <p>containerd-shim-runc-v2 启动完成后，返回了一个本地的连接地址，如下</p>
 <p>unix:///run/containerd/s/41107b8f6663c77e690f1e545ff41ce9039b6106896f6cf5a137e23c73c363c1</p>
-<h4 id="shimtaskcreate">shimTask.Create()</h4>
+<h6 id="小结">小结</h6>
+<p>m.manager.Start()方法准备了bundle文件夹，config.json配置文件，启动了shim。</p>
+<h5 id="shimtaskcreate">shimTask.Create()</h5>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -2882,7 +2889,7 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h5 id="staskcreate">s.task.Create()</h5>
+</div><h6 id="staskcreate">s.task.Create()</h6>
 <p>containerd/api/runtime/task/v2/shim_ttrpc.pb.go L175</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -2908,6 +2915,7 @@
 <p>然后这里调用它的create方法</p>
 <p>这里我们可以调试 containerd-shim-runc-v2 的相关代码，看一下 containerd 调用 shim 的create方法之后，会发生哪些事情。</p>
 <p>下面进入 <code>containerd-shim-runc-v2</code> 的相关代码</p>
+<br>
 <h3 id="containerd-shim-runc-v2-create">[containerd-shim-runc-v2] Create()</h3>
 <p>containerd/runtime/v2/runc/task/service.go L118</p>
 <div class="highlight"><div class="chroma">
@@ -3649,7 +3657,60 @@
 </span></span></code></pre></td></tr></table>
 </div>
 </div><p>容器现在处于 runc create 之后的created(runc init)状态。</p>
-<h3 id="containernewtask小结">container.NewTask()小结</h3>
+<br>
+<h3 id="containerd-lmonitormonitorc-labels">[containerd] l.monitor.Monitor(c, labels)</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">cgroupsMonitor</span><span class="p">)</span> <span class="nf">Monitor</span><span class="p">(</span><span class="nx">c</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">Task</span><span class="p">,</span> <span class="nx">labels</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">m</span><span class="p">.</span><span class="nx">collector</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="nx">c</span><span class="p">,</span> <span class="nx">labels</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">t</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">c</span><span class="p">.(</span><span class="o">*</span><span class="nx">linux</span><span class="p">.</span><span class="nx">Task</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cg</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">t</span><span class="p">.</span><span class="nf">Cgroup</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">errdefs</span><span class="p">.</span><span class="nf">IsNotFound</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">err</span> <span class="p">=</span> <span class="nx">m</span><span class="p">.</span><span class="nx">oom</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nf">ID</span><span class="p">(),</span> <span class="nx">c</span><span class="p">.</span><span class="nf">Namespace</span><span class="p">(),</span> <span class="nx">cg</span><span class="p">,</span> <span class="nx">m</span><span class="p">.</span><span class="nx">trigger</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">==</span> <span class="nx">cgroups</span><span class="p">.</span><span class="nx">ErrMemoryNotSupported</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">logrus</span><span class="p">.</span><span class="nf">WithError</span><span class="p">(</span><span class="nx">err</span><span class="p">).</span><span class="nf">Warn</span><span class="p">(</span><span class="s">&#34;OOM monitoring failed&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><br>
+<h3 id="小结-1">小结</h3>
 <p>从上文的分析可以看出，NewTask()完成了容器启动前的所有准备工作。</p>
 <p><code>containerd</code>创建task相关文件夹(也就是runc所需要的bundle)，并创建spec(也就是config.json)。</p>
 <p><code>shim</code>根据配置挂载rootfs，然后调用<code>runc -b ... create</code>创建容器，等待<code>runc start</code>启动容器。</p>

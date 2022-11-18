@@ -7,21 +7,15 @@
 
 <br>
 
-## shim如何监控多个容器
+## shim如何监控多个容器？
 
-在k8s中，创建一个pod，如：
+在k8s中，创建一个pod，如：`k run nginx --image=nginx`
 
-`k run nginx --image=nginx`
-
-节点上会有两个容器，一个是 `pause` 容器（也称为`sandbox`容器），一个是`nginx`容器。
+实际上会创建两个容器，一个是 `pause` 容器（也称为`sandbox`容器），一个是`nginx`容器。
 
 这两个容器的父进程都是同一个shim，如下：
 
 ![image-20221117172644477](https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221117-172645.png "ps -ef --forest")
-
-<br>
-
-
 
 接下来通过代码调试，了解这个过程：
 
@@ -78,8 +72,6 @@ containerd为同一个pod创建容器时，只有`pause`容器启动了`shim`进
 所以，同一个pod下的容器，都是由同一个shim进程创建管理。
 
 {{< /admonition >}}
-
-
 
 
 
@@ -258,11 +250,27 @@ var groupLabels = []string{
 
 如果存在 groupLabels，则使用 groupID 替换 id。
 
-所以，pause 容器和 nginx容器，计算出来的 shim sock address 是一样的。
+所以，同一个pod里面的pause 容器和 nginx容器，计算出来的 shim sock address 是一样的。
 
-第一次创建 pause 容器的时候，socket file不存在，使用cmd正常启动shim server，然后返回socket address。
+首先创建 pause 容器的时候，socket file不存在，使用cmd正常启动shim server，然后返回socket address。
 
-接下来创建nginx容器的时候，socket已存在，验证socket连接，成功则**直接**返回 socket address地址。
+接下来创建nginx容器的时候，socket file已存在，验证socket连接，成功则**直接**返回 socket address地址。
+
+
+
+<br>
+
+## shim意外退出，会发生什么？
+
+先说结论：
+
+如果shim意外退出，由shim创建的子进程(也就是容器)会跟着退出。
+
+containerd会运行`m.startShim()`重新启动`shim`和重新启动相关容器
+
+
+
+
 
 
 

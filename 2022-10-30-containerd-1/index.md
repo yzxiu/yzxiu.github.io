@@ -1096,7 +1096,7 @@ func (m *TaskManager) Create(ctx context.Context, taskID string, opts runtime.Cr
    return t, nil
 }
 ```
-#### m.manager.Start()
+##### m.manager.Start()
 
 ```go
 // Start launches a new shim instance
@@ -1167,7 +1167,7 @@ func (m *ShimManager) Start(ctx context.Context, id string, opts runtime.CreateO
 }
 ```
 
-##### NewBundle()
+###### NewBundle()
 
 ```go
 // NewBundle returns a new bundle on disk
@@ -1255,7 +1255,7 @@ xiu-desktop# tree
     └── work -> /var/lib/containerd/io.containerd.runtime.v2.task/default/redis-server
 ```
 
-##### shim, err := m.startShim()
+###### shim, err := m.startShim()
 
 ```go
 func (m *ShimManager) startShim(ctx context.Context, bundle *Bundle, id string, opts runtime.CreateOpts) (*shim, error) {
@@ -1402,7 +1402,13 @@ containerd-shim-runc-v2 启动完成后，返回了一个本地的连接地址�
 
 unix:///run/containerd/s/41107b8f6663c77e690f1e545ff41ce9039b6106896f6cf5a137e23c73c363c1
 
-#### shimTask.Create()
+###### 小结
+
+m.manager.Start()方法准备了bundle文件夹，config.json配置文件，启动了shim。
+
+
+
+##### shimTask.Create()
 
 ```go
 func (s *shimTask) Create(ctx context.Context, opts runtime.CreateOpts) (runtime.Task, error) {
@@ -1438,7 +1444,7 @@ func (s *shimTask) Create(ctx context.Context, opts runtime.CreateOpts) (runtime
 }
 ```
 
-##### s.task.Create()
+###### s.task.Create()
 
 containerd/api/runtime/task/v2/shim_ttrpc.pb.go L175
 
@@ -1459,6 +1465,8 @@ func (c *taskClient) Create(ctx context.Context, req *CreateTaskRequest) (*Creat
 这里我们可以调试 containerd-shim-runc-v2 的相关代码，看一下 containerd 调用 shim 的create方法之后，会发生哪些事情。
 
 下面进入 `containerd-shim-runc-v2` 的相关代码
+
+<br>
 
 ### [containerd-shim-runc-v2] Create()
 
@@ -1845,7 +1853,41 @@ root       67705   63337  0 10:05 ?        00:00:00 runc init
 
 容器现在处于 runc create 之后的created(runc init)状态。
 
-### container.NewTask()小结
+<br>
+
+### [containerd] l.monitor.Monitor(c, labels)
+
+```go
+func (m *cgroupsMonitor) Monitor(c runtime.Task, labels map[string]string) error {
+	if err := m.collector.Add(c, labels); err != nil {
+		return err
+	}
+	t, ok := c.(*linux.Task)
+	if !ok {
+		return nil
+	}
+	cg, err := t.Cgroup()
+	if err != nil {
+		if errdefs.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	err = m.oom.Add(c.ID(), c.Namespace(), cg, m.trigger)
+	if err == cgroups.ErrMemoryNotSupported {
+		logrus.WithError(err).Warn("OOM monitoring failed")
+		return nil
+	}
+	return err
+}
+
+```
+
+
+
+<br>
+
+### 小结
 
 从上文的分析可以看出，NewTask()完成了容器启动前的所有准备工作。
 

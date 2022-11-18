@@ -9,7 +9,7 @@
     <pubDate>Tue, 15 Nov 2022 17:04:35 &#43;0800</pubDate>
     <author>Yuyu</author>
     <guid>https://yzxiu.github.io/2022-11-15-containerd-8-runc-modes/</guid>
-    <description><![CDATA[概述 在runc中，存在两种 Terminal Modes，分别是：New Terminal、Pass-Through ​ 存在两种 runc Modes，分别是：Foregr]]></description>
+    <description><![CDATA[概述 在runc中， 有两种 Terminal Modes，分别是：New Terminal、Pass-Through 有两种 Runc Modes，分别是：Foregroun]]></description>
 </item>
 <item>
     <title>Containerd解析(7) - log</title>

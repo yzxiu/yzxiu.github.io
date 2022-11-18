@@ -3,9 +3,11 @@
 
 ## 概述
 
-在[runc](https://github.com/opencontainers/runc/blob/main/docs/terminals.md)中，存在两种 Terminal Modes，分别是：`New Terminal`、`Pass-Through`
+在[runc](https://github.com/opencontainers/runc/blob/main/docs/terminals.md)中，
 
-​                    存在两种 runc Modes，分别是：`Foreground、Detached`
+有两种 [Terminal Modes](https://github.com/opencontainers/runc/blob/main/docs/terminals.md#-terminal-modes)，分别是：[New Terminal](https://github.com/opencontainers/runc/blob/main/docs/terminals.md#-new-terminal)、[Pass-Through](https://github.com/opencontainers/runc/blob/main/docs/terminals.md#-pass-through)
+
+有两种 [Runc Modes](https://github.com/opencontainers/runc/blob/main/docs/terminals.md#-runc-modes)，分别是：[Foreground](https://github.com/opencontainers/runc/blob/main/docs/terminals.md#foreground)、[Detached](https://github.com/opencontainers/runc/blob/main/docs/terminals.md#detached)
 
 
 

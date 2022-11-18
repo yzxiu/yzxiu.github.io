@@ -3,7 +3,31 @@
         <title>containerd-shim - 标签 - Yuyu&#39;s Blog</title>
         <link>https://yzxiu.github.io/tags/containerd-shim/</link>
         <description>containerd-shim - 标签 - Yuyu&#39;s Blog</description>
-        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Sun, 30 Oct 2022 21:48:08 &#43;0800</lastBuildDate><atom:link href="https://yzxiu.github.io/tags/containerd-shim/" rel="self" type="application/rss+xml" /><item>
+        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Fri, 18 Nov 2022 09:07:39 &#43;0800</lastBuildDate><atom:link href="https://yzxiu.github.io/tags/containerd-shim/" rel="self" type="application/rss+xml" /><item>
+    <title>Containerd解析(9) - Containerd,Containerd-shim,runc的依存关系</title>
+    <link>https://yzxiu.github.io/2022-11-18-containerd-9-containerd-containerd-shim-runc/</link>
+    <pubDate>Fri, 18 Nov 2022 09:07:39 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2022-11-18-containerd-9-containerd-containerd-shim-runc/</guid>
+    <description><![CDATA[概述 参考文章，该文时间比较久远，containerd的很多逻辑已经发生变化。 学习该文思路，重新整理Containerd,Containerd]]></description>
+</item>
+<item>
+    <title>Containerd解析(7) - log</title>
+    <link>https://yzxiu.github.io/2022-11-14-containerd-7-log/</link>
+    <pubDate>Mon, 14 Nov 2022 11:14:42 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2022-11-14-containerd-7-log/</guid>
+    <description><![CDATA[概述 了解 nerdctl 是怎样处理容器日志的，后续再分析kubelet的处理方式。 nerdctl 中的日志处理 容器日志处理，其实就是处理runc程序的标准输出，标准错误]]></description>
+</item>
+<item>
+    <title>Containerd解析(3) - shim</title>
+    <link>https://yzxiu.github.io/2022-11-02-containerd-3-shim-start/</link>
+    <pubDate>Wed, 02 Nov 2022 21:50:04 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2022-11-02-containerd-3-shim-start/</guid>
+    <description><![CDATA[概述 记录shim相关的疑问和分析 shim如何监控多个容器？ 在k8s中，创建一个pod，如：k run nginx --image=nginx 实际上会创建两个容器，一个是 pause 容器（也称为]]></description>
+</item>
+<item>
     <title>Containerd解析(1) - example</title>
     <link>https://yzxiu.github.io/2022-10-30-containerd-1/</link>
     <pubDate>Sun, 30 Oct 2022 21:48:08 &#43;0800</pubDate>
