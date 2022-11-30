@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2022-11-14-containerd-7-log\/"
-        },"genre": "posts","keywords": "containerd-shim, log, pipe","wordcount":  3800 ,
+        },"genre": "posts","keywords": "containerd-shim, log, pipe","wordcount":  3818 ,
         "url": "https:\/\/yzxiu.github.io\/2022-11-14-containerd-7-log\/","datePublished": "2022-11-14T11:14:42+08:00","dateModified": "2022-11-14T11:14:42+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,7 +102,7 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Containerd解析(7) - log</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-11-14">2022-11-14</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 3800 字&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-11-14">2022-11-14</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 3818 字&nbsp;
                 <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 8 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
@@ -268,7 +268,6 @@
 </span><span class="lnt">45
 </span><span class="lnt">46
 </span><span class="lnt">47
-</span><span class="lnt">48
 </span></code></pre></td>
 <td class="lntd">
 <pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// nerdctl/pkg/taskutil/taskutil.go
@@ -312,8 +311,7 @@
 </span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">streams</span><span class="p">.</span><span class="nx">Stdout</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
 </span></span><span class="line"><span class="cl">			<span class="nx">fifos</span><span class="p">.</span><span class="nx">Stdout</span> <span class="p">=</span> <span class="s">&#34;&#34;</span>
 </span></span><span class="line"><span class="cl">		<span class="p">}</span>
-</span></span><span class="line"><span class="cl">        <span class="c1">// 这里会执行
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="k">if</span> <span class="nx">streams</span><span class="p">.</span><span class="nx">Stderr</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">streams</span><span class="p">.</span><span class="nx">Stderr</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
 </span></span><span class="line"><span class="cl">			<span class="nx">fifos</span><span class="p">.</span><span class="nx">Stderr</span> <span class="p">=</span> <span class="s">&#34;&#34;</span>
 </span></span><span class="line"><span class="cl">		<span class="p">}</span>
 </span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nf">copyIO</span><span class="p">(</span><span class="nx">fifos</span><span class="p">,</span> <span class="nx">streams</span><span class="p">)</span>
@@ -529,7 +527,8 @@
         data-sizes="auto"
         alt="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-210507.png"
         title="image-20221116210506511" /></p>
-<p>与创建socket相关联，将容器的 stdio 传输至 nerdctl 进程</p>
+<p>与创建socket相关联，将容器的 console 传输至 nerdctl 进程 console。</p>
+<p>所以，使用 -it 运行容器时，可以与容器进程直接进行交互。</p>
 <br>
 <h3 id="nerdctl-run--d---name-runcdev1-q946666800runcdev">nerdctl run -d &ndash;name runcdev1 q946666800/runcdev</h3>
 <p>runc启动方式为：<code>Pass-Through &amp; Detached</code></p>
@@ -886,13 +885,14 @@
 </span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 </span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
 </span></span><span class="line"><span class="cl">	<span class="p">}</span>
-</span></span><span class="line"><span class="cl">    <span class="c1">// 从代码可以看出，所谓日志驱动，就是编写处理日志的fn函数，然后传递给 logging.Run
-</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">logging</span><span class="p">.</span><span class="nf">Run</span><span class="p">(</span><span class="nx">fn</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">	<span class="nx">logging</span><span class="p">.</span><span class="nf">Run</span><span class="p">(</span><span class="nx">fn</span><span class="p">)</span>
 </span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">nil</span>
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><div class="highlight"><div class="chroma">
+</div><p>所谓日志驱动，就是编写处理日志的<code>fn</code>函数，然后传递给 <code>logging.Run</code></p>
+<div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
 </span><span class="lnt"> 2
@@ -1664,7 +1664,6 @@
 </div>
 </div><p>nerdctl中日志处理方式大致如此。</p>
 <p><a href="https://github.com/yzxiu/nerdctl-log-example" target="_blank" rel="noopener noreffer ">demo</a></p>
-<br>
 <br>
 <h2 id="kubelet中的日志处理">kubelet中的日志处理</h2>
 <p>待补充</p>

@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2022-11-18-containerd-9-containerd-containerd-shim-runc\/"
-        },"genre": "posts","keywords": "containerd, containerd-shim, runc","wordcount":  534 ,
+        },"genre": "posts","keywords": "containerd, containerd-shim, runc","wordcount":  3248 ,
         "url": "https:\/\/yzxiu.github.io\/2022-11-18-containerd-9-containerd-containerd-shim-runc\/","datePublished": "2022-11-18T09:07:39+08:00","dateModified": "2022-11-18T09:07:39+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,8 +102,8 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Containerd解析(9) - Containerd,Containerd-shim,runc的依存关系</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-11-18">2022-11-18</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 534 字&nbsp;
-                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 2 分钟&nbsp;</div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-11-18">2022-11-18</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 3248 字&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 7 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
                     <span>目录</span>
@@ -114,6 +114,18 @@
     <li><a href="#概述">概述</a></li>
     <li><a href="#整体关系">整体关系</a></li>
     <li><a href="#第一种情况">第一种情况</a></li>
+    <li><a href="#第二种情况">第二种情况</a></li>
+    <li><a href="#第三种情况">第三种情况</a>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#loadexistingtasks">loadExistingTasks</a></li>
+            <li><a href="#loadshims">loadShims</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#第四种情况">第四种情况</a></li>
   </ul>
 </nav></div>
             </div><div class="content" id="content"><h2 id="概述">概述</h2>
@@ -179,8 +191,819 @@
             <div class="admonition-content">结论：在containerd运行的情况下，杀死containerd-shim，<strong>容器进程会退出</strong>。</div>
         </div>
     </div>
+<p>看下为什么容器进程会退出。</p>
+<p>查看<code>containerd</code>启动<code>containerd-shim</code>的相关代码，也就是 <code>m.startShim()</code></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">ShimManager</span><span class="p">)</span> <span class="nf">startShim</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">bundle</span> <span class="o">*</span><span class="nx">Bundle</span><span class="p">,</span> <span class="nx">id</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">opts</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">CreateOpts</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">shim</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="o">...</span>
+</span></span><span class="line"><span class="cl">   <span class="o">...</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">shim</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">b</span><span class="p">.</span><span class="nf">Start</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">protobuf</span><span class="p">.</span><span class="nf">FromAny</span><span class="p">(</span><span class="nx">topts</span><span class="p">),</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">log</span><span class="p">.</span><span class="nf">G</span><span class="p">(</span><span class="nx">ctx</span><span class="p">).</span><span class="nf">WithField</span><span class="p">(</span><span class="s">&#34;id&#34;</span><span class="p">,</span> <span class="nx">id</span><span class="p">).</span><span class="nf">Info</span><span class="p">(</span><span class="s">&#34;shim disconnected&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="nf">cleanupAfterDeadShim</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">id</span><span class="p">,</span> <span class="nx">ns</span><span class="p">,</span> <span class="nx">m</span><span class="p">.</span><span class="nx">shims</span><span class="p">,</span> <span class="nx">m</span><span class="p">.</span><span class="nx">events</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">// Remove self from the runtime task list. Even though the cleanupAfterDeadShim()
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// would publish taskExit event, but the shim.Delete() would always failed with ttrpc
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// disconnect and there is no chance to remove this dead task from runtime task lists.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// Thus it&#39;s better to delete it here.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="nx">m</span><span class="p">.</span><span class="nx">shims</span><span class="p">.</span><span class="nf">Delete</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">id</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">})</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;start failed: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="nx">shim</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>注意到，在<code>b.Start</code> 后面传入了一个回调函数</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">log</span><span class="p">.</span><span class="nf">G</span><span class="p">(</span><span class="nx">ctx</span><span class="p">).</span><span class="nf">WithField</span><span class="p">(</span><span class="s">&#34;id&#34;</span><span class="p">,</span> <span class="nx">id</span><span class="p">).</span><span class="nf">Info</span><span class="p">(</span><span class="s">&#34;shim disconnected&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="nf">cleanupAfterDeadShim</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">id</span><span class="p">,</span> <span class="nx">ns</span><span class="p">,</span> <span class="nx">m</span><span class="p">.</span><span class="nx">shims</span><span class="p">,</span> <span class="nx">m</span><span class="p">.</span><span class="nx">events</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">// Remove self from the runtime task list. Even though the cleanupAfterDeadShim()
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// would publish taskExit event, but the shim.Delete() would always failed with ttrpc
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// disconnect and there is no chance to remove this dead task from runtime task lists.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// Thus it&#39;s better to delete it here.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="nx">m</span><span class="p">.</span><span class="nx">shims</span><span class="p">.</span><span class="nf">Delete</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">id</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>从该函数名 <code>cleanupAfterDeadShim</code> 可以推测主要是做一些清理工作。</p>
+<p>先看一下 b.Start()</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">b</span> <span class="o">*</span><span class="nx">binary</span><span class="p">)</span> <span class="nf">Start</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">opts</span> <span class="o">*</span><span class="nx">types</span><span class="p">.</span><span class="nx">Any</span><span class="p">,</span> <span class="nx">onClose</span> <span class="kd">func</span><span class="p">())</span> <span class="p">(</span><span class="nx">_</span> <span class="o">*</span><span class="nx">shim</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">args</span> <span class="o">:=</span> <span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&#34;-id&#34;</span><span class="p">,</span> <span class="nx">b</span><span class="p">.</span><span class="nx">bundle</span><span class="p">.</span><span class="nx">ID</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">switch</span> <span class="nx">logrus</span><span class="p">.</span><span class="nf">GetLevel</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">case</span> <span class="nx">logrus</span><span class="p">.</span><span class="nx">DebugLevel</span><span class="p">,</span> <span class="nx">logrus</span><span class="p">.</span><span class="nx">TraceLevel</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">args</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">args</span><span class="p">,</span> <span class="s">&#34;-debug&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">args</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">args</span><span class="p">,</span> <span class="s">&#34;start&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	
+</span></span><span class="line"><span class="cl">    <span class="c1">// 1. 构建cmd
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">cmd</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">client</span><span class="p">.</span><span class="nf">Command</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">ctx</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="o">&amp;</span><span class="nx">client</span><span class="p">.</span><span class="nx">CommandConfig</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">Runtime</span><span class="p">:</span>      <span class="nx">b</span><span class="p">.</span><span class="nx">runtime</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">Address</span><span class="p">:</span>      <span class="nx">b</span><span class="p">.</span><span class="nx">containerdAddress</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">TTRPCAddress</span><span class="p">:</span> <span class="nx">b</span><span class="p">.</span><span class="nx">containerdTTRPCAddress</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">Path</span><span class="p">:</span>         <span class="nx">b</span><span class="p">.</span><span class="nx">bundle</span><span class="p">.</span><span class="nx">Path</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">Opts</span><span class="p">:</span>         <span class="nx">opts</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">Args</span><span class="p">:</span>         <span class="nx">args</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">SchedCore</span><span class="p">:</span>    <span class="nx">b</span><span class="p">.</span><span class="nx">schedCore</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="p">})</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">...</span>
+</span></span><span class="line"><span class="cl">    <span class="o">...</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 2. 启动shim server，并获取 sock address
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">out</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">cmd</span><span class="p">.</span><span class="nf">CombinedOutput</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;%s: %w&#34;</span><span class="p">,</span> <span class="nx">out</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">address</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">TrimSpace</span><span class="p">(</span><span class="nb">string</span><span class="p">(</span><span class="nx">out</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">conn</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">client</span><span class="p">.</span><span class="nf">Connect</span><span class="p">(</span><span class="nx">address</span><span class="p">,</span> <span class="nx">client</span><span class="p">.</span><span class="nx">AnonDialer</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 连接丢失的回调函数，包含刚刚传进来的 onClose
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">onCloseWithShimLog</span> <span class="o">:=</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">onClose</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">cancelShimLog</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">f</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// Save runtime binary path for restore.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">WriteFile</span><span class="p">(</span><span class="nx">filepath</span><span class="p">.</span><span class="nf">Join</span><span class="p">(</span><span class="nx">b</span><span class="p">.</span><span class="nx">bundle</span><span class="p">.</span><span class="nx">Path</span><span class="p">,</span> <span class="s">&#34;shim-binary-path&#34;</span><span class="p">),</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">b</span><span class="p">.</span><span class="nx">runtime</span><span class="p">),</span> <span class="mo">0600</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 3.与sock address 建立连接，并在连接关闭的时候调用传进来的回调函数onClose
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">client</span> <span class="o">:=</span> <span class="nx">ttrpc</span><span class="p">.</span><span class="nf">NewClient</span><span class="p">(</span><span class="nx">conn</span><span class="p">,</span> <span class="nx">ttrpc</span><span class="p">.</span><span class="nf">WithOnClose</span><span class="p">(</span><span class="nx">onCloseWithShimLog</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">shim</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">bundle</span><span class="p">:</span> <span class="nx">b</span><span class="p">.</span><span class="nx">bundle</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">client</span><span class="p">:</span> <span class="nx">client</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="p">},</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>构建cmd</li>
+<li>启动<code>shim server</code>，并获取 <code>sock address</code></li>
+<li>通过<code>sock address</code>与刚刚启动的<code>shim server</code>建立连接，并在<code>连接关闭</code>时调用回调函数<code>onClose</code>，从而执行 <code>cleanupAfterDeadShim</code></li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">cleanupAfterDeadShim</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">id</span><span class="p">,</span> <span class="nx">ns</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">rt</span> <span class="o">*</span><span class="nx">runtime</span><span class="p">.</span><span class="nx">NSMap</span><span class="p">[</span><span class="nx">ShimInstance</span><span class="p">],</span> <span class="nx">events</span> <span class="o">*</span><span class="nx">exchange</span><span class="p">.</span><span class="nx">Exchange</span><span class="p">,</span> <span class="nx">binaryCall</span> <span class="o">*</span><span class="nx">binary</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="o">...</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">response</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">binaryCall</span><span class="p">.</span><span class="nf">Delete</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="o">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">b</span> <span class="o">*</span><span class="nx">binary</span><span class="p">)</span> <span class="nf">Delete</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">runtime</span><span class="p">.</span><span class="nx">Exit</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">log</span><span class="p">.</span><span class="nf">G</span><span class="p">(</span><span class="nx">ctx</span><span class="p">).</span><span class="nf">Info</span><span class="p">(</span><span class="s">&#34;cleaning up dead shim&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="o">...</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">cmd</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">client</span><span class="p">.</span><span class="nf">Command</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="o">&amp;</span><span class="nx">client</span><span class="p">.</span><span class="nx">CommandConfig</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">Runtime</span><span class="p">:</span>      <span class="nx">b</span><span class="p">.</span><span class="nx">runtime</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">Address</span><span class="p">:</span>      <span class="nx">b</span><span class="p">.</span><span class="nx">containerdAddress</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">TTRPCAddress</span><span class="p">:</span> <span class="nx">b</span><span class="p">.</span><span class="nx">containerdTTRPCAddress</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">Path</span><span class="p">:</span>         <span class="nx">bundlePath</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">Opts</span><span class="p">:</span>         <span class="kc">nil</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">Args</span><span class="p">:</span> <span class="p">[]</span><span class="kt">string</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="s">&#34;-id&#34;</span><span class="p">,</span> <span class="nx">b</span><span class="p">.</span><span class="nx">bundle</span><span class="p">.</span><span class="nx">ID</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">            <span class="s">&#34;-bundle&#34;</span><span class="p">,</span> <span class="nx">b</span><span class="p">.</span><span class="nx">bundle</span><span class="p">.</span><span class="nx">Path</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">            <span class="s">&#34;delete&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="p">},</span>
+</span></span><span class="line"><span class="cl">   <span class="p">})</span>
+</span></span><span class="line"><span class="cl">   <span class="o">...</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">cmd</span><span class="p">.</span><span class="nf">Run</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">log</span><span class="p">.</span><span class="nf">G</span><span class="p">(</span><span class="nx">ctx</span><span class="p">).</span><span class="nf">WithField</span><span class="p">(</span><span class="s">&#34;cmd&#34;</span><span class="p">,</span> <span class="nx">cmd</span><span class="p">).</span><span class="nf">WithError</span><span class="p">(</span><span class="nx">err</span><span class="p">).</span><span class="nf">Error</span><span class="p">(</span><span class="s">&#34;failed to delete&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;%s: %w&#34;</span><span class="p">,</span> <span class="nx">errb</span><span class="p">.</span><span class="nf">String</span><span class="p">(),</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="o">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看cmd：</p>
+<p><figure><a class="lightgallery" href="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221118-162848.png" title="image-20221118162848004" data-thumbnail="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221118-162848.png" data-sub-html="<h2>clean up cmd</h2><p>image-20221118162848004</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221118-162848.png"
+            data-srcset="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221118-162848.png, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221118-162848.png 1.5x, https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221118-162848.png 2x"
+            data-sizes="auto"
+            alt="https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221118-162848.png" />
+    </a><figcaption class="image-caption">clean up cmd</figcaption>
+    </figure></p>
+<p>可以看到，cleanup是通过<code>containerd-shim</code>的 <code>delete</code> 命令进行runc容器的清理，具体细节这里不进行展开。</p>
 <br>
-</div><div class="post-footer" id="post-footer">
+<h2 id="第二种情况">第二种情况</h2>
+<p>containerd进程存在的情况下，杀死容器进程;</p>
+<p><del>一方面，在容器进程退出时，containerd-shim也会捕获到信号退出，这将在第四种情况下详细分析。</del></p>
+<p><del>另一方面，容器进程退出，containerd中的monitor会会捕获到该事件，从而触发容器进程退出流程，这是本小节详细分析的内容。</del></p>
+<p>杀死容器进程，<code>shim</code> <code>service</code>中的订阅者<code>reaper.Default.Subscribe()</code>会收到退出状态，</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">s</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">service</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">context</span><span class="p">:</span>    <span class="nx">ctx</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">events</span><span class="p">:</span>     <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">interface</span><span class="p">{},</span> <span class="mi">128</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">ec</span><span class="p">:</span>         <span class="nx">reaper</span><span class="p">.</span><span class="nx">Default</span><span class="p">.</span><span class="nf">Subscribe</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">ep</span><span class="p">:</span>         <span class="nx">ep</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">shutdown</span><span class="p">:</span>   <span class="nx">sd</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">containers</span><span class="p">:</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">runc</span><span class="p">.</span><span class="nx">Container</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>然后将该退出状态推送至 containerd。</p>
+<h2 id="第三种情况">第三种情况</h2>
+<p>containerd进程不存在的情况下，杀死containerd-shim进程，然后启动containerd进程</p>
+<p>首先杀死 containerd 进程，shim进程和容器进程依然存在。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">[xiu-desktop] ~ sp shim      
+</span></span><span class="line"><span class="cl">[shim] 相关进程信息如下：
+</span></span><span class="line"><span class="cl">root      118803       1  0 11月27 ?      00:00:01 /usr/bin/containerd-shim-runc-v2 -namespace default -id dc236284189782b7c37131ad23473acaf8b8282e3532baf18928ec4e3949713e -address /run/containerd/containerd.sock -debug
+</span></span><span class="line"><span class="cl">[xiu-desktop] ~ sp main-example
+</span></span><span class="line"><span class="cl">[main-example] 相关进程信息如下：
+</span></span><span class="line"><span class="cl">root      118880  118803  0 11月27 ?      00:00:04 /main-example
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>接着杀死shim进程，容器进程依然存在，并且被进程1接收（父进程变为1）</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">[xiu-desktop] ~ kp shim  
+</span></span><span class="line"><span class="cl">[shim] 相关进程信息如下：
+</span></span><span class="line"><span class="cl">root      118803       1  0 11月27 ?      00:00:01 /usr/bin/containerd-shim-runc-v2 -namespace default -id dc236284189782b7c37131ad23473acaf8b8282e3532baf18928ec4e3949713e -address /run/containerd/containerd.sock -debug
+</span></span><span class="line"><span class="cl">是否关闭 [shim] 相关进程? (y/n)
+</span></span><span class="line"><span class="cl">y
+</span></span><span class="line"><span class="cl">已关闭 1 个 [shim] 相关进程
+</span></span><span class="line"><span class="cl">[xiu-desktop] ~ sp main-example
+</span></span><span class="line"><span class="cl">[main-example] 相关进程信息如下：
+</span></span><span class="line"><span class="cl">root      118880       1  0 11月27 ?      00:00:04 /main-example
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>然后再启动containerd，容器进程消失。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">[xiu-desktop] ~ sp main-example
+</span></span><span class="line"><span class="cl">没有 [main-example] 相关进程
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这时候容器变为 created 状态</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">[xiu-desktop] ~ n ps -a
+</span></span><span class="line"><span class="cl">CONTAINER ID    IMAGE                                  COMMAND            CREATED        STATUS     PORTS    NAMES
+</span></span><span class="line"><span class="cl">dc2362841897    docker.io/q946666800/runcdev:latest    &#34;/main-example&#34;    4 hours ago    Created             runcdev
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>代码解析：</p>
+<p>残留容器进程的清理工作，主要在 <code>RuntimePluginV2</code> 插件初始化过程中触发的，相关调用堆栈如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">v2.(*binary).Delete (binary.go:154) github.com/containerd/containerd/runtime/v2
+</span></span><span class="line"><span class="cl">v2.cleanupAfterDeadShim (shim.go:143) github.com/containerd/containerd/runtime/v2
+</span></span><span class="line"><span class="cl">v2.(*ShimManager).loadShims (shim_load.go:141) github.com/containerd/containerd/runtime/v2
+</span></span><span class="line"><span class="cl">v2.(*ShimManager).loadExistingTasks (shim_load.go:46) github.com/containerd/containerd/runtime/v2
+</span></span><span class="line"><span class="cl">v2.NewShimManager (manager.go:152) github.com/containerd/containerd/runtime/v2
+</span></span><span class="line"><span class="cl">v2.init.0.func1 (manager.go:84) github.com/containerd/containerd/runtime/v2
+</span></span><span class="line"><span class="cl">plugin.(*Registration).Init (plugin.go:115) github.com/containerd/containerd/plugin
+</span></span><span class="line"><span class="cl">server.New (server.go:230) github.com/containerd/containerd/services/server
+</span></span><span class="line"><span class="cl">command.App.func1.1 (main.go:194) github.com/containerd/containerd/cmd/containerd/command
+</span></span><span class="line"><span class="cl">runtime.goexit (asm_amd64.s:1571) runtime
+</span></span><span class="line"><span class="cl"> - 异步堆栈跟踪
+</span></span><span class="line"><span class="cl">command.App.func1 (main.go:191) github.com/containerd/containerd/cmd/containerd/command
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看几个重要的方法：</p>
+<h4 id="loadexistingtasks">loadExistingTasks</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">ShimManager</span><span class="p">)</span> <span class="nf">loadExistingTasks</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">nsDirs</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">ReadDir</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">state</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// 遍历 ns
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">nsd</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">nsDirs</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="p">!</span><span class="nx">nsd</span><span class="p">.</span><span class="nf">IsDir</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">continue</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">ns</span> <span class="o">:=</span> <span class="nx">nsd</span><span class="p">.</span><span class="nf">Name</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">// skip hidden directories
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">ns</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="nx">ns</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="sc">&#39;.&#39;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">continue</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">log</span><span class="p">.</span><span class="nf">G</span><span class="p">(</span><span class="nx">ctx</span><span class="p">).</span><span class="nf">WithField</span><span class="p">(</span><span class="s">&#34;namespace&#34;</span><span class="p">,</span> <span class="nx">ns</span><span class="p">).</span><span class="nf">Debug</span><span class="p">(</span><span class="s">&#34;loading tasks in namespace&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">m</span><span class="p">.</span><span class="nf">loadShims</span><span class="p">(</span><span class="nx">namespaces</span><span class="p">.</span><span class="nf">WithNamespace</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">ns</span><span class="p">));</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">log</span><span class="p">.</span><span class="nf">G</span><span class="p">(</span><span class="nx">ctx</span><span class="p">).</span><span class="nf">WithField</span><span class="p">(</span><span class="s">&#34;namespace&#34;</span><span class="p">,</span> <span class="nx">ns</span><span class="p">).</span><span class="nf">WithError</span><span class="p">(</span><span class="nx">err</span><span class="p">).</span><span class="nf">Error</span><span class="p">(</span><span class="s">&#34;loading tasks in namespace&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="k">continue</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">m</span><span class="p">.</span><span class="nf">cleanupWorkDirs</span><span class="p">(</span><span class="nx">namespaces</span><span class="p">.</span><span class="nf">WithNamespace</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">ns</span><span class="p">));</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">log</span><span class="p">.</span><span class="nf">G</span><span class="p">(</span><span class="nx">ctx</span><span class="p">).</span><span class="nf">WithField</span><span class="p">(</span><span class="s">&#34;namespace&#34;</span><span class="p">,</span> <span class="nx">ns</span><span class="p">).</span><span class="nf">WithError</span><span class="p">(</span><span class="nx">err</span><span class="p">).</span><span class="nf">Error</span><span class="p">(</span><span class="s">&#34;cleanup working directory in namespace&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="k">continue</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><figure><a class="lightgallery" href="https://raw.githubusercontent.com/yzxiu/images/blog/2022-12/20221201-000558.png" title="image-20221201000557547" data-thumbnail="https://raw.githubusercontent.com/yzxiu/images/blog/2022-12/20221201-000558.png" data-sub-html="<h2>ns dir</h2><p>image-20221201000557547</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-12/20221201-000558.png"
+            data-srcset="https://raw.githubusercontent.com/yzxiu/images/blog/2022-12/20221201-000558.png, https://raw.githubusercontent.com/yzxiu/images/blog/2022-12/20221201-000558.png 1.5x, https://raw.githubusercontent.com/yzxiu/images/blog/2022-12/20221201-000558.png 2x"
+            data-sizes="auto"
+            alt="https://raw.githubusercontent.com/yzxiu/images/blog/2022-12/20221201-000558.png" />
+    </a><figcaption class="image-caption">ns dir</figcaption>
+    </figure></p>
+<h4 id="loadshims">loadShims</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span><span class="lnt">110
+</span><span class="lnt">111
+</span><span class="lnt">112
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">ShimManager</span><span class="p">)</span> <span class="nf">loadShims</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">ns</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">namespaces</span><span class="p">.</span><span class="nf">NamespaceRequired</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">shimDirs</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">ReadDir</span><span class="p">(</span><span class="nx">filepath</span><span class="p">.</span><span class="nf">Join</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">state</span><span class="p">,</span> <span class="nx">ns</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">sd</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">shimDirs</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="p">!</span><span class="nx">sd</span><span class="p">.</span><span class="nf">IsDir</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">continue</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">id</span> <span class="o">:=</span> <span class="nx">sd</span><span class="p">.</span><span class="nf">Name</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">// skip hidden directories
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">id</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="nx">id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="sc">&#39;.&#39;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">continue</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">bundle</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">LoadBundle</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">m</span><span class="p">.</span><span class="nx">state</span><span class="p">,</span> <span class="nx">id</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="c1">// fine to return error here, it is a programmer error if the context
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>         <span class="c1">// does not have a namespace
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>         <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">// fast path
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="nx">bf</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">ReadDir</span><span class="p">(</span><span class="nx">bundle</span><span class="p">.</span><span class="nx">Path</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">bundle</span><span class="p">.</span><span class="nf">Delete</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">log</span><span class="p">.</span><span class="nf">G</span><span class="p">(</span><span class="nx">ctx</span><span class="p">).</span><span class="nf">WithError</span><span class="p">(</span><span class="nx">err</span><span class="p">).</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;fast path read bundle path for %s&#34;</span><span class="p">,</span> <span class="nx">bundle</span><span class="p">.</span><span class="nx">Path</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="k">continue</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">bf</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">bundle</span><span class="p">.</span><span class="nf">Delete</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">         <span class="k">continue</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="kd">var</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">runtime</span> <span class="kt">string</span>
+</span></span><span class="line"><span class="cl">      <span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="c1">// If we&#39;re on 1.6+ and specified custom path to the runtime binary, path will be saved in &#39;shim-binary-path&#39; file.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="k">if</span> <span class="nx">data</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">ReadFile</span><span class="p">(</span><span class="nx">filepath</span><span class="p">.</span><span class="nf">Join</span><span class="p">(</span><span class="nx">bundle</span><span class="p">.</span><span class="nx">Path</span><span class="p">,</span> <span class="s">&#34;shim-binary-path&#34;</span><span class="p">));</span> <span class="nx">err</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">runtime</span> <span class="p">=</span> <span class="nb">string</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="p">!</span><span class="nx">os</span><span class="p">.</span><span class="nf">IsNotExist</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">log</span><span class="p">.</span><span class="nf">G</span><span class="p">(</span><span class="nx">ctx</span><span class="p">).</span><span class="nf">WithError</span><span class="p">(</span><span class="nx">err</span><span class="p">).</span><span class="nf">Error</span><span class="p">(</span><span class="s">&#34;failed to read `runtime` path from bundle&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="c1">// Query runtime name from metadata store
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="k">if</span> <span class="nx">runtime</span> <span class="o">==</span> <span class="s">&#34;&#34;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">container</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">m</span><span class="p">.</span><span class="nx">containers</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">id</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">log</span><span class="p">.</span><span class="nf">G</span><span class="p">(</span><span class="nx">ctx</span><span class="p">).</span><span class="nf">WithError</span><span class="p">(</span><span class="nx">err</span><span class="p">).</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;loading container %s&#34;</span><span class="p">,</span> <span class="nx">id</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">mount</span><span class="p">.</span><span class="nf">UnmountAll</span><span class="p">(</span><span class="nx">filepath</span><span class="p">.</span><span class="nf">Join</span><span class="p">(</span><span class="nx">bundle</span><span class="p">.</span><span class="nx">Path</span><span class="p">,</span> <span class="s">&#34;rootfs&#34;</span><span class="p">),</span> <span class="mi">0</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">               <span class="nx">log</span><span class="p">.</span><span class="nf">G</span><span class="p">(</span><span class="nx">ctx</span><span class="p">).</span><span class="nf">WithError</span><span class="p">(</span><span class="nx">err</span><span class="p">).</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to unmount of rootfs %s&#34;</span><span class="p">,</span> <span class="nx">id</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">bundle</span><span class="p">.</span><span class="nf">Delete</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">            <span class="k">continue</span>
+</span></span><span class="line"><span class="cl">         <span class="p">}</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">runtime</span> <span class="p">=</span> <span class="nx">container</span><span class="p">.</span><span class="nx">Runtime</span><span class="p">.</span><span class="nx">Name</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="nx">runtime</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">m</span><span class="p">.</span><span class="nf">resolveRuntimePath</span><span class="p">(</span><span class="nx">runtime</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">bundle</span><span class="p">.</span><span class="nf">Delete</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">log</span><span class="p">.</span><span class="nf">G</span><span class="p">(</span><span class="nx">ctx</span><span class="p">).</span><span class="nf">WithError</span><span class="p">(</span><span class="nx">err</span><span class="p">).</span><span class="nf">Error</span><span class="p">(</span><span class="s">&#34;failed to resolve runtime path&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="k">continue</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="nx">binaryCall</span> <span class="o">:=</span> <span class="nf">shimBinary</span><span class="p">(</span><span class="nx">bundle</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">shimBinaryConfig</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">runtime</span><span class="p">:</span>      <span class="nx">runtime</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">address</span><span class="p">:</span>      <span class="nx">m</span><span class="p">.</span><span class="nx">containerdAddress</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">ttrpcAddress</span><span class="p">:</span> <span class="nx">m</span><span class="p">.</span><span class="nx">containerdTTRPCAddress</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">schedCore</span><span class="p">:</span>    <span class="nx">m</span><span class="p">.</span><span class="nx">schedCore</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="p">})</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">instance</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">loadShim</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">bundle</span><span class="p">,</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">log</span><span class="p">.</span><span class="nf">G</span><span class="p">(</span><span class="nx">ctx</span><span class="p">).</span><span class="nf">WithField</span><span class="p">(</span><span class="s">&#34;id&#34;</span><span class="p">,</span> <span class="nx">id</span><span class="p">).</span><span class="nf">Info</span><span class="p">(</span><span class="s">&#34;shim disconnected&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">         <span class="nf">cleanupAfterDeadShim</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">id</span><span class="p">,</span> <span class="nx">ns</span><span class="p">,</span> <span class="nx">m</span><span class="p">.</span><span class="nx">shims</span><span class="p">,</span> <span class="nx">m</span><span class="p">.</span><span class="nx">events</span><span class="p">,</span> <span class="nx">binaryCall</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="c1">// Remove self from the runtime task list.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>         <span class="nx">m</span><span class="p">.</span><span class="nx">shims</span><span class="p">.</span><span class="nf">Delete</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">id</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="p">})</span>
+</span></span><span class="line"><span class="cl">       
+</span></span><span class="line"><span class="cl">      <span class="c1">// 在这里进入 cleanupAfterDeadShim，进行清理工作
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nf">cleanupAfterDeadShim</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">id</span><span class="p">,</span> <span class="nx">ns</span><span class="p">,</span> <span class="nx">m</span><span class="p">.</span><span class="nx">shims</span><span class="p">,</span> <span class="nx">m</span><span class="p">.</span><span class="nx">events</span><span class="p">,</span> <span class="nx">binaryCall</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="k">continue</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">shim</span> <span class="o">:=</span> <span class="nf">newShimTask</span><span class="p">(</span><span class="nx">instance</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="c1">// There are 3 possibilities for the loaded shim here:
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// 1. It could be a shim that is running a task.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// 2. It could be a sandbox shim.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// 3. Or it could be a shim that was created for running a task but
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// something happened (probably a containerd crash) and the task was never
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// created. This shim process should be cleaned up here. Look at
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// containerd/containerd#6860 for further details.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">      <span class="nx">_</span><span class="p">,</span> <span class="nx">sgetErr</span> <span class="o">:=</span> <span class="nx">m</span><span class="p">.</span><span class="nx">sandboxStore</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">id</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">pInfo</span><span class="p">,</span> <span class="nx">pidErr</span> <span class="o">:=</span> <span class="nx">shim</span><span class="p">.</span><span class="nf">Pids</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">sgetErr</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">Is</span><span class="p">(</span><span class="nx">sgetErr</span><span class="p">,</span> <span class="nx">errdefs</span><span class="p">.</span><span class="nx">ErrNotFound</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nx">pInfo</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">||</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">Is</span><span class="p">(</span><span class="nx">pidErr</span><span class="p">,</span> <span class="nx">errdefs</span><span class="p">.</span><span class="nx">ErrNotFound</span><span class="p">))</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">log</span><span class="p">.</span><span class="nf">G</span><span class="p">(</span><span class="nx">ctx</span><span class="p">).</span><span class="nf">WithField</span><span class="p">(</span><span class="s">&#34;id&#34;</span><span class="p">,</span> <span class="nx">id</span><span class="p">).</span><span class="nf">Info</span><span class="p">(</span><span class="s">&#34;cleaning leaked shim process&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="c1">// We are unable to get Pids from the shim and it&#39;s not a sandbox
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>         <span class="c1">// shim. We should clean it up her.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>         <span class="c1">// No need to do anything for removeTask since we never added this shim.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>         <span class="nx">shim</span><span class="p">.</span><span class="nb">delete</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="kc">false</span><span class="p">,</span> <span class="kd">func</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">id</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{})</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">m</span><span class="p">.</span><span class="nx">shims</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">shim</span><span class="p">.</span><span class="nx">ShimInstance</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><figure><a class="lightgallery" href="https://raw.githubusercontent.com/yzxiu/images/blog/2022-12/20221201-000810.png" title="image-20221201000809738" data-thumbnail="https://raw.githubusercontent.com/yzxiu/images/blog/2022-12/20221201-000810.png" data-sub-html="<h2>shimDirs</h2><p>image-20221201000809738</p>">
+        <img
+            class="lazyload"
+            src="/svg/loading.min.svg"
+            data-src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-12/20221201-000810.png"
+            data-srcset="https://raw.githubusercontent.com/yzxiu/images/blog/2022-12/20221201-000810.png, https://raw.githubusercontent.com/yzxiu/images/blog/2022-12/20221201-000810.png 1.5x, https://raw.githubusercontent.com/yzxiu/images/blog/2022-12/20221201-000810.png 2x"
+            data-sizes="auto"
+            alt="https://raw.githubusercontent.com/yzxiu/images/blog/2022-12/20221201-000810.png" />
+    </a><figcaption class="image-caption">shimDirs</figcaption>
+    </figure></p>
+<p>文件夹内容：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">drwx------ 3 root root   240 11月 30 16:23 ./
+</span></span><span class="line"><span class="cl">drwx--x--x 3 root root    60 11月 30 16:23 ../
+</span></span><span class="line"><span class="cl">-rw-r--r-- 1 root root    89 11月 30 16:23 address
+</span></span><span class="line"><span class="cl">-rw-r--r-- 1 root root 15058 11月 30 16:23 config.json
+</span></span><span class="line"><span class="cl">-rw-r--r-- 1 root root     5 11月 30 16:23 init.pid
+</span></span><span class="line"><span class="cl">prwx------ 1 root root     0 11月 30 16:23 log|
+</span></span><span class="line"><span class="cl">-rw-r--r-- 1 root root     0 11月 30 16:23 log.json
+</span></span><span class="line"><span class="cl">-rw------- 1 root root     2 11月 30 16:23 options.json
+</span></span><span class="line"><span class="cl">drwxr-xr-x 1 root root  4096 11月 28 02:22 rootfs/
+</span></span><span class="line"><span class="cl">-rw------- 1 root root     0 11月 30 16:23 runtime
+</span></span><span class="line"><span class="cl">-rw------- 1 root root    32 11月 30 16:23 shim-binary-path
+</span></span><span class="line"><span class="cl">lrwxrwxrwx 1 root root   122 11月 30 16:23 work -&gt; /var/lib/containerd/io.containerd.runtime.v2.task/default/7206459bb2db6c1636a9d2931e1b0edcd5ae82fd3426796d8959c76c3c81c1c8/
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>接下来调用：</p>
+<p>cleanupAfterDeadShim()  -&gt;  Delete()</p>
+<p>与情况1类似。</p>
+<h2 id="第四种情况">第四种情况</h2>
+<p>containerd进程不存在的情况下，杀死容器进程，然后启动containerd进程</p>
+<p>先杀掉 containerd进程，shim 和 容器进程都存在：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">[xiu-desktop] ~ sp shim        
+</span></span><span class="line"><span class="cl">[shim] 相关进程信息如下：
+</span></span><span class="line"><span class="cl">root      140133       1  0 02:22 ?        00:00:00 /usr/bin/containerd-shim-runc-v2 -namespace default -id 7206459bb2db6c1636a9d2931e1b0edcd5ae82fd3426796d8959c76c3c81c1c8 -address /run/containerd/containerd.sock -debug
+</span></span><span class="line"><span class="cl">[xiu-desktop] ~ sp main-example
+</span></span><span class="line"><span class="cl">[main-example] 相关进程信息如下：
+</span></span><span class="line"><span class="cl">root      140163  140133  0 02:22 ?        00:00:00 /main-example
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>然后杀掉容器进程，shim进程依然存在：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">[xiu-desktop] ~ sudo kill -9 140163
+</span></span><span class="line"><span class="cl">[xiu-desktop] ~ sp shim            
+</span></span><span class="line"><span class="cl">[shim] 相关进程信息如下：
+</span></span><span class="line"><span class="cl">root      140133       1  0 02:22 ?        00:00:00 /usr/bin/containerd-shim-runc-v2 -namespace default -id 7206459bb2db6c1636a9d2931e1b0edcd5ae82fd3426796d8959c76c3c81c1c8 -address /run/containerd/containerd.sock -debug
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>然后重启containerd，shim进程消失</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">[xiu-desktop] ~ sp shim        
+</span></span><span class="line"><span class="cl">没有 [shim] 相关进程
+</span></span><span class="line"><span class="cl">[xiu-desktop] ~ sp main-example
+</span></span><span class="line"><span class="cl">没有 [main-example] 相关进程
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这时候容器变为 created 状态</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">[xiu-desktop] ~ n ps -a
+</span></span><span class="line"><span class="cl">CONTAINER ID    IMAGE                                  COMMAND            CREATED          STATUS     PORTS    NAMES
+</span></span><span class="line"><span class="cl">7206459bb2db    docker.io/q946666800/runcdev:latest    &#34;/main-example&#34;    4 minutes ago    Created             runcdev
+</span></span></code></pre></td></tr></table>
+</div>
+</div></div><div class="post-footer" id="post-footer">
     <div class="post-info">
         <div class="post-info-line">
             <div class="post-info-mod">
@@ -204,7 +1027,7 @@
     </div>
 
     <div class="post-nav"><a href="/2022-11-15-containerd-8-runc-modes/" class="prev" rel="prev" title="Containerd解析(8) - Runc Modes"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>Containerd解析(8) - Runc Modes</a>
-            <a href="/2022-11-18-containerd-10-containerd-start/" class="next" rel="next" title="2022 11 18 Containerd 10 Containerd Start">2022 11 18 Containerd 10 Containerd Start<i class="fas fa-angle-right fa-fw" aria-hidden="true"></i></a></div>
+            <a href="/2022-11-18-containerd-10-containerd-start/" class="next" rel="next" title="Containerd解析(10) - Containerd Start">Containerd解析(10) - Containerd Start<i class="fas fa-angle-right fa-fw" aria-hidden="true"></i></a></div>
 </div>
 <div id="comments"><div id="giscus" class="comment"></div><noscript>
                 Please enable JavaScript to view the comments powered by <a href="https://giscus.app">Giscus</a>.

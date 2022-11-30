@@ -706,7 +706,7 @@ func (p *proxySnapshotter) Prepare(ctx context.Context, key, parent string, opts
 }
 ```
 
-#### [containerd] client.Prepare()
+#### [containerd] (s *service) Prepare
 
 /containerd/services/snapshots/service.go L88
 

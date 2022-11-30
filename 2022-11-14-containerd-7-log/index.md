@@ -120,7 +120,6 @@ func NewCreator(opts ...Opt) Creator {
 		if streams.Stdout == nil {
 			fifos.Stdout = ""
 		}
-        // 这里会执行
 		if streams.Stderr == nil {
 			fifos.Stderr = ""
 		}
@@ -237,11 +236,9 @@ func (p *linuxPlatform) CopyConsole(ctx context.Context, console console.Console
 
 ![image-20221116210506511](https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-210507.png)
 
-与创建socket相关联，将容器的 stdio 传输至 nerdctl 进程
+与创建socket相关联，将容器的 console 传输至 nerdctl 进程 console。
 
-
-
-
+所以，使用 -it 运行容器时，可以与容器进程直接进行交互。
 
 <br>
 
@@ -429,11 +426,13 @@ func Main(argv2 string) error {
 	if err != nil {
 		return err
 	}
-    // 从代码可以看出，所谓日志驱动，就是编写处理日志的fn函数，然后传递给 logging.Run
+    
 	logging.Run(fn)
 	return nil
 }
 ```
+
+所谓日志驱动，就是编写处理日志的`fn`函数，然后传递给 `logging.Run`
 
 ```go
 // github.com/containerd/containerd@v1.7.0-beta.0/runtime/v2/logging/logging_unix.go
@@ -835,17 +834,9 @@ log drive exit 0
 
 ```
 
-
-
-
-
 nerdctl中日志处理方式大致如此。
 
 [demo](https://github.com/yzxiu/nerdctl-log-example)
-
-
-
-<br>
 
 <br>
 

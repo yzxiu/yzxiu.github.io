@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2022-11-02-containerd-3-shim-start\/"
-        },"genre": "posts","keywords": "containerd, containerd-shim","wordcount":  1685 ,
+        },"genre": "posts","keywords": "containerd, containerd-shim","wordcount":  4426 ,
         "url": "https:\/\/yzxiu.github.io\/2022-11-02-containerd-3-shim-start\/","datePublished": "2022-11-02T21:50:04+08:00","dateModified": "2022-11-02T21:50:04+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,8 +102,8 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Containerd解析(3) - shim</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-11-02">2022-11-02</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 1685 字&nbsp;
-                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 4 分钟&nbsp;</div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-11-02">2022-11-02</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 4426 字&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 9 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
                     <span>目录</span>
@@ -125,6 +125,26 @@
       </ul>
     </li>
     <li><a href="#shim意外退出会发生什么">shim意外退出，会发生什么？</a></li>
+    <li><a href="#shim启动过程">shim启动过程</a></li>
+    <li><a href="#shim-monitor">shim Monitor</a>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#reapctx-contextcontext-logger-logrusentry-signals-chan-ossignal">reap(ctx context.Context, logger *logrus.Entry, signals chan os.Signal)</a>
+              <ul>
+                <li><a href="#reap-error">Reap() error</a>
+                  <ul>
+                    <li><a href="#reapwait-bool-exits-exit-err-error">reap(wait bool) (exits []exit, err error)</a></li>
+                    <li><a href="#notifye-runcexit">notify(e runc.Exit)</a></li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+            <li><a href="#monitorstartcmd--monitorwaitcmd-ec">Monitor.Start(cmd) &amp; Monitor.Wait(cmd, ec)</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
   </ul>
 </nav></div>
             </div><div class="content" id="content"><h2 id="概述">概述</h2>
@@ -571,10 +591,1239 @@
 <p>接下来创建nginx容器的时候，socket file已存在，验证socket连接，成功则<strong>直接</strong>返回 socket address地址。</p>
 <br>
 <h2 id="shim意外退出会发生什么">shim意外退出，会发生什么？</h2>
-<p>先说结论：</p>
-<p>如果shim意外退出，由shim创建的子进程(也就是容器)会跟着退出。</p>
-<p>containerd会运行<code>m.startShim()</code>重新启动<code>shim</code>和重新启动相关容器</p>
-</div><div class="post-footer" id="post-footer">
+<h2 id="shim启动过程">shim启动过程</h2>
+<p>主要分析 <code>containerd-shim-runc-v2</code></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;context&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/containerd/containerd/runtime/v2/runc/manager&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">_</span> <span class="s">&#34;github.com/containerd/containerd/runtime/v2/runc/pause&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">_</span> <span class="s">&#34;github.com/containerd/containerd/runtime/v2/runc/task/plugin&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/containerd/containerd/runtime/v2/shim&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">shim</span><span class="p">.</span><span class="nf">RunManager</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">manager</span><span class="p">.</span><span class="nf">NewShimManager</span><span class="p">(</span><span class="s">&#34;io.containerd.runc.v2&#34;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// NewShimManager returns an implementation of the shim manager
+</span></span></span><span class="line"><span class="cl"><span class="c1">// using runc
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">NewShimManager</span><span class="p">(</span><span class="nx">name</span> <span class="kt">string</span><span class="p">)</span> <span class="nx">shim</span><span class="p">.</span><span class="nx">Manager</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">manager</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">name</span><span class="p">:</span> <span class="nx">name</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这里使用的实现类为</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// containerd/runtime/v2/runc/manager/manager_linux.go
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">manager</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">name</span> <span class="kt">string</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// RunManager initialzes and runs a shim server
+</span></span></span><span class="line"><span class="cl"><span class="c1">// TODO(2.0): Rename to Run
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">RunManager</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">manager</span> <span class="nx">Manager</span><span class="p">,</span> <span class="nx">opts</span> <span class="o">...</span><span class="nx">BinaryOpts</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">config</span> <span class="nx">Config</span>
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">o</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">opts</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">o</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">config</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">ctx</span> <span class="p">=</span> <span class="nx">log</span><span class="p">.</span><span class="nf">WithLogger</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">log</span><span class="p">.</span><span class="nf">G</span><span class="p">(</span><span class="nx">ctx</span><span class="p">).</span><span class="nf">WithField</span><span class="p">(</span><span class="s">&#34;runtime&#34;</span><span class="p">,</span> <span class="nx">manager</span><span class="p">.</span><span class="nf">Name</span><span class="p">()))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">run</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">manager</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="nx">config</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Fprintf</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Stderr</span><span class="p">,</span> <span class="s">&#34;%s: %s&#34;</span><span class="p">,</span> <span class="nx">manager</span><span class="p">.</span><span class="nf">Name</span><span class="p">(),</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">os</span><span class="p">.</span><span class="nf">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span><span class="lnt">110
+</span><span class="lnt">111
+</span><span class="lnt">112
+</span><span class="lnt">113
+</span><span class="lnt">114
+</span><span class="lnt">115
+</span><span class="lnt">116
+</span><span class="lnt">117
+</span><span class="lnt">118
+</span><span class="lnt">119
+</span><span class="lnt">120
+</span><span class="lnt">121
+</span><span class="lnt">122
+</span><span class="lnt">123
+</span><span class="lnt">124
+</span><span class="lnt">125
+</span><span class="lnt">126
+</span><span class="lnt">127
+</span><span class="lnt">128
+</span><span class="lnt">129
+</span><span class="lnt">130
+</span><span class="lnt">131
+</span><span class="lnt">132
+</span><span class="lnt">133
+</span><span class="lnt">134
+</span><span class="lnt">135
+</span><span class="lnt">136
+</span><span class="lnt">137
+</span><span class="lnt">138
+</span><span class="lnt">139
+</span><span class="lnt">140
+</span><span class="lnt">141
+</span><span class="lnt">142
+</span><span class="lnt">143
+</span><span class="lnt">144
+</span><span class="lnt">145
+</span><span class="lnt">146
+</span><span class="lnt">147
+</span><span class="lnt">148
+</span><span class="lnt">149
+</span><span class="lnt">150
+</span><span class="lnt">151
+</span><span class="lnt">152
+</span><span class="lnt">153
+</span><span class="lnt">154
+</span><span class="lnt">155
+</span><span class="lnt">156
+</span><span class="lnt">157
+</span><span class="lnt">158
+</span><span class="lnt">159
+</span><span class="lnt">160
+</span><span class="lnt">161
+</span><span class="lnt">162
+</span><span class="lnt">163
+</span><span class="lnt">164
+</span><span class="lnt">165
+</span><span class="lnt">166
+</span><span class="lnt">167
+</span><span class="lnt">168
+</span><span class="lnt">169
+</span><span class="lnt">170
+</span><span class="lnt">171
+</span><span class="lnt">172
+</span><span class="lnt">173
+</span><span class="lnt">174
+</span><span class="lnt">175
+</span><span class="lnt">176
+</span><span class="lnt">177
+</span><span class="lnt">178
+</span><span class="lnt">179
+</span><span class="lnt">180
+</span><span class="lnt">181
+</span><span class="lnt">182
+</span><span class="lnt">183
+</span><span class="lnt">184
+</span><span class="lnt">185
+</span><span class="lnt">186
+</span><span class="lnt">187
+</span><span class="lnt">188
+</span><span class="lnt">189
+</span><span class="lnt">190
+</span><span class="lnt">191
+</span><span class="lnt">192
+</span><span class="lnt">193
+</span><span class="lnt">194
+</span><span class="lnt">195
+</span><span class="lnt">196
+</span><span class="lnt">197
+</span><span class="lnt">198
+</span><span class="lnt">199
+</span><span class="lnt">200
+</span><span class="lnt">201
+</span><span class="lnt">202
+</span><span class="lnt">203
+</span><span class="lnt">204
+</span><span class="lnt">205
+</span><span class="lnt">206
+</span><span class="lnt">207
+</span><span class="lnt">208
+</span><span class="lnt">209
+</span><span class="lnt">210
+</span><span class="lnt">211
+</span><span class="lnt">212
+</span><span class="lnt">213
+</span><span class="lnt">214
+</span><span class="lnt">215
+</span><span class="lnt">216
+</span><span class="lnt">217
+</span><span class="lnt">218
+</span><span class="lnt">219
+</span><span class="lnt">220
+</span><span class="lnt">221
+</span><span class="lnt">222
+</span><span class="lnt">223
+</span><span class="lnt">224
+</span><span class="lnt">225
+</span><span class="lnt">226
+</span><span class="lnt">227
+</span><span class="lnt">228
+</span><span class="lnt">229
+</span><span class="lnt">230
+</span><span class="lnt">231
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">run</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">manager</span> <span class="nx">Manager</span><span class="p">,</span> <span class="nx">initFunc</span> <span class="nx">Init</span><span class="p">,</span> <span class="nx">name</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">config</span> <span class="nx">Config</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nf">parseFlags</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">versionFlag</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;%s:\n&#34;</span><span class="p">,</span> <span class="nx">filepath</span><span class="p">.</span><span class="nf">Base</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Args</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;  Version: &#34;</span><span class="p">,</span> <span class="nx">version</span><span class="p">.</span><span class="nx">Version</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;  Revision:&#34;</span><span class="p">,</span> <span class="nx">version</span><span class="p">.</span><span class="nx">Revision</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;  Go version:&#34;</span><span class="p">,</span> <span class="nx">version</span><span class="p">.</span><span class="nx">GoVersion</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">namespaceFlag</span> <span class="o">==</span> <span class="s">&#34;&#34;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;shim namespace cannot be empty&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nf">setRuntime</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// 1, 接收系统信号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// smp := []os.Signal{unix.SIGTERM, unix.SIGINT, unix.SIGPIPE}
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// smp = append(smp, unix.SIGCHLD)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">signals</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">setupSignals</span><span class="p">(</span><span class="nx">config</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// prctl(PR_SET_CHILD_SUBREAPER,1)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// 让当前进程像init进程一样来收养孤儿进程，称为subreaper进程
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// 孤儿进程成会被祖先中距离最近的 supreaper 进程收养
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">if</span> <span class="p">!</span><span class="nx">config</span><span class="p">.</span><span class="nx">NoSubreaper</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">subreaper</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">ttrpcAddress</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">Getenv</span><span class="p">(</span><span class="nx">ttrpcAddressEnv</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">publisher</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">NewPublisher</span><span class="p">(</span><span class="nx">ttrpcAddress</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">defer</span> <span class="nx">publisher</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">ctx</span> <span class="p">=</span> <span class="nx">namespaces</span><span class="p">.</span><span class="nf">WithNamespace</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">namespaceFlag</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">ctx</span> <span class="p">=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">WithValue</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">OptsKey</span><span class="p">{},</span> <span class="nx">Opts</span><span class="p">{</span><span class="nx">BundlePath</span><span class="p">:</span> <span class="nx">bundlePath</span><span class="p">,</span> <span class="nx">Debug</span><span class="p">:</span> <span class="nx">debugFlag</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">ctx</span><span class="p">,</span> <span class="nx">sd</span> <span class="o">:=</span> <span class="nx">shutdown</span><span class="p">.</span><span class="nf">WithShutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">defer</span> <span class="nx">sd</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// 初始化manager
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// 这里的manager并不为nil
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">if</span> <span class="nx">manager</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">service</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">initFunc</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">id</span><span class="p">,</span> <span class="nx">publisher</span><span class="p">,</span> <span class="nx">sd</span><span class="p">.</span><span class="nx">Shutdown</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">plugin</span><span class="p">.</span><span class="nf">Register</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">plugin</span><span class="p">.</span><span class="nx">Registration</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">Type</span><span class="p">:</span> <span class="nx">plugin</span><span class="p">.</span><span class="nx">TTRPCPlugin</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">ID</span><span class="p">:</span>   <span class="s">&#34;task&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">Requires</span><span class="p">:</span> <span class="p">[]</span><span class="nx">plugin</span><span class="p">.</span><span class="nx">Type</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">plugin</span><span class="p">.</span><span class="nx">EventPlugin</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="p">},</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">InitFn</span><span class="p">:</span> <span class="kd">func</span><span class="p">(</span><span class="nx">ic</span> <span class="o">*</span><span class="nx">plugin</span><span class="p">.</span><span class="nx">InitContext</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">return</span> <span class="nx">taskService</span><span class="p">{</span><span class="nx">service</span><span class="p">},</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">         <span class="p">},</span>
+</span></span><span class="line"><span class="cl">      <span class="p">})</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">manager</span> <span class="p">=</span> <span class="nx">shimToManager</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">shim</span><span class="p">:</span> <span class="nx">service</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">name</span><span class="p">:</span> <span class="nx">name</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// Handle explicit actions
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">switch</span> <span class="nx">action</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="k">case</span> <span class="s">&#34;delete&#34;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">logger</span> <span class="o">:=</span> <span class="nx">log</span><span class="p">.</span><span class="nf">G</span><span class="p">(</span><span class="nx">ctx</span><span class="p">).</span><span class="nf">WithFields</span><span class="p">(</span><span class="nx">logrus</span><span class="p">.</span><span class="nx">Fields</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="s">&#34;pid&#34;</span><span class="p">:</span>       <span class="nx">os</span><span class="p">.</span><span class="nf">Getpid</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl">         <span class="s">&#34;namespace&#34;</span><span class="p">:</span> <span class="nx">namespaceFlag</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="p">})</span>
+</span></span><span class="line"><span class="cl">      <span class="k">go</span> <span class="nf">reap</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">logger</span><span class="p">,</span> <span class="nx">signals</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">ss</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">manager</span><span class="p">.</span><span class="nf">Stop</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">id</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">data</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">proto</span><span class="p">.</span><span class="nf">Marshal</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">shimapi</span><span class="p">.</span><span class="nx">DeleteResponse</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">Pid</span><span class="p">:</span>        <span class="nb">uint32</span><span class="p">(</span><span class="nx">ss</span><span class="p">.</span><span class="nx">Pid</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">ExitStatus</span><span class="p">:</span> <span class="nb">uint32</span><span class="p">(</span><span class="nx">ss</span><span class="p">.</span><span class="nx">ExitStatus</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">ExitedAt</span><span class="p">:</span>   <span class="nx">protobuf</span><span class="p">.</span><span class="nf">ToTimestamp</span><span class="p">(</span><span class="nx">ss</span><span class="p">.</span><span class="nx">ExitedAt</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">      <span class="p">})</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Stdout</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">data</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">   <span class="k">case</span> <span class="s">&#34;start&#34;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">opts</span> <span class="o">:=</span> <span class="nx">StartOpts</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">ContainerdBinary</span><span class="p">:</span> <span class="nx">containerdBinaryFlag</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">Address</span><span class="p">:</span>          <span class="nx">addressFlag</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">TTRPCAddress</span><span class="p">:</span>     <span class="nx">ttrpcAddress</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">Debug</span><span class="p">:</span>            <span class="nx">debugFlag</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="c1">// 启动 shim server，并返回 sock address
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="nx">address</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">manager</span><span class="p">.</span><span class="nf">Start</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">id</span><span class="p">,</span> <span class="nx">opts</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Stdout</span><span class="p">.</span><span class="nf">WriteString</span><span class="p">(</span><span class="nx">address</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="p">!</span><span class="nx">config</span><span class="p">.</span><span class="nx">NoSetupLogger</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">ctx</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nf">setLogger</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">id</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">plugin</span><span class="p">.</span><span class="nf">Register</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">plugin</span><span class="p">.</span><span class="nx">Registration</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">Type</span><span class="p">:</span> <span class="nx">plugin</span><span class="p">.</span><span class="nx">InternalPlugin</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">ID</span><span class="p">:</span>   <span class="s">&#34;shutdown&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">InitFn</span><span class="p">:</span> <span class="kd">func</span><span class="p">(</span><span class="nx">ic</span> <span class="o">*</span><span class="nx">plugin</span><span class="p">.</span><span class="nx">InitContext</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="nx">sd</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">      <span class="p">},</span>
+</span></span><span class="line"><span class="cl">   <span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// Register event plugin
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">plugin</span><span class="p">.</span><span class="nf">Register</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">plugin</span><span class="p">.</span><span class="nx">Registration</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">Type</span><span class="p">:</span> <span class="nx">plugin</span><span class="p">.</span><span class="nx">EventPlugin</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">ID</span><span class="p">:</span>   <span class="s">&#34;publisher&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">InitFn</span><span class="p">:</span> <span class="kd">func</span><span class="p">(</span><span class="nx">ic</span> <span class="o">*</span><span class="nx">plugin</span><span class="p">.</span><span class="nx">InitContext</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="nx">publisher</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">      <span class="p">},</span>
+</span></span><span class="line"><span class="cl">   <span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="kd">var</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">initialized</span>   <span class="p">=</span> <span class="nx">plugin</span><span class="p">.</span><span class="nf">NewPluginSet</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">ttrpcServices</span> <span class="p">=</span> <span class="p">[]</span><span class="nx">ttrpcService</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="nx">ttrpcUnaryInterceptors</span> <span class="p">=</span> <span class="p">[]</span><span class="nx">ttrpc</span><span class="p">.</span><span class="nx">UnaryServerInterceptor</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">plugins</span> <span class="o">:=</span> <span class="nx">plugin</span><span class="p">.</span><span class="nf">Graph</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="o">*</span><span class="nx">plugin</span><span class="p">.</span><span class="nx">Registration</span><span class="p">)</span> <span class="kt">bool</span> <span class="p">{</span> <span class="k">return</span> <span class="kc">false</span> <span class="p">})</span>
+</span></span><span class="line"><span class="cl">   <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">p</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">plugins</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">id</span> <span class="o">:=</span> <span class="nx">p</span><span class="p">.</span><span class="nf">URI</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">log</span><span class="p">.</span><span class="nf">G</span><span class="p">(</span><span class="nx">ctx</span><span class="p">).</span><span class="nf">WithField</span><span class="p">(</span><span class="s">&#34;type&#34;</span><span class="p">,</span> <span class="nx">p</span><span class="p">.</span><span class="nx">Type</span><span class="p">).</span><span class="nf">Infof</span><span class="p">(</span><span class="s">&#34;loading plugin %q...&#34;</span><span class="p">,</span> <span class="nx">id</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="nx">initContext</span> <span class="o">:=</span> <span class="nx">plugin</span><span class="p">.</span><span class="nf">NewContext</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">ctx</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">p</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">initialized</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="c1">// NOTE: Root is empty since the shim does not support persistent storage,
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>         <span class="c1">// shim plugins should make use state directory for writing files to disk.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>         <span class="c1">// The state directory will be destroyed when the shim if cleaned up or
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>         <span class="c1">// on reboot
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>         <span class="s">&#34;&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">bundlePath</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">initContext</span><span class="p">.</span><span class="nx">Address</span> <span class="p">=</span> <span class="nx">addressFlag</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">initContext</span><span class="p">.</span><span class="nx">TTRPCAddress</span> <span class="p">=</span> <span class="nx">ttrpcAddress</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="c1">// load the plugin specific configuration if it is provided
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">//TODO: Read configuration passed into shim, or from state directory?
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">//if p.Config != nil {
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// pc, err := config.Decode(p)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// if err != nil {
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">//    return nil, err
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// }
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// initContext.Config = pc
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">//}
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">      <span class="nx">result</span> <span class="o">:=</span> <span class="nx">p</span><span class="p">.</span><span class="nf">Init</span><span class="p">(</span><span class="nx">initContext</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">initialized</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="nx">result</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;could not add plugin result to plugin set: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="nx">instance</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">result</span><span class="p">.</span><span class="nf">Instance</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">if</span> <span class="nx">plugin</span><span class="p">.</span><span class="nf">IsSkipPlugin</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">log</span><span class="p">.</span><span class="nf">G</span><span class="p">(</span><span class="nx">ctx</span><span class="p">).</span><span class="nf">WithError</span><span class="p">(</span><span class="nx">err</span><span class="p">).</span><span class="nf">WithField</span><span class="p">(</span><span class="s">&#34;type&#34;</span><span class="p">,</span> <span class="nx">p</span><span class="p">.</span><span class="nx">Type</span><span class="p">).</span><span class="nf">Infof</span><span class="p">(</span><span class="s">&#34;skip loading plugin %q...&#34;</span><span class="p">,</span> <span class="nx">id</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="k">continue</span>
+</span></span><span class="line"><span class="cl">         <span class="p">}</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to load plugin %s: %w&#34;</span><span class="p">,</span> <span class="nx">id</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">src</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">instance</span><span class="p">.(</span><span class="nx">ttrpcService</span><span class="p">);</span> <span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">logrus</span><span class="p">.</span><span class="nf">WithField</span><span class="p">(</span><span class="s">&#34;id&#34;</span><span class="p">,</span> <span class="nx">id</span><span class="p">).</span><span class="nf">Debug</span><span class="p">(</span><span class="s">&#34;registering ttrpc service&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">ttrpcServices</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">ttrpcServices</span><span class="p">,</span> <span class="nx">src</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">src</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">instance</span><span class="p">.(</span><span class="nx">ttrpcServerOptioner</span><span class="p">);</span> <span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">ttrpcUnaryInterceptors</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">ttrpcUnaryInterceptors</span><span class="p">,</span> <span class="nx">src</span><span class="p">.</span><span class="nf">UnaryInterceptor</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">ttrpcServices</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;required that ttrpc service&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">unaryInterceptor</span> <span class="o">:=</span> <span class="nf">chainUnaryServerInterceptors</span><span class="p">(</span><span class="nx">ttrpcUnaryInterceptors</span><span class="o">...</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">server</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">newServer</span><span class="p">(</span><span class="nx">ttrpc</span><span class="p">.</span><span class="nf">WithUnaryServerInterceptor</span><span class="p">(</span><span class="nx">unaryInterceptor</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed creating server: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">srv</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">ttrpcServices</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">srv</span><span class="p">.</span><span class="nf">RegisterTTRPC</span><span class="p">(</span><span class="nx">server</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to register service: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">serve</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">server</span><span class="p">,</span> <span class="nx">signals</span><span class="p">,</span> <span class="nx">sd</span><span class="p">.</span><span class="nx">Shutdown</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="nx">shutdown</span><span class="p">.</span><span class="nx">ErrShutdown</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// NOTE: If the shim server is down(like oom killer), the address
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// socket might be leaking.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">if</span> <span class="nx">address</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">ReadAddress</span><span class="p">(</span><span class="s">&#34;address&#34;</span><span class="p">);</span> <span class="nx">err</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">_</span> <span class="p">=</span> <span class="nf">RemoveSocket</span><span class="p">(</span><span class="nx">address</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">select</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="k">case</span> <span class="o">&lt;-</span><span class="nx">publisher</span><span class="p">.</span><span class="nf">Done</span><span class="p">():</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">   <span class="k">case</span> <span class="o">&lt;-</span><span class="nx">time</span><span class="p">.</span><span class="nf">After</span><span class="p">(</span><span class="mi">5</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;publisher not closed&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>shim server</code>启动分为两个步骤</p>
+<ol>
+<li>调用 <code>containerd-shim-runc-v2 start</code>命令，在命令中构建cmd启动真正的shim server，然后返回与之连接的sock address。</li>
+<li>启动真正的<code>shim server</code>进程。</li>
+</ol>
+<p>所以，真正启动<code>shim server</code>的代码，并不在</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="k">switch</span> <span class="nx">action</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// delete命令用于在shim进程意外退出(或者有其他情况？)，清理相关的容器进程
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">case</span> <span class="s">&#34;delete&#34;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// start命令在代码中构建cmd，通过cmd从另外的进程启动 shim server，然后返回 sock address
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">case</span> <span class="s">&#34;start&#34;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>所以继续看<code>switch action</code>之后的代码&hellip;</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// 注册插件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">plugin</span><span class="p">.</span><span class="nf">Register</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">plugin</span><span class="p">.</span><span class="nx">Registration</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">Type</span><span class="p">:</span> <span class="nx">plugin</span><span class="p">.</span><span class="nx">InternalPlugin</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">ID</span><span class="p">:</span>   <span class="s">&#34;shutdown&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">InitFn</span><span class="p">:</span> <span class="kd">func</span><span class="p">(</span><span class="nx">ic</span> <span class="o">*</span><span class="nx">plugin</span><span class="p">.</span><span class="nx">InitContext</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">sd</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">   <span class="p">},</span>
+</span></span><span class="line"><span class="cl"><span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Register event plugin
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">plugin</span><span class="p">.</span><span class="nf">Register</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">plugin</span><span class="p">.</span><span class="nx">Registration</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">Type</span><span class="p">:</span> <span class="nx">plugin</span><span class="p">.</span><span class="nx">EventPlugin</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">ID</span><span class="p">:</span>   <span class="s">&#34;publisher&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">InitFn</span><span class="p">:</span> <span class="kd">func</span><span class="p">(</span><span class="nx">ic</span> <span class="o">*</span><span class="nx">plugin</span><span class="p">.</span><span class="nx">InitContext</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">publisher</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">   <span class="p">},</span>
+</span></span><span class="line"><span class="cl"><span class="p">})</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>启动服务</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// serve serves the ttrpc API over a unix socket in the current working directory
+</span></span></span><span class="line"><span class="cl"><span class="c1">// and blocks until the context is canceled
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">serve</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">server</span> <span class="o">*</span><span class="nx">ttrpc</span><span class="p">.</span><span class="nx">Server</span><span class="p">,</span> <span class="nx">signals</span> <span class="kd">chan</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Signal</span><span class="p">,</span> <span class="nx">shutdown</span> <span class="kd">func</span><span class="p">())</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">dump</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Signal</span><span class="p">,</span> <span class="mi">32</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="nf">setupDumpStacks</span><span class="p">(</span><span class="nx">dump</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">path</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">Getwd</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">l</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">serveListener</span><span class="p">(</span><span class="nx">socketFlag</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">defer</span> <span class="nx">l</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">server</span><span class="p">.</span><span class="nf">Serve</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">l</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="p">!</span><span class="nx">errors</span><span class="p">.</span><span class="nf">Is</span><span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">net</span><span class="p">.</span><span class="nx">ErrClosed</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">log</span><span class="p">.</span><span class="nf">G</span><span class="p">(</span><span class="nx">ctx</span><span class="p">).</span><span class="nf">WithError</span><span class="p">(</span><span class="nx">err</span><span class="p">).</span><span class="nf">Fatal</span><span class="p">(</span><span class="s">&#34;containerd-shim: ttrpc server failure&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}()</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">logger</span> <span class="o">:=</span> <span class="nx">log</span><span class="p">.</span><span class="nf">G</span><span class="p">(</span><span class="nx">ctx</span><span class="p">).</span><span class="nf">WithFields</span><span class="p">(</span><span class="nx">logrus</span><span class="p">.</span><span class="nx">Fields</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="s">&#34;pid&#34;</span><span class="p">:</span>       <span class="nx">os</span><span class="p">.</span><span class="nf">Getpid</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl">      <span class="s">&#34;path&#34;</span><span class="p">:</span>      <span class="nx">path</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="s">&#34;namespace&#34;</span><span class="p">:</span> <span class="nx">namespaceFlag</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="p">})</span>
+</span></span><span class="line"><span class="cl">   <span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">for</span> <span class="k">range</span> <span class="nx">dump</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nf">dumpStacks</span><span class="p">(</span><span class="nx">logger</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// 监听shim进程的退出信号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">go</span> <span class="nf">handleExitSignals</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">logger</span><span class="p">,</span> <span class="nx">shutdown</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">   <span class="c1">// smp := []os.Signal{unix.SIGTERM, unix.SIGINT, unix.SIGPIPE}
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// smp = append(smp, unix.SIGCHLD)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// 实际上只处理了 SIGCHLD
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">return</span> <span class="nf">reap</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">logger</span><span class="p">,</span> <span class="nx">signals</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="shim-monitor">shim Monitor</h2>
+<p>shim对容器进程的监控，是shim进程比较核心的一个功能。接下来对该功能的实现进行解析。</p>
+<p>首先查看启动过程中， <code>TaskService</code> 的启动代码：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// NewTaskService creates a new instance of a task service
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">NewTaskService</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">publisher</span> <span class="nx">shim</span><span class="p">.</span><span class="nx">Publisher</span><span class="p">,</span> <span class="nx">sd</span> <span class="nx">shutdown</span><span class="p">.</span><span class="nx">Service</span><span class="p">)</span> <span class="p">(</span><span class="nx">taskAPI</span><span class="p">.</span><span class="nx">TaskService</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="kd">var</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">ep</span>  <span class="nx">oom</span><span class="p">.</span><span class="nx">Watcher</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">err</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">   <span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">cgroups</span><span class="p">.</span><span class="nf">Mode</span><span class="p">()</span> <span class="o">==</span> <span class="nx">cgroups</span><span class="p">.</span><span class="nx">Unified</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">ep</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">oomv2</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">publisher</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">ep</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">oomv1</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">publisher</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">go</span> <span class="nx">ep</span><span class="p">.</span><span class="nf">Run</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">s</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">service</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">context</span><span class="p">:</span>    <span class="nx">ctx</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">events</span><span class="p">:</span>     <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">interface</span><span class="p">{},</span> <span class="mi">128</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">// s.ec进行了订阅
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// 这个订阅比较重要，发送通知的事件基本都是这个订阅产生的
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="nx">ec</span><span class="p">:</span>         <span class="nx">reaper</span><span class="p">.</span><span class="nx">Default</span><span class="p">.</span><span class="nf">Subscribe</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">ep</span><span class="p">:</span>         <span class="nx">ep</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">shutdown</span><span class="p">:</span>   <span class="nx">sd</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">containers</span><span class="p">:</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">runc</span><span class="p">.</span><span class="nx">Container</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// 从 s.ec 中获取退出事件，处理后发送到 s.events 中
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">go</span> <span class="nx">s</span><span class="p">.</span><span class="nf">processExits</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">   <span class="c1">// 修改 runcC.Monitor 的实现
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">runcC</span><span class="p">.</span><span class="nx">Monitor</span> <span class="p">=</span> <span class="nx">reaper</span><span class="p">.</span><span class="nx">Default</span>
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">s</span><span class="p">.</span><span class="nf">initPlatform</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to initialized platform behavior: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   
+</span></span><span class="line"><span class="cl">   <span class="c1">// 从 s.events 中获取时间，过滤处理之后，使用 publisher 发送事件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">go</span> <span class="nx">s</span><span class="p">.</span><span class="nf">forward</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">publisher</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">sd</span><span class="p">.</span><span class="nf">RegisterCallback</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nb">close</span><span class="p">(</span><span class="nx">s</span><span class="p">.</span><span class="nx">events</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">   <span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">address</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">shim</span><span class="p">.</span><span class="nf">ReadAddress</span><span class="p">(</span><span class="s">&#34;address&#34;</span><span class="p">);</span> <span class="nx">err</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">sd</span><span class="p">.</span><span class="nf">RegisterCallback</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="nx">shim</span><span class="p">.</span><span class="nf">RemoveSocket</span><span class="p">(</span><span class="nx">address</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="p">})</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="nx">s</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="reapctx-contextcontext-logger-logrusentry-signals-chan-ossignal">reap(ctx context.Context, logger *logrus.Entry, signals chan os.Signal)</h4>
+<p>主循环，持续监听 <code>SIGCHLD</code> 事件</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">reap</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">logger</span> <span class="o">*</span><span class="nx">logrus</span><span class="p">.</span><span class="nx">Entry</span><span class="p">,</span> <span class="nx">signals</span> <span class="kd">chan</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Signal</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">logger</span><span class="p">.</span><span class="nf">Info</span><span class="p">(</span><span class="s">&#34;starting signal loop&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">select</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">case</span> <span class="o">&lt;-</span><span class="nx">ctx</span><span class="p">.</span><span class="nf">Done</span><span class="p">():</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="nx">ctx</span><span class="p">.</span><span class="nf">Err</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">      <span class="k">case</span> <span class="nx">s</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">signals</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">         <span class="c1">// Exit signals are handled separately from this loop
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>         <span class="c1">// They get registered with this channel so that we can ignore such signals for short-running actions (e.g. `delete`)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>         <span class="k">switch</span> <span class="nx">s</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">case</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">SIGCHLD</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">            <span class="o">/</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">reaper</span><span class="p">.</span><span class="nf">Reap</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">               <span class="nx">logger</span><span class="p">.</span><span class="nf">WithError</span><span class="p">(</span><span class="nx">err</span><span class="p">).</span><span class="nf">Error</span><span class="p">(</span><span class="s">&#34;reap exit status&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">         <span class="k">case</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">SIGPIPE</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">         <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h5 id="reap-error">Reap() error</h5>
+<p>SIGCHLD 事件处理</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// Reap should be called when the process receives an SIGCHLD.  Reap will reap
+</span></span></span><span class="line"><span class="cl"><span class="c1">// all exited processes and close their wait channels
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">Reap</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">now</span> <span class="o">:=</span> <span class="nx">time</span><span class="p">.</span><span class="nf">Now</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// 1
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">exits</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">reap</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">e</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">exits</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">// 2
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="nx">done</span> <span class="o">:=</span> <span class="nx">Default</span><span class="p">.</span><span class="nf">notify</span><span class="p">(</span><span class="nx">runc</span><span class="p">.</span><span class="nx">Exit</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">Timestamp</span><span class="p">:</span> <span class="nx">now</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">Pid</span><span class="p">:</span>       <span class="nx">e</span><span class="p">.</span><span class="nx">Pid</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">Status</span><span class="p">:</span>    <span class="nx">e</span><span class="p">.</span><span class="nx">Status</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="k">select</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">case</span> <span class="o">&lt;-</span><span class="nx">done</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="k">case</span> <span class="o">&lt;-</span><span class="nx">time</span><span class="p">.</span><span class="nf">After</span><span class="p">(</span><span class="mi">1</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h6 id="reapwait-bool-exits-exit-err-error">reap(wait bool) (exits []exit, err error)</h6>
+<p>获取子进程退出状态</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// reap reaps all child processes for the calling process and returns their
+</span></span></span><span class="line"><span class="cl"><span class="c1">// exit information
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">reap</span><span class="p">(</span><span class="nx">wait</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">(</span><span class="nx">exits</span> <span class="p">[]</span><span class="nx">exit</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="kd">var</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">ws</span>  <span class="nx">unix</span><span class="p">.</span><span class="nx">WaitStatus</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">rus</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">Rusage</span>
+</span></span><span class="line"><span class="cl">   <span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">flag</span> <span class="o">:=</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">WNOHANG</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">wait</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">flag</span> <span class="p">=</span> <span class="mi">0</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">pid</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">unix</span><span class="p">.</span><span class="nf">Wait4</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">ws</span><span class="p">,</span> <span class="nx">flag</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">rus</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">if</span> <span class="nx">err</span> <span class="o">==</span> <span class="nx">unix</span><span class="p">.</span><span class="nx">ECHILD</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">return</span> <span class="nx">exits</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">         <span class="p">}</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="nx">exits</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">pid</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="nx">exits</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">exits</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">exits</span><span class="p">,</span> <span class="nx">exit</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">Pid</span><span class="p">:</span>    <span class="nx">pid</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">Status</span><span class="p">:</span> <span class="nf">exitStatus</span><span class="p">(</span><span class="nx">ws</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">      <span class="p">})</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h6 id="notifye-runcexit">notify(e runc.Exit)</h6>
+<p>将退出事件通知给各个订阅者。</p>
+<p>这个函数看起来有些复杂，实际上可以理解为：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Monitor</span><span class="p">)</span> <span class="nf">notify</span><span class="p">(</span><span class="nx">e</span> <span class="nx">runc</span><span class="p">.</span><span class="nx">Exit</span><span class="p">)</span> <span class="kd">chan</span> <span class="kd">struct</span><span class="p">{}</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="o">...</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">s</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">subscribers</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">s</span><span class="p">.</span><span class="nx">c</span> <span class="o">&lt;-</span> <span class="nx">e</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="o">...</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Monitor</span><span class="p">)</span> <span class="nf">notify</span><span class="p">(</span><span class="nx">e</span> <span class="nx">runc</span><span class="p">.</span><span class="nx">Exit</span><span class="p">)</span> <span class="kd">chan</span> <span class="kd">struct</span><span class="p">{}</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="kd">const</span> <span class="nx">timeout</span> <span class="p">=</span> <span class="mi">1</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span>
+</span></span><span class="line"><span class="cl">   <span class="kd">var</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">done</span>    <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{},</span> <span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">timer</span>   <span class="p">=</span> <span class="nx">time</span><span class="p">.</span><span class="nf">NewTimer</span><span class="p">(</span><span class="nx">timeout</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">success</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kd">chan</span> <span class="nx">runc</span><span class="p">.</span><span class="nx">Exit</span><span class="p">]</span><span class="kd">struct</span><span class="p">{})</span>
+</span></span><span class="line"><span class="cl">   <span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="nf">stop</span><span class="p">(</span><span class="nx">timer</span><span class="p">,</span> <span class="kc">true</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">defer</span> <span class="nb">close</span><span class="p">(</span><span class="nx">done</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="kd">var</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">failed</span>      <span class="kt">int</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">subscribers</span> <span class="p">=</span> <span class="nx">m</span><span class="p">.</span><span class="nf">getSubscribers</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">         <span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">s</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">subscribers</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">s</span><span class="p">.</span><span class="nf">do</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">               <span class="k">if</span> <span class="nx">s</span><span class="p">.</span><span class="nx">closed</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                  <span class="k">return</span>
+</span></span><span class="line"><span class="cl">               <span class="p">}</span>
+</span></span><span class="line"><span class="cl">               <span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">success</span><span class="p">[</span><span class="nx">s</span><span class="p">.</span><span class="nx">c</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                  <span class="k">return</span>
+</span></span><span class="line"><span class="cl">               <span class="p">}</span>
+</span></span><span class="line"><span class="cl">               <span class="nx">timer</span><span class="p">.</span><span class="nf">Reset</span><span class="p">(</span><span class="nx">timeout</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">               <span class="nx">recv</span> <span class="o">:=</span> <span class="kc">true</span>
+</span></span><span class="line"><span class="cl">               <span class="k">select</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">               <span class="k">case</span> <span class="nx">s</span><span class="p">.</span><span class="nx">c</span> <span class="o">&lt;-</span> <span class="nx">e</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">                  <span class="nx">success</span><span class="p">[</span><span class="nx">s</span><span class="p">.</span><span class="nx">c</span><span class="p">]</span> <span class="p">=</span> <span class="kd">struct</span><span class="p">{}{}</span>
+</span></span><span class="line"><span class="cl">               <span class="k">case</span> <span class="o">&lt;-</span><span class="nx">timer</span><span class="p">.</span><span class="nx">C</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">                  <span class="nx">recv</span> <span class="p">=</span> <span class="kc">false</span>
+</span></span><span class="line"><span class="cl">                  <span class="nx">failed</span><span class="o">++</span>
+</span></span><span class="line"><span class="cl">               <span class="p">}</span>
+</span></span><span class="line"><span class="cl">               <span class="nf">stop</span><span class="p">(</span><span class="nx">timer</span><span class="p">,</span> <span class="nx">recv</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="p">})</span>
+</span></span><span class="line"><span class="cl">         <span class="p">}</span>
+</span></span><span class="line"><span class="cl">         <span class="c1">// all subscribers received the message
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>         <span class="k">if</span> <span class="nx">failed</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">return</span>
+</span></span><span class="line"><span class="cl">         <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}()</span>
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="nx">done</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="monitorstartcmd--monitorwaitcmd-ec">Monitor.Start(cmd) &amp; Monitor.Wait(cmd, ec)</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// Start starts the command a registers the process with the reaper
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Monitor</span><span class="p">)</span> <span class="nf">Start</span><span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">exec</span><span class="p">.</span><span class="nx">Cmd</span><span class="p">)</span> <span class="p">(</span><span class="kd">chan</span> <span class="nx">runc</span><span class="p">.</span><span class="nx">Exit</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">ec</span> <span class="o">:=</span> <span class="nx">m</span><span class="p">.</span><span class="nf">Subscribe</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">c</span><span class="p">.</span><span class="nf">Start</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">m</span><span class="p">.</span><span class="nf">Unsubscribe</span><span class="p">(</span><span class="nx">ec</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="nx">ec</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Wait blocks until a process is signal as dead.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// User should rely on the value of the exit status to determine if the
+</span></span></span><span class="line"><span class="cl"><span class="c1">// command was successful or not.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Monitor</span><span class="p">)</span> <span class="nf">Wait</span><span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">exec</span><span class="p">.</span><span class="nx">Cmd</span><span class="p">,</span> <span class="nx">ec</span> <span class="kd">chan</span> <span class="nx">runc</span><span class="p">.</span><span class="nx">Exit</span><span class="p">)</span> <span class="p">(</span><span class="kt">int</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="k">for</span> <span class="nx">e</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">ec</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">e</span><span class="p">.</span><span class="nx">Pid</span> <span class="o">==</span> <span class="nx">c</span><span class="p">.</span><span class="nx">Process</span><span class="p">.</span><span class="nx">Pid</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="c1">// make sure we flush all IO
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>         <span class="nx">c</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">m</span><span class="p">.</span><span class="nf">Unsubscribe</span><span class="p">(</span><span class="nx">ec</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="nx">e</span><span class="p">.</span><span class="nx">Status</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// return no such process if the ec channel is closed and no more exit
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// events will be sent
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nx">ErrNoSuchProcess</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// Subscribe to process exit changes
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Monitor</span><span class="p">)</span> <span class="nf">Subscribe</span><span class="p">()</span> <span class="kd">chan</span> <span class="nx">runc</span><span class="p">.</span><span class="nx">Exit</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">c</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">runc</span><span class="p">.</span><span class="nx">Exit</span><span class="p">,</span> <span class="nx">bufferSize</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">m</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">m</span><span class="p">.</span><span class="nx">subscribers</span><span class="p">[</span><span class="nx">c</span><span class="p">]</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">subscriber</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">c</span><span class="p">:</span> <span class="nx">c</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">m</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="nx">c</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Unsubscribe to process exit changes
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">m</span> <span class="o">*</span><span class="nx">Monitor</span><span class="p">)</span> <span class="nf">Unsubscribe</span><span class="p">(</span><span class="nx">c</span> <span class="kd">chan</span> <span class="nx">runc</span><span class="p">.</span><span class="nx">Exit</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">m</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">s</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">m</span><span class="p">.</span><span class="nx">subscribers</span><span class="p">[</span><span class="nx">c</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">m</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">s</span><span class="p">.</span><span class="nb">close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="nb">delete</span><span class="p">(</span><span class="nx">m</span><span class="p">.</span><span class="nx">subscribers</span><span class="p">,</span> <span class="nx">c</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">m</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div></div><div class="post-footer" id="post-footer">
     <div class="post-info">
         <div class="post-info-line">
             <div class="post-info-mod">

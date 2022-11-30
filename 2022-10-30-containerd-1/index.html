@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2022-10-30-containerd-1\/"
-        },"genre": "posts","keywords": "containerd, containerd-shim","wordcount":  11358 ,
+        },"genre": "posts","keywords": "containerd, containerd-shim","wordcount":  11360 ,
         "url": "https:\/\/yzxiu.github.io\/2022-10-30-containerd-1\/","datePublished": "2022-10-30T21:48:08+08:00","dateModified": "2022-10-30T21:48:08+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,7 +102,7 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Containerd解析(1) - example</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-10-30">2022-10-30</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 11358 字&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-10-30">2022-10-30</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 11360 字&nbsp;
                 <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 23 分钟&nbsp;</div>
         </div><div class="featured-image"><img
         class="lazyload"
@@ -136,7 +136,7 @@
         <li><a href="#withnewspec">WithNewSpec：</a></li>
         <li><a href="#withnewsnapshot">WithNewSnapshot:</a>
           <ul>
-            <li><a href="#containerd-clientprepare">[containerd] client.Prepare()</a></li>
+            <li><a href="#containerd-s-service-prepare">[containerd] (s *service) Prepare</a></li>
           </ul>
         </li>
         <li><a href="#containerd-ccontainerservicecreate">[containerd] c.ContainerService().Create()</a></li>
@@ -1530,7 +1530,7 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h4 id="containerd-clientprepare">[containerd] client.Prepare()</h4>
+</div><h4 id="containerd-s-service-prepare">[containerd] (s *service) Prepare</h4>
 <p>/containerd/services/snapshots/service.go L88</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">

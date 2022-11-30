@@ -262,17 +262,667 @@ var groupLabels = []string{
 
 ## shim意外退出，会发生什么？
 
-先说结论：
-
-如果shim意外退出，由shim创建的子进程(也就是容器)会跟着退出。
-
-containerd会运行`m.startShim()`重新启动`shim`和重新启动相关容器
 
 
 
 
 
 
+## shim启动过程
+
+主要分析 `containerd-shim-runc-v2`
+
+```go
+package main
+
+import (
+	"context"
+
+	"github.com/containerd/containerd/runtime/v2/runc/manager"
+	_ "github.com/containerd/containerd/runtime/v2/runc/pause"
+	_ "github.com/containerd/containerd/runtime/v2/runc/task/plugin"
+	"github.com/containerd/containerd/runtime/v2/shim"
+)
+
+func main() {
+	shim.RunManager(context.Background(), manager.NewShimManager("io.containerd.runc.v2"))
+}
+```
+
+```go
+// NewShimManager returns an implementation of the shim manager
+// using runc
+func NewShimManager(name string) shim.Manager {
+	return &manager{
+		name: name,
+	}
+}
+```
+
+这里使用的实现类为
+
+```go
+// containerd/runtime/v2/runc/manager/manager_linux.go
+type manager struct {
+	name string
+}
+```
+
+```go
+// RunManager initialzes and runs a shim server
+// TODO(2.0): Rename to Run
+func RunManager(ctx context.Context, manager Manager, opts ...BinaryOpts) {
+	var config Config
+	for _, o := range opts {
+		o(&config)
+	}
+
+	ctx = log.WithLogger(ctx, log.G(ctx).WithField("runtime", manager.Name()))
+
+	if err := run(ctx, manager, nil, "", config); err != nil {
+		fmt.Fprintf(os.Stderr, "%s: %s", manager.Name(), err)
+		os.Exit(1)
+	}
+}
+
+```
+
+```go
+func run(ctx context.Context, manager Manager, initFunc Init, name string, config Config) error {
+   parseFlags()
+   if versionFlag {
+      fmt.Printf("%s:\n", filepath.Base(os.Args[0]))
+      fmt.Println("  Version: ", version.Version)
+      fmt.Println("  Revision:", version.Revision)
+      fmt.Println("  Go version:", version.GoVersion)
+      fmt.Println("")
+      return nil
+   }
+
+   if namespaceFlag == "" {
+      return fmt.Errorf("shim namespace cannot be empty")
+   }
+
+   setRuntime()
+
+   // 1, 接收系统信号
+   // smp := []os.Signal{unix.SIGTERM, unix.SIGINT, unix.SIGPIPE}
+   // smp = append(smp, unix.SIGCHLD)
+   signals, err := setupSignals(config)
+   if err != nil {
+      return err
+   }
+
+   // prctl(PR_SET_CHILD_SUBREAPER,1)
+   // 让当前进程像init进程一样来收养孤儿进程，称为subreaper进程
+   // 孤儿进程成会被祖先中距离最近的 supreaper 进程收养
+   if !config.NoSubreaper {
+      if err := subreaper(); err != nil {
+         return err
+      }
+   }
+
+   ttrpcAddress := os.Getenv(ttrpcAddressEnv)
+   publisher, err := NewPublisher(ttrpcAddress)
+   if err != nil {
+      return err
+   }
+   defer publisher.Close()
+
+   ctx = namespaces.WithNamespace(ctx, namespaceFlag)
+   ctx = context.WithValue(ctx, OptsKey{}, Opts{BundlePath: bundlePath, Debug: debugFlag})
+   ctx, sd := shutdown.WithShutdown(ctx)
+   defer sd.Shutdown()
+
+   // 初始化manager
+   // 这里的manager并不为nil
+   if manager == nil {
+      service, err := initFunc(ctx, id, publisher, sd.Shutdown)
+      if err != nil {
+         return err
+      }
+      plugin.Register(&plugin.Registration{
+         Type: plugin.TTRPCPlugin,
+         ID:   "task",
+         Requires: []plugin.Type{
+            plugin.EventPlugin,
+         },
+         InitFn: func(ic *plugin.InitContext) (interface{}, error) {
+            return taskService{service}, nil
+         },
+      })
+      manager = shimToManager{
+         shim: service,
+         name: name,
+      }
+   }
+
+   // Handle explicit actions
+   switch action {
+   case "delete":
+      logger := log.G(ctx).WithFields(logrus.Fields{
+         "pid":       os.Getpid(),
+         "namespace": namespaceFlag,
+      })
+      go reap(ctx, logger, signals)
+      ss, err := manager.Stop(ctx, id)
+      if err != nil {
+         return err
+      }
+      data, err := proto.Marshal(&shimapi.DeleteResponse{
+         Pid:        uint32(ss.Pid),
+         ExitStatus: uint32(ss.ExitStatus),
+         ExitedAt:   protobuf.ToTimestamp(ss.ExitedAt),
+      })
+      if err != nil {
+         return err
+      }
+      if _, err := os.Stdout.Write(data); err != nil {
+         return err
+      }
+      return nil
+   case "start":
+      opts := StartOpts{
+         ContainerdBinary: containerdBinaryFlag,
+         Address:          addressFlag,
+         TTRPCAddress:     ttrpcAddress,
+         Debug:            debugFlag,
+      }
+
+      // 启动 shim server，并返回 sock address
+      address, err := manager.Start(ctx, id, opts)
+      if err != nil {
+         return err
+      }
+      if _, err := os.Stdout.WriteString(address); err != nil {
+         return err
+      }
+      return nil
+   }
+
+   if !config.NoSetupLogger {
+      ctx, err = setLogger(ctx, id)
+      if err != nil {
+         return err
+      }
+   }
+
+   plugin.Register(&plugin.Registration{
+      Type: plugin.InternalPlugin,
+      ID:   "shutdown",
+      InitFn: func(ic *plugin.InitContext) (interface{}, error) {
+         return sd, nil
+      },
+   })
+
+   // Register event plugin
+   plugin.Register(&plugin.Registration{
+      Type: plugin.EventPlugin,
+      ID:   "publisher",
+      InitFn: func(ic *plugin.InitContext) (interface{}, error) {
+         return publisher, nil
+      },
+   })
+
+   var (
+      initialized   = plugin.NewPluginSet()
+      ttrpcServices = []ttrpcService{}
+
+      ttrpcUnaryInterceptors = []ttrpc.UnaryServerInterceptor{}
+   )
+   plugins := plugin.Graph(func(*plugin.Registration) bool { return false })
+   for _, p := range plugins {
+      id := p.URI()
+      log.G(ctx).WithField("type", p.Type).Infof("loading plugin %q...", id)
+
+      initContext := plugin.NewContext(
+         ctx,
+         p,
+         initialized,
+         // NOTE: Root is empty since the shim does not support persistent storage,
+         // shim plugins should make use state directory for writing files to disk.
+         // The state directory will be destroyed when the shim if cleaned up or
+         // on reboot
+         "",
+         bundlePath,
+      )
+      initContext.Address = addressFlag
+      initContext.TTRPCAddress = ttrpcAddress
+
+      // load the plugin specific configuration if it is provided
+      //TODO: Read configuration passed into shim, or from state directory?
+      //if p.Config != nil {
+      // pc, err := config.Decode(p)
+      // if err != nil {
+      //    return nil, err
+      // }
+      // initContext.Config = pc
+      //}
+
+      result := p.Init(initContext)
+      if err := initialized.Add(result); err != nil {
+         return fmt.Errorf("could not add plugin result to plugin set: %w", err)
+      }
+
+      instance, err := result.Instance()
+      if err != nil {
+         if plugin.IsSkipPlugin(err) {
+            log.G(ctx).WithError(err).WithField("type", p.Type).Infof("skip loading plugin %q...", id)
+            continue
+         }
+         return fmt.Errorf("failed to load plugin %s: %w", id, err)
+      }
+
+      if src, ok := instance.(ttrpcService); ok {
+         logrus.WithField("id", id).Debug("registering ttrpc service")
+         ttrpcServices = append(ttrpcServices, src)
+
+      }
+
+      if src, ok := instance.(ttrpcServerOptioner); ok {
+         ttrpcUnaryInterceptors = append(ttrpcUnaryInterceptors, src.UnaryInterceptor())
+      }
+   }
+
+   if len(ttrpcServices) == 0 {
+      return fmt.Errorf("required that ttrpc service")
+   }
+
+   unaryInterceptor := chainUnaryServerInterceptors(ttrpcUnaryInterceptors...)
+   server, err := newServer(ttrpc.WithUnaryServerInterceptor(unaryInterceptor))
+   if err != nil {
+      return fmt.Errorf("failed creating server: %w", err)
+   }
+
+   for _, srv := range ttrpcServices {
+      if err := srv.RegisterTTRPC(server); err != nil {
+         return fmt.Errorf("failed to register service: %w", err)
+      }
+   }
+
+   if err := serve(ctx, server, signals, sd.Shutdown); err != nil {
+      if err != shutdown.ErrShutdown {
+         return err
+      }
+   }
+
+   // NOTE: If the shim server is down(like oom killer), the address
+   // socket might be leaking.
+   if address, err := ReadAddress("address"); err == nil {
+      _ = RemoveSocket(address)
+   }
+
+   select {
+   case <-publisher.Done():
+      return nil
+   case <-time.After(5 * time.Second):
+      return errors.New("publisher not closed")
+   }
+}
+```
+
+`shim server`启动分为两个步骤
+
+1. 调用 `containerd-shim-runc-v2 start`命令，在命令中构建cmd启动真正的shim server，然后返回与之连接的sock address。
+2. 启动真正的`shim server`进程。
+
+所以，真正启动`shim server`的代码，并不在
+
+```go
+switch action {
+    // delete命令用于在shim进程意外退出(或者有其他情况？)，清理相关的容器进程
+   case "delete":
+   // start命令在代码中构建cmd，通过cmd从另外的进程启动 shim server，然后返回 sock address
+   case "start":
+}
+```
+
+所以继续看`switch action`之后的代码...
+
+```go
+// 注册插件
+plugin.Register(&plugin.Registration{
+   Type: plugin.InternalPlugin,
+   ID:   "shutdown",
+   InitFn: func(ic *plugin.InitContext) (interface{}, error) {
+      return sd, nil
+   },
+})
+
+// Register event plugin
+plugin.Register(&plugin.Registration{
+   Type: plugin.EventPlugin,
+   ID:   "publisher",
+   InitFn: func(ic *plugin.InitContext) (interface{}, error) {
+      return publisher, nil
+   },
+})
+```
+
+启动服务
+
+```go
+// serve serves the ttrpc API over a unix socket in the current working directory
+// and blocks until the context is canceled
+func serve(ctx context.Context, server *ttrpc.Server, signals chan os.Signal, shutdown func()) error {
+   dump := make(chan os.Signal, 32)
+   setupDumpStacks(dump)
+
+   path, err := os.Getwd()
+   if err != nil {
+      return err
+   }
+
+   l, err := serveListener(socketFlag)
+   if err != nil {
+      return err
+   }
+   go func() {
+      defer l.Close()
+      if err := server.Serve(ctx, l); err != nil && !errors.Is(err, net.ErrClosed) {
+         log.G(ctx).WithError(err).Fatal("containerd-shim: ttrpc server failure")
+      }
+   }()
+   logger := log.G(ctx).WithFields(logrus.Fields{
+      "pid":       os.Getpid(),
+      "path":      path,
+      "namespace": namespaceFlag,
+   })
+   go func() {
+      for range dump {
+         dumpStacks(logger)
+      }
+   }()
+
+   // 监听shim进程的退出信号
+   // signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+   go handleExitSignals(ctx, logger, shutdown)
+    
+    
+   // smp := []os.Signal{unix.SIGTERM, unix.SIGINT, unix.SIGPIPE}
+   // smp = append(smp, unix.SIGCHLD)
+   // 实际上只处理了 SIGCHLD
+   return reap(ctx, logger, signals)
+}
+```
+
+
+
+## shim Monitor
+
+shim对容器进程的监控，是shim进程比较核心的一个功能。接下来对该功能的实现进行解析。
+
+首先查看启动过程中， `TaskService` 的启动代码：
+
+```go
+// NewTaskService creates a new instance of a task service
+func NewTaskService(ctx context.Context, publisher shim.Publisher, sd shutdown.Service) (taskAPI.TaskService, error) {
+   var (
+      ep  oom.Watcher
+      err error
+   )
+   if cgroups.Mode() == cgroups.Unified {
+      ep, err = oomv2.New(publisher)
+   } else {
+      ep, err = oomv1.New(publisher)
+   }
+   if err != nil {
+      return nil, err
+   }
+   go ep.Run(ctx)
+   s := &service{
+      context:    ctx,
+      events:     make(chan interface{}, 128),
+      // s.ec进行了订阅
+      // 这个订阅比较重要，发送通知的事件基本都是这个订阅产生的
+      ec:         reaper.Default.Subscribe(),
+      ep:         ep,
+      shutdown:   sd,
+      containers: make(map[string]*runc.Container),
+   }
+   // 从 s.ec 中获取退出事件，处理后发送到 s.events 中
+   go s.processExits()
+    
+   // 修改 runcC.Monitor 的实现
+   runcC.Monitor = reaper.Default
+    
+   if err := s.initPlatform(); err != nil {
+      return nil, fmt.Errorf("failed to initialized platform behavior: %w", err)
+   }
+   
+   // 从 s.events 中获取时间，过滤处理之后，使用 publisher 发送事件
+   go s.forward(ctx, publisher)
+   sd.RegisterCallback(func(context.Context) error {
+      close(s.events)
+      return nil
+   })
+
+   if address, err := shim.ReadAddress("address"); err == nil {
+      sd.RegisterCallback(func(context.Context) error {
+         return shim.RemoveSocket(address)
+      })
+   }
+   return s, nil
+}
+```
+
+
+
+
+
+#### reap(ctx context.Context, logger *logrus.Entry, signals chan os.Signal)
+
+主循环，持续监听 `SIGCHLD` 事件
+
+```go
+func reap(ctx context.Context, logger *logrus.Entry, signals chan os.Signal) error {
+   logger.Info("starting signal loop")
+
+   for {
+      select {
+      case <-ctx.Done():
+         return ctx.Err()
+      case s := <-signals:
+         // Exit signals are handled separately from this loop
+         // They get registered with this channel so that we can ignore such signals for short-running actions (e.g. `delete`)
+         switch s {
+         case unix.SIGCHLD:
+            /
+            if err := reaper.Reap(); err != nil {
+               logger.WithError(err).Error("reap exit status")
+            }
+         case unix.SIGPIPE:
+         }
+      }
+   }
+}
+```
+
+##### Reap() error
+
+SIGCHLD 事件处理
+
+```go
+// Reap should be called when the process receives an SIGCHLD.  Reap will reap
+// all exited processes and close their wait channels
+func Reap() error {
+   now := time.Now()
+   // 1
+   exits, err := reap(false)
+   for _, e := range exits {
+      // 2
+      done := Default.notify(runc.Exit{
+         Timestamp: now,
+         Pid:       e.Pid,
+         Status:    e.Status,
+      })
+
+      select {
+      case <-done:
+      case <-time.After(1 * time.Second):
+      }
+   }
+   return err
+}
+```
+
+###### reap(wait bool) (exits []exit, err error)
+
+获取子进程退出状态
+
+```go
+// reap reaps all child processes for the calling process and returns their
+// exit information
+func reap(wait bool) (exits []exit, err error) {
+   var (
+      ws  unix.WaitStatus
+      rus unix.Rusage
+   )
+   flag := unix.WNOHANG
+   if wait {
+      flag = 0
+   }
+   for {
+      pid, err := unix.Wait4(-1, &ws, flag, &rus)
+      if err != nil {
+         if err == unix.ECHILD {
+            return exits, nil
+         }
+         return exits, err
+      }
+      if pid <= 0 {
+         return exits, nil
+      }
+      exits = append(exits, exit{
+         Pid:    pid,
+         Status: exitStatus(ws),
+      })
+   }
+}
+```
+
+###### notify(e runc.Exit)
+
+将退出事件通知给各个订阅者。
+
+这个函数看起来有些复杂，实际上可以理解为：
+
+```go
+func (m *Monitor) notify(e runc.Exit) chan struct{} {
+    ...
+    for _, s := range subscribers {
+        s.c <- e
+	}
+    ...
+}
+```
+
+```go
+func (m *Monitor) notify(e runc.Exit) chan struct{} {
+   const timeout = 1 * time.Millisecond
+   var (
+      done    = make(chan struct{}, 1)
+      timer   = time.NewTimer(timeout)
+      success = make(map[chan runc.Exit]struct{})
+   )
+   stop(timer, true)
+
+   go func() {
+      defer close(done)
+
+      for {
+         var (
+            failed      int
+            subscribers = m.getSubscribers()
+         )
+         for _, s := range subscribers {
+            s.do(func() {
+               if s.closed {
+                  return
+               }
+               if _, ok := success[s.c]; ok {
+                  return
+               }
+               timer.Reset(timeout)
+               recv := true
+               select {
+               case s.c <- e:
+                  success[s.c] = struct{}{}
+               case <-timer.C:
+                  recv = false
+                  failed++
+               }
+               stop(timer, recv)
+            })
+         }
+         // all subscribers received the message
+         if failed == 0 {
+            return
+         }
+      }
+   }()
+   return done
+}
+```
+
+
+
+#### Monitor.Start(cmd) & Monitor.Wait(cmd, ec)
+
+```go
+// Start starts the command a registers the process with the reaper
+func (m *Monitor) Start(c *exec.Cmd) (chan runc.Exit, error) {
+   ec := m.Subscribe()
+   if err := c.Start(); err != nil {
+      m.Unsubscribe(ec)
+      return nil, err
+   }
+   return ec, nil
+}
+
+// Wait blocks until a process is signal as dead.
+// User should rely on the value of the exit status to determine if the
+// command was successful or not.
+func (m *Monitor) Wait(c *exec.Cmd, ec chan runc.Exit) (int, error) {
+   for e := range ec {
+      if e.Pid == c.Process.Pid {
+         // make sure we flush all IO
+         c.Wait()
+         m.Unsubscribe(ec)
+         return e.Status, nil
+      }
+   }
+   // return no such process if the ec channel is closed and no more exit
+   // events will be sent
+   return -1, ErrNoSuchProcess
+}
+```
+
+```go
+// Subscribe to process exit changes
+func (m *Monitor) Subscribe() chan runc.Exit {
+   c := make(chan runc.Exit, bufferSize)
+   m.Lock()
+   m.subscribers[c] = &subscriber{
+      c: c,
+   }
+   m.Unlock()
+   return c
+}
+
+// Unsubscribe to process exit changes
+func (m *Monitor) Unsubscribe(c chan runc.Exit) {
+   m.Lock()
+   s, ok := m.subscribers[c]
+   if !ok {
+      m.Unlock()
+      return
+   }
+   s.close()
+   delete(m.subscribers, c)
+   m.Unlock()
+}
+```
 
 
 
