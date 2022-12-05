@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <title>Containerd解析(12) network - Yuyu&#39;s Blog</title><meta name="Description" content=""><meta property="og:title" content="Containerd解析(12) network" />
+<meta property="og:description" content="概述 分析containerd网络，从不同的上层应用： nerdctl run -d &ndash;name runcdev -p 8080:80 nginx kubectl run nginx &ndash;image=nginx 根据containerd 的 Scope and principles The following table specifies the various components of containerd and general features of container runtimes. The" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/" /><meta property="og:image" content="https://yzxiu.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2022-12-02T09:45:30+08:00" />
+<meta property="article:modified_time" content="2022-12-02T09:45:30+08:00" /><meta property="og:site_name" content="Yuyu&#39;s Blog" />
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://yzxiu.github.io/logo.png"/>
+
+<meta name="twitter:title" content="Containerd解析(12) network"/>
+<meta name="twitter:description" content="概述 分析containerd网络，从不同的上层应用： nerdctl run -d &ndash;name runcdev -p 8080:80 nginx kubectl run nginx &ndash;image=nginx 根据containerd 的 Scope and principles The following table specifies the various components of containerd and general features of container runtimes. The"/>
+<meta name="application-name" content="Yuyu&#39;s Blog">
+<meta name="apple-mobile-web-app-title" content="Yuyu&#39;s Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="icon" href="/images/avataaars.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/" /><link rel="prev" href="https://yzxiu.github.io/2022-11-23-containerd-11-go-events/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"></noscript><link rel="preload" href="/lib/animate/animate.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="/lib/animate/animate.min.css"></noscript><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "Containerd解析(12) network",
+        "inLanguage": "zh-CN",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/yzxiu.github.io\/2022-12-02-containerd-12-containerd-network\/"
+        },"genre": "posts","keywords": "containerd, network, hook","wordcount":  2029 ,
+        "url": "https:\/\/yzxiu.github.io\/2022-12-02-containerd-12-containerd-network\/","datePublished": "2022-12-02T09:45:30+08:00","dateModified": "2022-12-02T09:45:30+08:00","publisher": {
+            "@type": "Organization",
+            "name": ""},"author": {
+                "@type": "Person",
+                "name": "Yuyu"
+            },"description": ""
+    }
+    </script></head>
+    <body data-header-desktop="fixed" data-header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="Yuyu&#39;s Blog">Yuyu&#39;s Blog</a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/about/"> 关于 </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
+                            <i class="fas fa-search fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="清空">
+                            <i class="fas fa-times-circle fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin" aria-hidden="true"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                    <i class="fas fa-adjust fa-fw" aria-hidden="true"></i>
+                </a></div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="Yuyu&#39;s Blog">Yuyu&#39;s Blog</a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="搜索文章标题或内容..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="搜索">
+                            <i class="fas fa-search fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="清空">
+                            <i class="fas fa-times-circle fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin" aria-hidden="true"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        取消
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">文章</a><a class="menu-item" href="/tags/" title="">标签</a><a class="menu-item" href="/categories/" title="">分类</a><a class="menu-item" href="/about/" title="">关于</a><a href="javascript:void(0);" class="menu-item theme-switch" title="切换主题">
+                <i class="fas fa-adjust fa-fw" aria-hidden="true"></i>
+            </a></div>
+    </div>
+</header><div class="search-dropdown desktop">
+        <div id="search-dropdown-desktop"></div>
+    </div>
+    <div class="search-dropdown mobile">
+        <div id="search-dropdown-mobile"></div>
+    </div><main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content always-active" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Containerd解析(12) network</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-12-02">2022-12-02</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 2029 字&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 5 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  data-kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right" aria-hidden="true"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#概述">概述</a></li>
+    <li><a href="#nerdctl-run--d---name-runcdev--p-808080-nginx">nerdctl run -d &ndash;name runcdev -p 8080:80 nginx</a>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#从一个报错开始">从一个报错开始</a></li>
+            <li><a href="#createruntime-hooks">CreateRuntime Hooks</a></li>
+            <li><a href="#hook">hook</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#kubectl-run-nginx---imagenginx">kubectl run nginx &ndash;image=nginx</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><h2 id="概述">概述</h2>
+<p>分析containerd网络，从不同的上层应用：</p>
+<ol>
+<li>nerdctl run -d &ndash;name runcdev -p 8080:80 nginx</li>
+<li>kubectl run nginx &ndash;image=nginx</li>
+</ol>
+<br>
+<p>根据containerd 的 <strong><a href="https://containerd.io/scope/" target="_blank" rel="noopener noreffer ">Scope and principles</a></strong></p>
+<p>The following table specifies the various components of containerd and general features of container runtimes. The table specifies whether or not the feature/component is in or out of scope.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Name</th>
+<th style="text-align:left">Description</th>
+<th style="text-align:left">In/Out</th>
+<th style="text-align:left">Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">execution</td>
+<td style="text-align:left">Provide an extensible execution layer for executing a container</td>
+<td style="text-align:left">in</td>
+<td style="text-align:left">Create,start, stop pause, resume exec, signal, delete</td>
+</tr>
+<tr>
+<td style="text-align:left">cow filesystem</td>
+<td style="text-align:left">Built in functionality for overlay, aufs, and other copy on write filesystems for containers</td>
+<td style="text-align:left">in</td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">distribution</td>
+<td style="text-align:left">Having the ability to push and pull images as well as operations on images as a first class API object</td>
+<td style="text-align:left">in</td>
+<td style="text-align:left">containerd will fully support the management and retrieval of images</td>
+</tr>
+<tr>
+<td style="text-align:left">metrics</td>
+<td style="text-align:left">container-level metrics, cgroup stats, and OOM events</td>
+<td style="text-align:left">in</td>
+<td style="text-align:left"></td>
+</tr>
+<tr>
+<td style="text-align:left">networking</td>
+<td style="text-align:left">creation and management of network interfaces</td>
+<td style="text-align:left">out</td>
+<td style="text-align:left">Networking will be handled and provided to containerd via higher level systems.</td>
+</tr>
+<tr>
+<td style="text-align:left">build</td>
+<td style="text-align:left">Building images as a first class API</td>
+<td style="text-align:left">out</td>
+<td style="text-align:left">Build is a higher level tooling feature and can be implemented in many different ways on top of containerd</td>
+</tr>
+<tr>
+<td style="text-align:left">volumes</td>
+<td style="text-align:left">Volume management for external data</td>
+<td style="text-align:left">out</td>
+<td style="text-align:left">The API supports mounts, binds, etc where all volumes type systems can be built on top of containerd.</td>
+</tr>
+<tr>
+<td style="text-align:left">logging</td>
+<td style="text-align:left">Persisting container logs</td>
+<td style="text-align:left">out</td>
+<td style="text-align:left">Logging can be build on top of containerd because the container’s STDIO will be provided to the clients and they can persist any way they see fit. There is no io copying of container STDIO in containerd.</td>
+</tr>
+</tbody>
+</table>
+<p>从上表可知，containerd并不负责容器网络的配置工作。</p>
+<br>
+<h2 id="nerdctl-run--d---name-runcdev--p-808080-nginx">nerdctl run -d &ndash;name runcdev -p 8080:80 nginx</h2>
+<p>nerdctl使用cri插件进行网络配置，默认插件为<code>bridge</code></p>
+<h4 id="从一个报错开始">从一个报错开始</h4>
+<p>删除 cni bridge二进制文件，<code>sudo rm -rf /opt/cni/bin/bridge</code>，重新创建容器，报错如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">[xiu-notebook] ~ n run -d --name runcdev -p 8080:80 nginx
+</span></span><span class="line"><span class="cl">[sudo] password for xiu: 
+</span></span><span class="line"><span class="cl">FATA[0005] failed to create shim task: OCI runtime create failed: container_linux.go:380: starting container process caused: process_linux.go:545: container init caused: Running hook #0:: error running hook: exit status 1, stdout: , stderr: time=&#34;2022-12-02T13:58:11+08:00&#34; level=fatal msg=&#34;failed to call cni.Setup: plugin type=\&#34;bridge\&#34; failed (add): failed to find plugin \&#34;bridge\&#34; in path [/opt/cni/bin]&#34;
+</span></span><span class="line"><span class="cl">Failed to write to log, write /var/lib/nerdctl/1935db59/containers/default/7aef42386e604726fec25f9f62acbf128c1b5648cd41259eefa3503602f65353/oci-hook.createRuntime.log: file already closed: unknown
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看hook相关定义：<a href="https://github.com/opencontainers/runtime-spec/blob/main/config.md#posix-platform-hooks" target="_blank" rel="noopener noreffer ">Hooks</a></p>
+<h4 id="createruntime-hooks">CreateRuntime Hooks</h4>
+<p>The <code>createRuntime</code> hooks MUST be called as part of the <a href="https://github.com/opencontainers/runtime-spec/blob/main/runtime.md#create" target="_blank" rel="noopener noreffer "><code>create</code></a> operation after the runtime environment has been created (according to the configuration in config.json) but before the <code>pivot_root</code> or any equivalent operation has been executed.</p>
+<p>The <code>createRuntime</code> hooks&rsquo; path MUST resolve in the <a href="https://github.com/opencontainers/runtime-spec/blob/main/glossary.md#runtime-namespace" target="_blank" rel="noopener noreffer ">runtime namespace</a>. The <code>createRuntime</code> hooks MUST be executed in the <a href="https://github.com/opencontainers/runtime-spec/blob/main/glossary.md#runtime-namespace" target="_blank" rel="noopener noreffer ">runtime namespace</a>.</p>
+<p>On Linux, for example, they are called after the container namespaces are created, so they provide an opportunity to customize the container (e.g. the network namespace could be specified in this hook).</p>
+<p>The definition of <code>createRuntime</code> hooks is currently underspecified and hooks authors, should only expect from the runtime that the mount namespace have been created and the mount operations performed. Other operations such as cgroups and SELinux/AppArmor labels might not have been performed by the runtime.</p>
+<p>Note: <code>runc</code> originally implemented <code>prestart</code> hooks contrary to the spec, namely as part of the <code>create</code> operation (instead of during the <code>start</code> operation). This incorrect implementation actually corresponds to <code>createRuntime</code> hooks. For runtimes that implement the deprecated <code>prestart</code> hooks as <code>createRuntime</code> hooks, <code>createRuntime</code> hooks MUST be called after the <code>prestart</code> hooks.</p>
+<h4 id="hook">hook</h4>
+<p>查看容器config.json中hook的相关内容：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;ociVersion&#34;</span><span class="p">:</span> <span class="s2">&#34;1.0.2-dev&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;process&#34;</span><span class="p">:</span> <span class="p">{},</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;root&#34;</span><span class="p">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;path&#34;</span><span class="p">:</span> <span class="s2">&#34;rootfs&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">},</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;hostname&#34;</span><span class="p">:</span> <span class="s2">&#34;5bed8c875756&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;mounts&#34;</span><span class="p">:</span> <span class="p">[],</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;hooks&#34;</span><span class="p">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;createRuntime&#34;</span><span class="p">:</span> <span class="p">[</span>
+</span></span><span class="line"><span class="cl">            <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="nt">&#34;path&#34;</span><span class="p">:</span> <span class="s2">&#34;/home/xiu/CloudDrive/UBUNTU/application/bin/nerdctl&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                <span class="nt">&#34;args&#34;</span><span class="p">:</span> <span class="p">[</span>
+</span></span><span class="line"><span class="cl">                    <span class="s2">&#34;/home/xiu/CloudDrive/UBUNTU/application/bin/nerdctl&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                    <span class="s2">&#34;internal&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                    <span class="s2">&#34;oci-hook&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                    <span class="s2">&#34;createRuntime&#34;</span>
+</span></span><span class="line"><span class="cl">                <span class="p">],</span>
+</span></span><span class="line"><span class="cl">                <span class="nt">&#34;env&#34;</span><span class="p">:</span> <span class="p">[</span>
+</span></span><span class="line"><span class="cl">                <span class="p">]</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="p">],</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;poststop&#34;</span><span class="p">:</span> <span class="p">[</span>
+</span></span><span class="line"><span class="cl">            <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="nt">&#34;path&#34;</span><span class="p">:</span> <span class="s2">&#34;/home/xiu/CloudDrive/UBUNTU/application/bin/nerdctl&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                <span class="nt">&#34;args&#34;</span><span class="p">:</span> <span class="p">[</span>
+</span></span><span class="line"><span class="cl">                    <span class="s2">&#34;/home/xiu/CloudDrive/UBUNTU/application/bin/nerdctl&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                    <span class="s2">&#34;internal&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                    <span class="s2">&#34;oci-hook&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                    <span class="s2">&#34;postStop&#34;</span>
+</span></span><span class="line"><span class="cl">                <span class="p">],</span>
+</span></span><span class="line"><span class="cl">                <span class="nt">&#34;env&#34;</span><span class="p">:</span> <span class="p">[</span>
+</span></span><span class="line"><span class="cl">                <span class="p">]</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="p">]</span>
+</span></span><span class="line"><span class="cl">    <span class="p">},</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;annotations&#34;</span><span class="p">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;io.containerd.image.config.stop-signal&#34;</span><span class="p">:</span> <span class="s2">&#34;SIGQUIT&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;nerdctl/extraHosts&#34;</span><span class="p">:</span> <span class="s2">&#34;null&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;nerdctl/hostname&#34;</span><span class="p">:</span> <span class="s2">&#34;5bed8c875756&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;nerdctl/log-uri&#34;</span><span class="p">:</span> <span class="s2">&#34;binary:///home/xiu/CloudDrive/UBUNTU/application/bin/nerdctl?_NERDCTL_INTERNAL_LOGGING=%2Fvar%2Flib%2Fnerdctl%2F1935db59&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;nerdctl/name&#34;</span><span class="p">:</span> <span class="s2">&#34;runcdev&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;nerdctl/namespace&#34;</span><span class="p">:</span> <span class="s2">&#34;default&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;nerdctl/networks&#34;</span><span class="p">:</span> <span class="s2">&#34;[\&#34;bridge\&#34;]&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;nerdctl/platform&#34;</span><span class="p">:</span> <span class="s2">&#34;linux/amd64&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;nerdctl/ports&#34;</span><span class="p">:</span> <span class="s2">&#34;[{\&#34;HostPort\&#34;:8080,\&#34;ContainerPort\&#34;:80,\&#34;Protocol\&#34;:\&#34;tcp\&#34;,\&#34;HostIP\&#34;:\&#34;0.0.0.0\&#34;}]&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;nerdctl/state-dir&#34;</span><span class="p">:</span> <span class="s2">&#34;/var/lib/nerdctl/1935db59/containers/default/5bed8c875756abdac43e664d2e7a1950a838675ca143ab71e3a4d8bd0ef9d59f&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">},</span>
+</span></span><span class="line"><span class="cl">    <span class="nt">&#34;linux&#34;</span><span class="p">:</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>nerdctl在创建容器过程中，会添加<code>createRuntime</code>，<code>poststop</code>两个<code>hook</code>，不管存不存在<code>-p</code>参数，构造hook的方法如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">nerdctl</span><span class="o">/</span><span class="nx">cmd</span><span class="o">/</span><span class="nx">nerdctl</span><span class="o">/</span><span class="nx">run</span><span class="p">.</span><span class="k">go</span>
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">withNerdctlOCIHook</span><span class="p">(</span><span class="nx">cmd</span> <span class="o">*</span><span class="nx">cobra</span><span class="p">.</span><span class="nx">Command</span><span class="p">,</span> <span class="nx">id</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="nx">oci</span><span class="p">.</span><span class="nx">SpecOpts</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">selfExe</span><span class="p">,</span> <span class="nx">f</span> <span class="o">:=</span> <span class="nf">globalFlags</span><span class="p">(</span><span class="nx">cmd</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">args</span> <span class="o">:=</span> <span class="nb">append</span><span class="p">([]</span><span class="kt">string</span><span class="p">{</span><span class="nx">selfExe</span><span class="p">},</span> <span class="nb">append</span><span class="p">(</span><span class="nx">f</span><span class="p">,</span> <span class="s">&#34;internal&#34;</span><span class="p">,</span> <span class="s">&#34;oci-hook&#34;</span><span class="p">)</span><span class="o">...</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kd">func</span><span class="p">(</span><span class="nx">_</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">_</span> <span class="nx">oci</span><span class="p">.</span><span class="nx">Client</span><span class="p">,</span> <span class="nx">_</span> <span class="o">*</span><span class="nx">containers</span><span class="p">.</span><span class="nx">Container</span><span class="p">,</span> <span class="nx">s</span> <span class="o">*</span><span class="nx">specs</span><span class="p">.</span><span class="nx">Spec</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">s</span><span class="p">.</span><span class="nx">Hooks</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">s</span><span class="p">.</span><span class="nx">Hooks</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">specs</span><span class="p">.</span><span class="nx">Hooks</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">crArgs</span> <span class="o">:=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">args</span><span class="p">,</span> <span class="s">&#34;createRuntime&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">s</span><span class="p">.</span><span class="nx">Hooks</span><span class="p">.</span><span class="nx">CreateRuntime</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">s</span><span class="p">.</span><span class="nx">Hooks</span><span class="p">.</span><span class="nx">CreateRuntime</span><span class="p">,</span> <span class="nx">specs</span><span class="p">.</span><span class="nx">Hook</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">Path</span><span class="p">:</span> <span class="nx">selfExe</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">Args</span><span class="p">:</span> <span class="nx">crArgs</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">Env</span><span class="p">:</span>  <span class="nx">os</span><span class="p">.</span><span class="nf">Environ</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl">		<span class="p">})</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">argsCopy</span> <span class="o">:=</span> <span class="nb">append</span><span class="p">([]</span><span class="nb">string</span><span class="p">(</span><span class="kc">nil</span><span class="p">),</span> <span class="nx">args</span><span class="o">...</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">psArgs</span> <span class="o">:=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">argsCopy</span><span class="p">,</span> <span class="s">&#34;postStop&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">s</span><span class="p">.</span><span class="nx">Hooks</span><span class="p">.</span><span class="nx">Poststop</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">s</span><span class="p">.</span><span class="nx">Hooks</span><span class="p">.</span><span class="nx">Poststop</span><span class="p">,</span> <span class="nx">specs</span><span class="p">.</span><span class="nx">Hook</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">Path</span><span class="p">:</span> <span class="nx">selfExe</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">Args</span><span class="p">:</span> <span class="nx">psArgs</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">Env</span><span class="p">:</span>  <span class="nx">os</span><span class="p">.</span><span class="nf">Environ</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl">		<span class="p">})</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">	<span class="p">},</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>runc在启动容器过程中，父进程会执行相应的hook方法，如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">runc</span><span class="o">/</span><span class="nx">libcontainer</span><span class="o">/</span><span class="nx">process_linux</span><span class="p">.</span><span class="k">go</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">hooks</span><span class="p">[</span><span class="nx">configs</span><span class="p">.</span><span class="nx">CreateRuntime</span><span class="p">].</span><span class="nf">RunHooks</span><span class="p">(</span><span class="nx">s</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">runc</span><span class="o">/</span><span class="nx">libcontainer</span><span class="o">/</span><span class="nx">configs</span><span class="o">/</span><span class="nx">config</span><span class="p">.</span><span class="k">go</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="nx">Command</span><span class="p">)</span> <span class="nf">Run</span><span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">specs</span><span class="p">.</span><span class="nx">State</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">b</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">json</span><span class="p">.</span><span class="nf">Marshal</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">stdout</span><span class="p">,</span> <span class="nx">stderr</span> <span class="nx">bytes</span><span class="p">.</span><span class="nx">Buffer</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cmd</span> <span class="o">:=</span> <span class="nx">exec</span><span class="p">.</span><span class="nx">Cmd</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">Path</span><span class="p">:</span>   <span class="nx">c</span><span class="p">.</span><span class="nx">Path</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">Args</span><span class="p">:</span>   <span class="nx">c</span><span class="p">.</span><span class="nx">Args</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">Env</span><span class="p">:</span>    <span class="nx">c</span><span class="p">.</span><span class="nx">Env</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">Stdin</span><span class="p">:</span>  <span class="nx">bytes</span><span class="p">.</span><span class="nf">NewReader</span><span class="p">(</span><span class="nx">b</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">Stdout</span><span class="p">:</span> <span class="o">&amp;</span><span class="nx">stdout</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">Stderr</span><span class="p">:</span> <span class="o">&amp;</span><span class="nx">stderr</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">cmd</span><span class="p">.</span><span class="nf">Start</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">errC</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">error</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">err</span> <span class="o">:=</span> <span class="nx">cmd</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">err</span> <span class="p">=</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;error running hook: %w, stdout: %s, stderr: %s&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">,</span> <span class="nx">stdout</span><span class="p">.</span><span class="nf">String</span><span class="p">(),</span> <span class="nx">stderr</span><span class="p">.</span><span class="nf">String</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">errC</span> <span class="o">&lt;-</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}()</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">timerCh</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Time</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">c</span><span class="p">.</span><span class="nx">Timeout</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">timer</span> <span class="o">:=</span> <span class="nx">time</span><span class="p">.</span><span class="nf">NewTimer</span><span class="p">(</span><span class="o">*</span><span class="nx">c</span><span class="p">.</span><span class="nx">Timeout</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">defer</span> <span class="nx">timer</span><span class="p">.</span><span class="nf">Stop</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">timerCh</span> <span class="p">=</span> <span class="nx">timer</span><span class="p">.</span><span class="nx">C</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">select</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">case</span> <span class="nx">err</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">errC</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">timerCh</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">_</span> <span class="p">=</span> <span class="nx">cmd</span><span class="p">.</span><span class="nx">Process</span><span class="p">.</span><span class="nf">Kill</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="o">&lt;-</span><span class="nx">errC</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;hook ran past specified timeout of %.1fs&#34;</span><span class="p">,</span> <span class="nx">c</span><span class="p">.</span><span class="nx">Timeout</span><span class="p">.</span><span class="nf">Seconds</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>相当于使用命令行启动 <code>nerdctl internal oci-hook createRuntime</code></p>
+<div class="details admonition info open">
+        <div class="details-summary admonition-title">
+            <i class="icon fas fa-info-circle fa-fw" aria-hidden="true"></i>信息<i class="details-icon fas fa-angle-right fa-fw" aria-hidden="true"></i>
+        </div>
+        <div class="details-content">
+            <div class="admonition-content">从这里也可以看出，<code>runc</code>的 <code>createRuntime hook</code>，使用的是直接调用外部二进制文件的方式</div>
+        </div>
+    </div>
+<p>查看nerdctl中的 <code>internal oci-hook createRuntime</code>相关代码：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span><span class="lnt">76
+</span><span class="lnt">77
+</span><span class="lnt">78
+</span><span class="lnt">79
+</span><span class="lnt">80
+</span><span class="lnt">81
+</span><span class="lnt">82
+</span><span class="lnt">83
+</span><span class="lnt">84
+</span><span class="lnt">85
+</span><span class="lnt">86
+</span><span class="lnt">87
+</span><span class="lnt">88
+</span><span class="lnt">89
+</span><span class="lnt">90
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">newInternalCommand</span><span class="p">()</span> <span class="o">*</span><span class="nx">cobra</span><span class="p">.</span><span class="nx">Command</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">internalCommand</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">cobra</span><span class="p">.</span><span class="nx">Command</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">Use</span><span class="p">:</span>           <span class="s">&#34;internal&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">Short</span><span class="p">:</span>         <span class="s">&#34;DO NOT EXECUTE MANUALLY&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">Hidden</span><span class="p">:</span>        <span class="kc">true</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">SilenceUsage</span><span class="p">:</span>  <span class="kc">true</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">SilenceErrors</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">internalCommand</span><span class="p">.</span><span class="nf">AddCommand</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">newInternalOCIHookCommandCommand</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl">	<span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">internalCommand</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">newInternalOCIHookCommandCommand</span><span class="p">()</span> <span class="o">*</span><span class="nx">cobra</span><span class="p">.</span><span class="nx">Command</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">internalOCIHookCommand</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">cobra</span><span class="p">.</span><span class="nx">Command</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">Use</span><span class="p">:</span>           <span class="s">&#34;oci-hook&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">Short</span><span class="p">:</span>         <span class="s">&#34;OCI hook&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">RunE</span><span class="p">:</span>          <span class="nx">internalOCIHookAction</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">SilenceUsage</span><span class="p">:</span>  <span class="kc">true</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">SilenceErrors</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">internalOCIHookCommand</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">internalOCIHookAction</span><span class="p">(</span><span class="nx">cmd</span> <span class="o">*</span><span class="nx">cobra</span><span class="p">.</span><span class="nx">Command</span><span class="p">,</span> <span class="nx">args</span> <span class="p">[]</span><span class="kt">string</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">event</span> <span class="o">:=</span> <span class="s">&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">args</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">event</span> <span class="p">=</span> <span class="nx">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">event</span> <span class="o">==</span> <span class="s">&#34;&#34;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;event type needs to be passed&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">dataStore</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">getDataStore</span><span class="p">(</span><span class="nx">cmd</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cniPath</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">cmd</span><span class="p">.</span><span class="nf">Flags</span><span class="p">().</span><span class="nf">GetString</span><span class="p">(</span><span class="s">&#34;cni-path&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cniNetconfpath</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">cmd</span><span class="p">.</span><span class="nf">Flags</span><span class="p">().</span><span class="nf">GetString</span><span class="p">(</span><span class="s">&#34;cni-netconfpath&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">ocihook</span><span class="p">.</span><span class="nf">Run</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Stdin</span><span class="p">,</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Stderr</span><span class="p">,</span> <span class="nx">event</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">dataStore</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">cniPath</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">cniNetconfpath</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">Run</span><span class="p">(</span><span class="nx">stdin</span> <span class="nx">io</span><span class="p">.</span><span class="nx">Reader</span><span class="p">,</span> <span class="nx">stderr</span> <span class="nx">io</span><span class="p">.</span><span class="nx">Writer</span><span class="p">,</span> <span class="nx">event</span><span class="p">,</span> <span class="nx">dataStore</span><span class="p">,</span> <span class="nx">cniPath</span><span class="p">,</span> <span class="nx">cniNetconfPath</span> <span class="kt">string</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">stdin</span> <span class="o">==</span> <span class="kc">nil</span> <span class="o">||</span> <span class="nx">event</span> <span class="o">==</span> <span class="s">&#34;&#34;</span> <span class="o">||</span> <span class="nx">dataStore</span> <span class="o">==</span> <span class="s">&#34;&#34;</span> <span class="o">||</span> <span class="nx">cniPath</span> <span class="o">==</span> <span class="s">&#34;&#34;</span> <span class="o">||</span> <span class="nx">cniNetconfPath</span> <span class="o">==</span> <span class="s">&#34;&#34;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;got insufficient args&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">state</span> <span class="nx">specs</span><span class="p">.</span><span class="nx">State</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">json</span><span class="p">.</span><span class="nf">NewDecoder</span><span class="p">(</span><span class="nx">stdin</span><span class="p">).</span><span class="nf">Decode</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">state</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">containerStateDir</span> <span class="o">:=</span> <span class="nx">state</span><span class="p">.</span><span class="nx">Annotations</span><span class="p">[</span><span class="nx">labels</span><span class="p">.</span><span class="nx">StateDir</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">containerStateDir</span> <span class="o">==</span> <span class="s">&#34;&#34;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;state dir must be set&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">MkdirAll</span><span class="p">(</span><span class="nx">containerStateDir</span><span class="p">,</span> <span class="mo">0700</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to create %q: %w&#34;</span><span class="p">,</span> <span class="nx">containerStateDir</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">logFilePath</span> <span class="o">:=</span> <span class="nx">filepath</span><span class="p">.</span><span class="nf">Join</span><span class="p">(</span><span class="nx">containerStateDir</span><span class="p">,</span> <span class="s">&#34;oci-hook.&#34;</span><span class="o">+</span><span class="nx">event</span><span class="o">+</span><span class="s">&#34;.log&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">logFile</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">Create</span><span class="p">(</span><span class="nx">logFilePath</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="nx">logFile</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">logrus</span><span class="p">.</span><span class="nf">SetOutput</span><span class="p">(</span><span class="nx">io</span><span class="p">.</span><span class="nf">MultiWriter</span><span class="p">(</span><span class="nx">stderr</span><span class="p">,</span> <span class="nx">logFile</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">opts</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">newHandlerOpts</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">state</span><span class="p">,</span> <span class="nx">dataStore</span><span class="p">,</span> <span class="nx">cniPath</span><span class="p">,</span> <span class="nx">cniNetconfPath</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">switch</span> <span class="nx">event</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">case</span> <span class="s">&#34;createRuntime&#34;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nf">onCreateRuntime</span><span class="p">(</span><span class="nx">opts</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">case</span> <span class="s">&#34;postStop&#34;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nf">onPostStop</span><span class="p">(</span><span class="nx">opts</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">default</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;unexpected event %q&#34;</span><span class="p">,</span> <span class="nx">event</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span><span class="lnt">76
+</span><span class="lnt">77
+</span><span class="lnt">78
+</span><span class="lnt">79
+</span><span class="lnt">80
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">onCreateRuntime</span><span class="p">(</span><span class="nx">opts</span> <span class="o">*</span><span class="nx">handlerOpts</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nf">loadAppArmor</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">cni</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">portMapOpts</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">getPortMapOpts</span><span class="p">(</span><span class="nx">opts</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">nsPath</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">getNetNSPath</span><span class="p">(</span><span class="nx">opts</span><span class="p">.</span><span class="nx">state</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">ctx</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">hs</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">hostsstore</span><span class="p">.</span><span class="nf">NewStore</span><span class="p">(</span><span class="nx">opts</span><span class="p">.</span><span class="nx">dataStore</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">ipAddressOpts</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">getIPAddressOpts</span><span class="p">(</span><span class="nx">opts</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">macAddressOpts</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">getMACAddressOpts</span><span class="p">(</span><span class="nx">opts</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="kd">var</span> <span class="nx">namespaceOpts</span> <span class="p">[]</span><span class="nx">gocni</span><span class="p">.</span><span class="nx">NamespaceOpts</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">namespaceOpts</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">namespaceOpts</span><span class="p">,</span> <span class="nx">portMapOpts</span><span class="o">...</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">namespaceOpts</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">namespaceOpts</span><span class="p">,</span> <span class="nx">ipAddressOpts</span><span class="o">...</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">namespaceOpts</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">namespaceOpts</span><span class="p">,</span> <span class="nx">macAddressOpts</span><span class="o">...</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">hsMeta</span> <span class="o">:=</span> <span class="nx">hostsstore</span><span class="p">.</span><span class="nx">Meta</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">Namespace</span><span class="p">:</span>  <span class="nx">opts</span><span class="p">.</span><span class="nx">state</span><span class="p">.</span><span class="nx">Annotations</span><span class="p">[</span><span class="nx">labels</span><span class="p">.</span><span class="nx">Namespace</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">ID</span><span class="p">:</span>         <span class="nx">opts</span><span class="p">.</span><span class="nx">state</span><span class="p">.</span><span class="nx">ID</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">Networks</span><span class="p">:</span>   <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">types100</span><span class="p">.</span><span class="nx">Result</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">opts</span><span class="p">.</span><span class="nx">cniNames</span><span class="p">)),</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">Hostname</span><span class="p">:</span>   <span class="nx">opts</span><span class="p">.</span><span class="nx">state</span><span class="p">.</span><span class="nx">Annotations</span><span class="p">[</span><span class="nx">labels</span><span class="p">.</span><span class="nx">Hostname</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">ExtraHosts</span><span class="p">:</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">extraHosts</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">Name</span><span class="p">:</span>       <span class="nx">opts</span><span class="p">.</span><span class="nx">state</span><span class="p">.</span><span class="nx">Annotations</span><span class="p">[</span><span class="nx">labels</span><span class="p">.</span><span class="nx">Name</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">cniRes</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">cni</span><span class="p">.</span><span class="nf">Setup</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">fullID</span><span class="p">,</span> <span class="nx">nsPath</span><span class="p">,</span> <span class="nx">namespaceOpts</span><span class="o">...</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;failed to call cni.Setup: %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">cniResRaw</span> <span class="o">:=</span> <span class="nx">cniRes</span><span class="p">.</span><span class="nf">Raw</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">cniName</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">cniNames</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">hsMeta</span><span class="p">.</span><span class="nx">Networks</span><span class="p">[</span><span class="nx">cniName</span><span class="p">]</span> <span class="p">=</span> <span class="nx">cniResRaw</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="nx">b4nnEnabled</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">bypass4netnsutil</span><span class="p">.</span><span class="nf">IsBypass4netnsEnabled</span><span class="p">(</span><span class="nx">opts</span><span class="p">.</span><span class="nx">state</span><span class="p">.</span><span class="nx">Annotations</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">hs</span><span class="p">.</span><span class="nf">Acquire</span><span class="p">(</span><span class="nx">hsMeta</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">rootlessutil</span><span class="p">.</span><span class="nf">IsRootlessChild</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">b4nnEnabled</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">bm</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">bypass4netnsutil</span><span class="p">.</span><span class="nf">NewBypass4netnsCNIBypassManager</span><span class="p">(</span><span class="nx">opts</span><span class="p">.</span><span class="nx">bypassClient</span><span class="p">,</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">rootlessKitClient</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">				<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">					<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">				<span class="p">}</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">err</span> <span class="p">=</span> <span class="nx">bm</span><span class="p">.</span><span class="nf">StartBypass</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">ports</span><span class="p">,</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">state</span><span class="p">.</span><span class="nx">ID</span><span class="p">,</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">state</span><span class="p">.</span><span class="nx">Annotations</span><span class="p">[</span><span class="nx">labels</span><span class="p">.</span><span class="nx">StateDir</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">				<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">					<span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;bypass4netnsd not running? (Hint: run `containerd-rootless-setuptool.sh install-bypass4netnsd`): %w&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">				<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">opts</span><span class="p">.</span><span class="nx">ports</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">pm</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">rootlessutil</span><span class="p">.</span><span class="nf">NewRootlessCNIPortManager</span><span class="p">(</span><span class="nx">opts</span><span class="p">.</span><span class="nx">rootlessKitClient</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">				<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">					<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">				<span class="p">}</span>
+</span></span><span class="line"><span class="cl">				<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">p</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">ports</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">					<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pm</span><span class="p">.</span><span class="nf">ExposePort</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">p</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">						<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">					<span class="p">}</span>
+</span></span><span class="line"><span class="cl">				<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>在 <code>opts.cni.Setup </code>中进行网络配置。</p>
+<br>
+<h2 id="kubectl-run-nginx---imagenginx">kubectl run nginx &ndash;image=nginx</h2>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2022-12-02</span>
+            </div></div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/2022-12-02-containerd-12-containerd-network/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/" data-title="Containerd解析(12) network" data-via="xxxx" data-hashtags="containerd,network,hook"><i class="fab fa-twitter fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/" data-hashtag="containerd"><i class="fab fa-facebook-square fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/" data-title="Containerd解析(12) network"><i class="fab fa-hacker-news fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/" data-title="Containerd解析(12) network"><i data-svg-src="/lib/simple-icons/icons/line.min.svg" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/" data-title="Containerd解析(12) network"><i class="fab fa-weibo fa-fw" aria-hidden="true"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/containerd/">containerd</a>,&nbsp;<a href="/tags/network/">network</a>,&nbsp;<a href="/tags/hook/">hook</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/2022-11-23-containerd-11-go-events/" class="prev" rel="prev" title="Containerd解析(11) - event &amp; go-events"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>Containerd解析(11) - event & go-events</a></div>
+</div>
+<div id="comments"><div id="giscus" class="comment"></div><noscript>
+                Please enable JavaScript to view the comments powered by <a href="https://giscus.app">Giscus</a>.
+            </noscript></div></article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.105.0">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.11"><i class="far fa-kiss-wink-heart fa-fw" aria-hidden="true"></i> LoveIt</a>
+                </div><div class="footer-line" itemscope itemtype="http://schema.org/CreativeWork"><i class="far fa-copyright fa-fw" aria-hidden="true"></i><span itemprop="copyrightYear">2022</span><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">Yuyu</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="回到顶部">
+                <i class="fas fa-arrow-up fa-fw" aria-hidden="true"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="查看评论">
+                <i class="fas fa-comment fa-fw" aria-hidden="true"></i>
+            </a>
+        </div><link rel="stylesheet" href="/lib/lightgallery/css/lightgallery-bundle.min.css"><link rel="stylesheet" href="/lib/katex/katex.min.css"><script type="text/javascript" src="/lib/autocomplete/autocomplete.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.stemmer.support.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.zh.min.js"></script><script type="text/javascript" src="/lib/lazysizes/lazysizes.min.js"></script><script type="text/javascript" src="/lib/lightgallery/lightgallery.min.js"></script><script type="text/javascript" src="/lib/lightgallery/plugins/thumbnail/lg-thumbnail.min.js"></script><script type="text/javascript" src="/lib/lightgallery/plugins/zoom/lg-zoom.min.js"></script><script type="text/javascript" src="/lib/clipboard/clipboard.min.js"></script><script type="text/javascript" src="/lib/sharer/sharer.min.js"></script><script type="text/javascript" src="/lib/katex/katex.min.js"></script><script type="text/javascript" src="/lib/katex/contrib/auto-render.min.js"></script><script type="text/javascript" src="/lib/katex/contrib/copy-tex.min.js"></script><script type="text/javascript" src="/lib/katex/contrib/mhchem.min.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"复制到剪贴板","maxShownLines":75},"comment":{"giscus":{"category":"Announcements","categoryId":"DIC_kwDOIVYpIs4CSRHk","darkTheme":"dark","emitMetadata":"0","inputPosition":"bottom","lang":"zh-CN","lazyLoading":false,"lightTheme":"light","mapping":"pathname","reactionsEnabled":"1","repo":"yzxiu/yzxiu.github.io","repoId":"R_kgDOIVYpIg"}},"lightgallery":true,"math":{"delimiters":[{"display":true,"left":"$$","right":"$$"},{"display":true,"left":"\\[","right":"\\]"},{"display":true,"left":"\\begin{equation}","right":"\\end{equation}"},{"display":true,"left":"\\begin{equation*}","right":"\\end{equation*}"},{"display":true,"left":"\\begin{align}","right":"\\end{align}"},{"display":true,"left":"\\begin{align*}","right":"\\end{align*}"},{"display":true,"left":"\\begin{alignat}","right":"\\end{alignat}"},{"display":true,"left":"\\begin{alignat*}","right":"\\end{alignat*}"},{"display":true,"left":"\\begin{gather}","right":"\\end{gather}"},{"display":true,"left":"\\begin{CD}","right":"\\end{CD}"},{"display":false,"left":"$","right":"$"},{"display":false,"left":"\\(","right":"\\)"}],"strict":false},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","lunrLanguageCode":"zh","lunrSegmentitURL":"/lib/lunr/lunr.segmentit.js","maxResultLength":10,"noResultsFound":"没有找到结果","snippetLength":50,"type":"lunr"}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

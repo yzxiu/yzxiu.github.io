@@ -3,7 +3,23 @@
         <title>所有文章 - Yuyu&#39;s Blog</title>
         <link>https://yzxiu.github.io/posts/</link>
         <description>所有文章 | Yuyu&#39;s Blog</description>
-        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Fri, 18 Nov 2022 11:55:14 &#43;0800</lastBuildDate><atom:link href="https://yzxiu.github.io/posts/" rel="self" type="application/rss+xml" /><item>
+        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Fri, 02 Dec 2022 09:45:30 &#43;0800</lastBuildDate><atom:link href="https://yzxiu.github.io/posts/" rel="self" type="application/rss+xml" /><item>
+    <title>Containerd解析(12) network</title>
+    <link>https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/</link>
+    <pubDate>Fri, 02 Dec 2022 09:45:30 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/</guid>
+    <description><![CDATA[概述 分析containerd网络，从不同的上层应用： nerdctl run -d &ndash;name runcdev -p 8080:80 nginx kubectl run nginx &ndash;image=nginx 根据containerd 的 Scope and principles The following table specifies the various components of containerd and general features of container runtimes. The]]></description>
+</item>
+<item>
+    <title>Containerd解析(11) - event &amp; go-events</title>
+    <link>https://yzxiu.github.io/2022-11-23-containerd-11-go-events/</link>
+    <pubDate>Wed, 23 Nov 2022 16:35:35 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2022-11-23-containerd-11-go-events/</guid>
+    <description><![CDATA[概述 在 containerd 的 event 中，主要用到了 go-events 这个包。 为 Go 实现一个可组合的事件分发包。 初始化 在containerd启动过程中， 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16]]></description>
+</item>
+<item>
     <title>Containerd解析(10) - Containerd Start</title>
     <link>https://yzxiu.github.io/2022-11-18-containerd-10-containerd-start/</link>
     <pubDate>Fri, 18 Nov 2022 11:55:14 &#43;0800</pubDate>
@@ -33,7 +49,7 @@
     <pubDate>Mon, 14 Nov 2022 11:14:42 &#43;0800</pubDate>
     <author>Yuyu</author>
     <guid>https://yzxiu.github.io/2022-11-14-containerd-7-log/</guid>
-    <description><![CDATA[概述 了解 nerdctl 是怎样处理容器日志的，后续再分析kubelet的处理方式。 nerdctl 中的日志处理 容器日志处理，其实就是处理runc程序的标准输出，标准错误]]></description>
+    <description><![CDATA[概述 容器日志处理，其实就是处理runc程序的标准输出，标准错误。 这里我们分析 containerd-shim-runc-v2 与 runc 查看 shim 调用runc的代码 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17]]></description>
 </item>
 <item>
     <title>Containerd解析(6) - restart</title>
@@ -66,26 +82,6 @@
     <author>Yuyu</author>
     <guid>https://yzxiu.github.io/2022-11-02-containerd-2-layer/</guid>
     <description><![CDATA[概述 本文只讨论containerd默认配置下的行为，不涉及docker。 参考：content-flow.md 执行 client.Pull(ctx, &quot;docker.io/library/redis:5.0.9&quot;, containerd.W]]></description>
-</item>
-<item>
-    <title>Containerd解析(1) - example</title>
-    <link>https://yzxiu.github.io/2022-10-30-containerd-1/</link>
-    <pubDate>Sun, 30 Oct 2022 21:48:08 &#43;0800</pubDate>
-    <author>Yuyu</author>
-    <guid>https://yzxiu.github.io/2022-10-30-containerd-1/</guid>
-    <description><![CDATA[<div class="featured-image">
-                <img src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221030-230138.png" referrerpolicy="no-referrer">
-            </div>概述 本文使用containerd默认配置，不涉及docker。 通过一个简单的例子，粗略了解containerd创建并运行一个容器的过程。 主要]]></description>
-</item>
-<item>
-    <title>My First Post</title>
-    <link>https://yzxiu.github.io/2022-10-29-my-first-post/</link>
-    <pubDate>Sat, 29 Oct 2022 21:24:15 &#43;0800</pubDate>
-    <author>Yuyu</author>
-    <guid>https://yzxiu.github.io/2022-10-29-my-first-post/</guid>
-    <description><![CDATA[<div class="featured-image">
-                <img src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221030-230547.jpg" referrerpolicy="no-referrer">
-            </div>1 配置 参考：https://hugoloveit.com/zh-cn/posts/ 2 图片 上传配置 typora配置： typora setting 图片插入： 1 2 # 使用t]]></description>
 </item>
 </channel>
 </rss>

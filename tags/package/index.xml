@@ -1,0 +1,15 @@
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title>package - 标签 - Yuyu&#39;s Blog</title>
+        <link>https://yzxiu.github.io/tags/package/</link>
+        <description>package - 标签 - Yuyu&#39;s Blog</description>
+        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Wed, 23 Nov 2022 16:35:35 &#43;0800</lastBuildDate><atom:link href="https://yzxiu.github.io/tags/package/" rel="self" type="application/rss+xml" /><item>
+    <title>Containerd解析(11) - event &amp; go-events</title>
+    <link>https://yzxiu.github.io/2022-11-23-containerd-11-go-events/</link>
+    <pubDate>Wed, 23 Nov 2022 16:35:35 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2022-11-23-containerd-11-go-events/</guid>
+    <description><![CDATA[概述 在 containerd 的 event 中，主要用到了 go-events 这个包。 为 Go 实现一个可组合的事件分发包。 初始化 在containerd启动过程中， 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16]]></description>
+</item>
+</channel>
+</rss>

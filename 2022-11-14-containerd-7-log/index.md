@@ -3,9 +3,152 @@
 
 ## 概述
 
-了解 nerdctl 是怎样处理容器日志的，后续再分析kubelet的处理方式。
+容器日志处理，其实就是处理runc程序的标准输出，标准错误。
 
+这里我们分析 `containerd-shim-runc-v2` 与 `runc`
 
+查看 shim 调用runc的代码
+
+```go
+containerd/pkg/process/init.go
+
+// Create the process with the provided config
+func (p *Init) Create(ctx context.Context, r *CreateConfig) error {
+   var (
+      err     error
+      socket  *runc.Socket
+      pio     *processIO
+      pidFile = newPidFile(p.Bundle)
+   )
+
+   // 是否为 Terminal 模式，也就是 -t 模式
+   if r.Terminal {
+      if socket, err = runc.NewTempConsoleSocket(); err != nil {
+         return fmt.Errorf("failed to create OCI runtime console socket: %w", err)
+      }
+      defer socket.Close()
+   } else {
+      if pio, err = createIO(ctx, p.id, p.IoUID, p.IoGID, p.stdio); err != nil {
+         return fmt.Errorf("failed to create init process I/O: %w", err)
+      }
+      // 除了 -t 模式，其他方式都在抽象成pio
+      p.io = pio
+   }
+    
+   if r.Checkpoint != "" {
+      return p.createCheckpointedState(r, pidFile)
+   }
+   opts := &runc.CreateOpts{
+      PidFile:      pidFile.Path(),
+      NoPivot:      p.NoPivotRoot,
+      NoNewKeyring: p.NoNewKeyring,
+   }
+   // pio赋值
+   if p.io != nil {
+      opts.IO = p.io.IO()
+   }
+   // socket 赋值
+   if socket != nil {
+      opts.ConsoleSocket = socket
+   }
+    
+   // 前面把处理日志的方式抽象成 socket 或 pio
+    // 在 p.runtime.Create 里面将 socket 或 pio 与 runc(容器进程)关联起来
+   if err := p.runtime.Create(ctx, r.ID, r.Bundle, opts); err != nil {
+      return p.runtimeError(err, "OCI runtime create failed")
+   }
+   ...
+   ..
+}
+```
+
+```go
+// Create creates a new container and returns its pid if it was created successfully
+func (r *Runc) Create(context context.Context, id, bundle string, opts *CreateOpts) error {
+   args := []string{"create", "--bundle", bundle}
+   if opts != nil {
+      oargs, err := opts.args()
+      if err != nil {
+         return err
+      }
+      args = append(args, oargs...)
+   }
+   cmd := r.command(context, append(args, id)...)
+   if opts != nil && opts.IO != nil {
+      opts.Set(cmd)
+   }
+   cmd.ExtraFiles = opts.ExtraFiles
+
+   if cmd.Stdout == nil && cmd.Stderr == nil {
+      data, err := cmdOutput(cmd, true, nil)
+      defer putBuf(data)
+      if err != nil {
+         return fmt.Errorf("%s: %s", err, data.String())
+      }
+      return nil
+   }
+   ec, err := Monitor.Start(cmd)
+   if err != nil {
+      return err
+   }
+   if opts != nil && opts.IO != nil {
+      if c, ok := opts.IO.(StartCloser); ok {
+         if err := c.CloseAfterStart(); err != nil {
+            return err
+         }
+      }
+   }
+   status, err := Monitor.Wait(cmd, ec)
+   if err == nil && status != 0 {
+      err = fmt.Errorf("%s did not terminate successfully: %w", cmd.Args[0], &ExitError{status})
+   }
+   return err
+}
+```
+
+socket 传递到runc的 `--console-socket`参数
+
+这里查看下pio即几种处理方式
+
+fifo
+
+```go
+// Set sets the io to the exec.Cmd
+func (i *pipeIO) Set(cmd *exec.Cmd) {
+	if i.in != nil {
+		cmd.Stdin = i.in.r
+	}
+	if i.out != nil {
+		cmd.Stdout = i.out.w
+	}
+	if i.err != nil {
+		cmd.Stderr = i.err.w
+	}
+}
+```
+
+binary
+
+```go
+func (b *binaryIO) Set(cmd *exec.Cmd) {
+	if b.out != nil {
+		cmd.Stdout = b.out.w
+	}
+	if b.err != nil {
+		cmd.Stderr = b.err.w
+	}
+}
+```
+
+stdio
+
+```go
+func (s *stdio) Set(cmd *exec.Cmd) {
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+}
+```
 
 
 
@@ -15,7 +158,7 @@
 
 ## nerdctl 中的日志处理
 
-容器日志处理，其实就是处理runc程序的标准输出，标准错误。
+
 
 分析两种常用的情况。
 
@@ -40,7 +183,7 @@ runc启动命令：
 
 
 
-查看如何创建并监听 `/run/user/1000/pty4072274856/pty.sock` ？？？
+查看如何创建并监听 `/run/user/1000/pty4072274856/pty.sock` 
 
 查看代码，可以看到在shim的 runc.NewContainer()  ->  p.Create() 代码中，创建了 pty.sock
 
@@ -58,13 +201,15 @@ if r.Terminal {
 }
 ```
 
-NewTempConsoleSocket()创建了 pty.sock，并将sock的路径参数传递给runc。
+NewTempConsoleSocket()创建了 `pty.sock`，并将sock的路径参数传递给runc。
 
 
 
 接下来查看 shim 创建的`pty.sock`怎样与`nerdctl`关联起来？？？
 
-查看 `nerdctl run -it` 相关代码，
+
+
+nerdctl：
 
 ```go
 // 
@@ -139,6 +284,10 @@ root@xiu-desktop:/run/containerd/fifo/7416553# tree
 
 随后，nerdctl将这两个路径传递给containerd，containerd传递给shim。
 
+
+
+shim：
+
 在shim中，接收到的请求如下：
 
 ![image-20221116210237546](https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-210238.png)
@@ -146,25 +295,51 @@ root@xiu-desktop:/run/containerd/fifo/7416553# tree
 
 
 ```go
-if socket != nil {
-   console, err := socket.ReceiveMaster()
-   if err != nil {
-      return fmt.Errorf("failed to retrieve console master: %w", err)
-   }
-   console, err = p.Platform.CopyConsole(ctx, console, p.id, r.Stdin, r.Stdout, r.Stderr, &p.wg)
-   if err != nil {
-      return fmt.Errorf("failed to start console copy: %w", err)
-   }
-   p.console = console
-} else {
-   if err := pio.Copy(ctx, &p.wg); err != nil {
-      return fmt.Errorf("failed to start io pipe copy: %w", err)
-   }
+// Create the process with the provided config
+func (p *Init) Create(ctx context.Context, r *CreateConfig) error {
+	var (
+		err     error
+		socket  *runc.Socket
+		pio     *processIO
+		pidFile = newPidFile(p.Bundle)
+	)
+
+	if r.Terminal {
+		if socket, err = runc.NewTempConsoleSocket(); err != nil {
+			return fmt.Errorf("failed to create OCI runtime console socket: %w", err)
+		}
+		defer socket.Close()
+	} else {
+		...
+	}
+	...
+	if socket != nil {
+		opts.ConsoleSocket = socket
+	}
+	if err := p.runtime.Create(ctx, r.ID, r.Bundle, opts); err != nil {
+		return p.runtimeError(err, "OCI runtime create failed")
+	}
+	...
+    ...
+	if socket != nil {
+		console, err := socket.ReceiveMaster()
+		if err != nil {
+			return fmt.Errorf("failed to retrieve console master: %w", err)
+		}
+		console, err = p.Platform.CopyConsole(ctx, console, p.id, r.Stdin, r.Stdout, r.Stderr, &p.wg)
+		if err != nil {
+			return fmt.Errorf("failed to start console copy: %w", err)
+		}
+		p.console = console
+	}
+    ...
+    ...
+	return nil
 }
 ```
 
 ```go
-func (p *linuxPlatform) CopyConsole(ctx context.Context, console console.Console, id, stdin, stdout, stderr string, wg *sync.WaitGroup) (cons c驱动onsole.Console, retErr error) {
+func (p *linuxPlatform) CopyConsole(ctx context.Context, console console.Console, id, stdin, stdout, stderr string, wg *sync.WaitGroup) (cons console.Console, retErr error) {
    if p.epoller == nil {
       return nil, errors.New("uninitialized epoller")
    }
@@ -247,6 +422,39 @@ func (p *linuxPlatform) CopyConsole(ctx context.Context, console console.Console
 runc启动方式为：`Pass-Through & Detached`
 
 首先，查看shim，create的请求参数：
+
+```go
+// Create a new initial process and container with the underlying OCI runtime
+func (s *service) Create(ctx context.Context, r *taskAPI.CreateTaskRequest) (_ *taskAPI.CreateTaskResponse, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	container, err := runc.NewContainer(ctx, s.platform, r)
+	if err != nil {
+		return nil, err
+	}
+
+	s.containers[r.ID] = container
+
+	s.send(&eventstypes.TaskCreate{
+		ContainerID: r.ID,
+		Bundle:      r.Bundle,
+		Rootfs:      r.Rootfs,
+		IO: &eventstypes.TaskIO{
+			Stdin:    r.Stdin,
+			Stdout:   r.Stdout,
+			Stderr:   r.Stderr,
+			Terminal: r.Terminal,
+		},
+		Checkpoint: r.Checkpoint,
+		Pid:        uint32(container.Pid()),
+	})
+
+	return &taskAPI.CreateTaskResponse{
+		Pid: uint32(container.Pid()),
+	}, nil
+}
+```
 
 ![image-20221116211250529](https://raw.githubusercontent.com/yzxiu/images/blog/2022-11/20221116-211251.png)
 
@@ -842,5 +1050,12 @@ nerdctl中日志处理方式大致如此。
 
 ## kubelet中的日志处理
 
-待补充
+使用命令 `k run nginx --image=nginx` 创建pod，会启动两个容器，我们只关注业务容器，即nginx容器。
+
+
+
+
+
+
+
 

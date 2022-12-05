@@ -1,0 +1,15 @@
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title>network - 标签 - Yuyu&#39;s Blog</title>
+        <link>https://yzxiu.github.io/tags/network/</link>
+        <description>network - 标签 - Yuyu&#39;s Blog</description>
+        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Fri, 02 Dec 2022 09:45:30 &#43;0800</lastBuildDate><atom:link href="https://yzxiu.github.io/tags/network/" rel="self" type="application/rss+xml" /><item>
+    <title>Containerd解析(12) network</title>
+    <link>https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/</link>
+    <pubDate>Fri, 02 Dec 2022 09:45:30 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/</guid>
+    <description><![CDATA[概述 分析containerd网络，从不同的上层应用： nerdctl run -d &ndash;name runcdev -p 8080:80 nginx kubectl run nginx &ndash;image=nginx 根据containerd 的 Scope and principles The following table specifies the various components of containerd and general features of container runtimes. The]]></description>
+</item>
+</channel>
+</rss>

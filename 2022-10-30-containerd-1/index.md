@@ -2406,4 +2406,12 @@ UID          PID    PPID  C STIME TTY          TIME CMD
 
 本文通过一个简单的例子，忽略了较多细节，了解一个容器在containerd中的主要启动过程。
 
+在containerd中，有`container`和`task`两个概念，
+
+container是containerd中的概念，创建一个 container 的时候，containerd需要准备相关的镜像和目录
+
+task是真正运行的部分，由具体的运行时创建的容器进程。
+
+`container`是分配和附加资源的元数据对象，`task`是系统中动态的运行的的进程，`task`在每次运行后应该被删除掉，但是`container`能够被多次使用，更新，查询。
+
 
