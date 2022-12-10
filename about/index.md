@@ -19,6 +19,7 @@
     - [#7624](https://github.com/containerd/containerd/pull/7624)
   - [containerd](https://github.com/containerd)/**[nerdctl](https://github.com/containerd/nerdctl)**
     - [#1618](https://github.com/containerd/nerdctl/pull/1618)
+    - [#1636](https://github.com/containerd/nerdctl/pull/1636)
 
 <br>
 
