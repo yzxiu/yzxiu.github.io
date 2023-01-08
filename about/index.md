@@ -12,9 +12,7 @@
 
 <br>
 
-### 参与的开源项目
-
-
+### 参与开源
 
 - [containerd](https://github.com/containerd)
   - [containerd](https://github.com/containerd)/**[containerd](https://github.com/containerd/containerd)**

@@ -166,6 +166,10 @@ func (t *tty) recvtty(socket *os.File) (Err error) {
 }
 ```
 
+上面 init 之前，
+
+下面是 init 过程，
+
 ```go
 // 组装command 模版，生成init 命令，设置大量以 _xxx 这样格式的环境变量，即大量的extraFiles 文件
 cmd := c.commandTemplate(p, childInitPipe, childLogPipe)
@@ -246,7 +250,7 @@ func (p *initProcess) sendConfig() error {
 runc init 中：
 
 ```go
-// 设置console，这必须在我们已经finalize rootfs之前并且在用户有机会挂载它们想要的mount之后
+// 设置console
 if l.config.CreateConsole {
    if err := setupConsole(l.consoleSocket, l.config, true); err != nil {
       return err
