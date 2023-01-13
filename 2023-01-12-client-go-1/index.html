@@ -4,36 +4,32 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="robots" content="noodp" />
-        <title> - Yuyu&#39;s Blog</title><meta name="Description" content=""><meta property="og:title" content="" />
-<meta property="og:description" content="关于
-工作 曾经是 iOS、Java 开发，现在是运维开发，专注 云原生
-参与开源 containerd containerd/containerd #7624 containerd/nerdctl #1618 #1636 #1642 #1775 opencontainers opencontainers/runc #3660 kubesphere kubesphere/kubesphere #5299 Containers containers/podman #16278 kubernetes kubernetes/website #38678 " />
+        <title>client-go解析(1) - Yuyu&#39;s Blog</title><meta name="Description" content=""><meta property="og:title" content="client-go解析(1)" />
+<meta property="og:description" content="概述 k8s许多重要的基础类型，都在client-go中定义。 如 cache.Store、cache.Reflector等。 接下来分析这些重要的" />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://yzxiu.github.io/about/" /><meta property="og:image" content="https://yzxiu.github.io/logo.png"/><meta property="article:section" content="" />
-
-<meta property="og:site_name" content="Yuyu&#39;s Blog" />
+<meta property="og:url" content="https://yzxiu.github.io/2023-01-12-client-go-1/" /><meta property="og:image" content="https://yzxiu.github.io/logo.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-01-12T09:52:51+08:00" />
+<meta property="article:modified_time" content="2023-01-12T09:52:51+08:00" /><meta property="og:site_name" content="Yuyu&#39;s Blog" />
 
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:image" content="https://yzxiu.github.io/logo.png"/>
 
-<meta name="twitter:title" content=""/>
-<meta name="twitter:description" content="关于
-工作 曾经是 iOS、Java 开发，现在是运维开发，专注 云原生
-参与开源 containerd containerd/containerd #7624 containerd/nerdctl #1618 #1636 #1642 #1775 opencontainers opencontainers/runc #3660 kubesphere kubesphere/kubesphere #5299 Containers containers/podman #16278 kubernetes kubernetes/website #38678 "/>
+<meta name="twitter:title" content="client-go解析(1)"/>
+<meta name="twitter:description" content="概述 k8s许多重要的基础类型，都在client-go中定义。 如 cache.Store、cache.Reflector等。 接下来分析这些重要的"/>
 <meta name="application-name" content="Yuyu&#39;s Blog">
-<meta name="apple-mobile-web-app-title" content="Yuyu&#39;s Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="icon" href="/images/avataaars.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://yzxiu.github.io/about/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<meta name="apple-mobile-web-app-title" content="Yuyu&#39;s Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="icon" href="/images/avataaars.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://yzxiu.github.io/2023-01-12-client-go-1/" /><link rel="prev" href="https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/" /><link rel="next" href="https://yzxiu.github.io/2023-01-12-client-go-2-cache-store/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"></noscript><link rel="preload" href="/lib/animate/animate.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="/lib/animate/animate.min.css"></noscript><script type="application/ld+json">
     {
         "@context": "http://schema.org",
         "@type": "BlogPosting",
-        "headline": "",
+        "headline": "client-go解析(1)",
         "inLanguage": "zh-CN",
         "mainEntityOfPage": {
             "@type": "WebPage",
-            "@id": "https:\/\/yzxiu.github.io\/about\/"
-        },"genre": "page","wordcount":  27 ,
-        "url": "https:\/\/yzxiu.github.io\/about\/","publisher": {
+            "@id": "https:\/\/yzxiu.github.io\/2023-01-12-client-go-1\/"
+        },"genre": "posts","keywords": "client-go","wordcount":  126 ,
+        "url": "https:\/\/yzxiu.github.io\/2023-01-12-client-go-1\/","datePublished": "2023-01-12T09:52:51+08:00","dateModified": "2023-01-12T09:52:51+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
                 "@type": "Person",
@@ -49,7 +45,7 @@
             <a href="/" title="Yuyu&#39;s Blog">Yuyu&#39;s Blog</a>
         </div>
         <div class="menu">
-            <div class="menu-inner"><a class="menu-item" href="/posts/"> 文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item active" href="/about/"> 关于 </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> 文章 </a><a class="menu-item" href="/tags/"> 标签 </a><a class="menu-item" href="/categories/"> 分类 </a><a class="menu-item" href="/about/"> 关于 </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
                         <input type="text" placeholder="搜索文章标题或内容..." id="search-input-desktop">
                         <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="搜索">
                             <i class="fas fa-search fa-fw" aria-hidden="true"></i>
@@ -101,82 +97,59 @@
     <div class="search-dropdown mobile">
         <div id="search-dropdown-mobile"></div>
     </div><main class="main">
-                <div class="container"><div class="page single special"><h1 class="single-title animate__animated animate__pulse animate__faster"></h1><div class="content" id="content"><h1 id="关于br">关于<br></h1>
-<br>
-<h3 id="工作">工作</h3>
-<p>曾经是 <code>iOS</code>、<code>Java</code> 开发，现在是运维开发，专注 <code>云原生</code></p>
-<br>
-<h3 id="参与开源">参与开源</h3>
-<ul>
-<li><a href="https://github.com/containerd" target="_blank" rel="noopener noreffer ">containerd</a>
-<ul>
-<li><a href="https://github.com/containerd" target="_blank" rel="noopener noreffer ">containerd</a>/<strong><a href="https://github.com/containerd/containerd" target="_blank" rel="noopener noreffer ">containerd</a></strong>
-<ul>
-<li><a href="https://github.com/containerd/containerd/pull/7624" target="_blank" rel="noopener noreffer ">#7624</a></li>
-</ul>
-</li>
-<li><a href="https://github.com/containerd" target="_blank" rel="noopener noreffer ">containerd</a>/<strong><a href="https://github.com/containerd/nerdctl" target="_blank" rel="noopener noreffer ">nerdctl</a></strong>
-<ul>
-<li><a href="https://github.com/containerd/nerdctl/pull/1618" target="_blank" rel="noopener noreffer ">#1618</a></li>
-<li><a href="https://github.com/containerd/nerdctl/pull/1636" target="_blank" rel="noopener noreffer ">#1636</a></li>
-<li><a href="https://github.com/containerd/nerdctl/pull/1642" target="_blank" rel="noopener noreffer ">#1642</a></li>
-<li><a href="https://github.com/containerd/nerdctl/pull/1775" target="_blank" rel="noopener noreffer ">#1775</a></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-<br>
-<ul>
-<li><a href="https://github.com/opencontainers" target="_blank" rel="noopener noreffer ">opencontainers</a>
-<ul>
-<li><a href="https://github.com/opencontainers" target="_blank" rel="noopener noreffer ">opencontainers</a>/<strong><a href="https://github.com/opencontainers/runc" target="_blank" rel="noopener noreffer ">runc</a></strong>
-<ul>
-<li><a href="https://github.com/opencontainers/runc/pull/3660" target="_blank" rel="noopener noreffer ">#3660</a></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-<br>
-<ul>
-<li><a href="https://github.com/kubesphere" target="_blank" rel="noopener noreffer ">kubesphere</a>
-<ul>
-<li><a href="https://github.com/kubesphere" target="_blank" rel="noopener noreffer ">kubesphere</a>/<strong><a href="https://github.com/kubesphere/kubesphere" target="_blank" rel="noopener noreffer ">kubesphere</a></strong>
-<ul>
-<li><a href="https://github.com/kubesphere/kubesphere/pull/5299" target="_blank" rel="noopener noreffer ">#5299</a></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-<br>
-<ul>
-<li><a href="https://github.com/containers" target="_blank" rel="noopener noreffer ">Containers</a>
-<ul>
-<li><a href="https://github.com/containers" target="_blank" rel="noopener noreffer ">containers</a>/<strong><a href="https://github.com/containers/podman" target="_blank" rel="noopener noreffer ">podman</a></strong>
-<ul>
-<li><a href="https://github.com/containers/podman/pull/16278" target="_blank" rel="noopener noreffer ">#16278</a></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-<br>
-<ul>
-<li><a href="https://github.com/kubernetes" target="_blank" rel="noopener noreffer ">kubernetes</a>
-<ul>
-<li><a href="https://github.com/kubernetes" target="_blank" rel="noopener noreffer ">kubernetes</a>/<strong><a href="https://github.com/kubernetes/website" target="_blank" rel="noopener noreffer ">website</a></strong>
-<ul>
-<li><a href="https://github.com/kubernetes/website/pull/38678" target="_blank" rel="noopener noreffer ">#38678</a></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-</div><div id="comments"><div id="giscus" class="comment"></div><noscript>
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">目录</h2>
+            <div class="toc-content always-active" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">client-go解析(1)</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-12">2023-01-12</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 126 字&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 1 分钟&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  data-kept="">
+                <div class="details-summary toc-title">
+                    <span>目录</span>
+                    <span><i class="details-icon fas fa-angle-right" aria-hidden="true"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#概述">概述</a></li>
+    <li><a href="#使用">使用</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><h2 id="概述">概述</h2>
+<p>k8s许多重要的基础类型，都在client-go中定义。</p>
+<p>如 <code>cache.Store</code>、<code>cache.Reflector</code>等。</p>
+<p>接下来分析这些重要的接口和类型，以及他们的组合(比如<code>informer</code>)在k8s中的使用。</p>
+<h2 id="使用">使用</h2>
+<p>client-go的一些用法，可以参考  <a href="https://github.com/iximiuz/client-go-examples" target="_blank" rel="noopener noreffer ">https://github.com/iximiuz/client-go-examples</a></p>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>更新于 2023-01-12</span>
+            </div></div>
+        <div class="post-info-line">
+            <div class="post-info-md"><span>
+                            <a class="link-to-markdown" href="/2023-01-12-client-go-1/index.md" target="_blank">阅读原始文档</a>
+                        </span></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://yzxiu.github.io/2023-01-12-client-go-1/" data-title="client-go解析(1)" data-via="xxxx" data-hashtags="client-go"><i class="fab fa-twitter fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://yzxiu.github.io/2023-01-12-client-go-1/" data-hashtag="client-go"><i class="fab fa-facebook-square fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://yzxiu.github.io/2023-01-12-client-go-1/" data-title="client-go解析(1)"><i class="fab fa-hacker-news fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://yzxiu.github.io/2023-01-12-client-go-1/" data-title="client-go解析(1)"><i data-svg-src="/lib/simple-icons/icons/line.min.svg" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://yzxiu.github.io/2023-01-12-client-go-1/" data-title="client-go解析(1)"><i class="fab fa-weibo fa-fw" aria-hidden="true"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/client-go/">client-go</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">返回</a></span>&nbsp;|&nbsp;<span><a href="/">主页</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/2022-12-02-containerd-12-containerd-network/" class="prev" rel="prev" title="Containerd解析(12) network"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>Containerd解析(12) network</a>
+            <a href="/2023-01-12-client-go-2-cache-store/" class="next" rel="next" title="client-go解析(2) - cache.Store">client-go解析(2) - cache.Store<i class="fas fa-angle-right fa-fw" aria-hidden="true"></i></a></div>
+</div>
+<div id="comments"><div id="giscus" class="comment"></div><noscript>
                 Please enable JavaScript to view the comments powered by <a href="https://giscus.app">Giscus</a>.
-            </noscript></div></div></div>
+            </noscript></div></article></div>
             </main><footer class="footer">
         <div class="footer-container"><div class="footer-line">由 <a href="https://gohugo.io/" target="_blank" rel="noopener noreffer" title="Hugo 0.105.0">Hugo</a> 强力驱动 | 主题 - <a href="https://github.com/dillonzq/LoveIt" target="_blank" rel="noopener noreffer" title="LoveIt 0.2.11"><i class="far fa-kiss-wink-heart fa-fw" aria-hidden="true"></i> LoveIt</a>
                 </div><div class="footer-line" itemscope itemtype="http://schema.org/CreativeWork"><i class="far fa-copyright fa-fw" aria-hidden="true"></i><span itemprop="copyrightYear">2022 - 2023</span><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">Yuyu</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>

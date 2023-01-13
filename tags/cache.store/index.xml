@@ -1,0 +1,15 @@
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title>cache.Store - 标签 - Yuyu&#39;s Blog</title>
+        <link>https://yzxiu.github.io/tags/cache.store/</link>
+        <description>cache.Store - 标签 - Yuyu&#39;s Blog</description>
+        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Thu, 12 Jan 2023 21:39:15 &#43;0800</lastBuildDate><atom:link href="https://yzxiu.github.io/tags/cache.store/" rel="self" type="application/rss+xml" /><item>
+    <title>client-go解析(2) - cache.Store</title>
+    <link>https://yzxiu.github.io/2023-01-12-client-go-2-cache-store/</link>
+    <pubDate>Thu, 12 Jan 2023 21:39:15 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2023-01-12-client-go-2-cache-store/</guid>
+    <description><![CDATA[概述 如果把k8s当成资源管理系统, 那cache.Store无疑是最核心的接口, 用于缓存,存储资源 。 reflector 依赖于 cache.Store 的实现做存储，根据不同的实现有不]]></description>
+</item>
+</channel>
+</rss>

@@ -1,14 +1,12 @@
 # 
 
-# 关于
+# 关于<br>
 
 <br>
 
 ### 工作
 
 曾经是 `iOS`、`Java` 开发，现在是运维开发，专注 `云原生`
-
-<br>
 
 <br>
 
@@ -22,7 +20,6 @@
     - [#1636](https://github.com/containerd/nerdctl/pull/1636)
     - [#1642](https://github.com/containerd/nerdctl/pull/1642)
     - [#1775](https://github.com/containerd/nerdctl/pull/1775)
-
 
 <br>
 
