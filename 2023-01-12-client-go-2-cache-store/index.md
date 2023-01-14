@@ -7,6 +7,10 @@
 
 reflector  依赖于 cache.Store 的实现做存储，根据不同的实现有不同的功能。所以，正确的理解cache.Store的不同实现，是理解 reflector 的关键。
 
+
+
+## 定义
+
 接口定义如下：
 
 ```go
@@ -72,7 +76,7 @@ UndeltaStore 是用于kubelet 获取pod数据用到的，watchCache 是apiserver
 
 
 
-## cache.Store的相关实现
+## 实现
 
 由上面的分析, 这里将 cache.Store的实现分为3组.
 
@@ -290,6 +294,8 @@ func NewFIFO(keyFunc KeyFunc) *FIFO {
 FIFO在client-go/k8s中并不多见,重点是下面的 DeltaFIFO
 
 #### DeltaFIFO
+
+informer 模式中，Reflector 使用 DeltaFIFO 作为 store，向 apiserver 中获取数据
 
 定义:
 

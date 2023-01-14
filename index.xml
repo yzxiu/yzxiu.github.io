@@ -11,7 +11,7 @@
     <pubDate>Sat, 14 Jan 2023 23:45:36 &#43;0800</pubDate>
     <author>Yuyu</author>
     <guid>https://yzxiu.github.io/2023-01-14-client-go-3-reflector/</guid>
-    <description><![CDATA[概述]]></description>
+    <description><![CDATA[概述 cache.Reflector 可以说是k8s最重要的组件，它串联起k8s的整个流程。 在服务端(apiserver) ，使用 reflector 向 etcd 获取资源数据。 在连接端(informe]]></description>
 </item>
 <item>
     <title>client-go解析(2) - cache.Store</title>
