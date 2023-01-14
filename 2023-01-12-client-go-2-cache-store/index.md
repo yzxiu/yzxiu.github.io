@@ -66,8 +66,6 @@ Queue的实现类有2个
 
 {{< /admonition >}}
 
-
-
 除此之外, 直接实现cache.Store的还有 ExpirationCache, UndeltaStore, cacheStore, watchCache, 
 
 UndeltaStore 是用于kubelet 获取pod数据用到的，watchCache 是apiserver缓存etcd数据据用到的。
@@ -78,7 +76,7 @@ UndeltaStore 是用于kubelet 获取pod数据用到的，watchCache 是apiserver
 
 由上面的分析, 这里将 cache.Store的实现分为3组.
 
-这里只分析基础的cache实现
+
 
 ### 基础 (cache)
 
