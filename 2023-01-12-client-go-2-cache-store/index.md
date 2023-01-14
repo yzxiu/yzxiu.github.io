@@ -5,7 +5,7 @@
 
 如果把`k8s`当成`资源管理系统`, 那`cache.Store`无疑是`最核心`的接口, 用于`缓存`,`存储`资源 。
 
-reflector 依赖于 cache.Store 的实现做存储，根据不同的实现有不同的功能。所以，正确的理解cache.Store的不同实现，是理解 reflector 的关键。
+reflector  依赖于 cache.Store 的实现做存储，根据不同的实现有不同的功能。所以，正确的理解cache.Store的不同实现，是理解 reflector 的关键。
 
 接口定义如下：
 
@@ -287,7 +287,7 @@ func NewFIFO(keyFunc KeyFunc) *FIFO {
 
 ```
 
-关于FIFO, 需要注意的事,如果pop处理失败,会重新放入队列
+关于FIFO, 需要注意的是,如果pop处理失败,会重新放入队列
 
 FIFO在client-go/k8s中并不多见,重点是下面的 DeltaFIFO
 
@@ -313,8 +313,6 @@ type DeltaFIFO struct {
    emitDeltaTypeReplaced bool
 }
 ```
-
-通过单元测试来了解特性
 
 ##### Add() / Update() / Delete()
 
@@ -392,11 +390,120 @@ f.Update(mkFifoObj("foo", 12))
 f.Delete(mkFifoObj("foo", 15))
 ```
 
-![image-20230113165311586](https://raw.githubusercontent.com/yzxiu/images/blog/2023-01/20230113-165312.png "DeltaFIFO")
+![image-20230113165311586](https://raw.githubusercontent.com/yzxiu/images/blog/2023-01/20230113-165312.png  "Add() / Update() / Delete() ")
 
 ##### Replace()
 
  Replace() 可以视为生产者，生产类型为 Sync / Replaced 的 Delta 数据
+
+```go
+// Replace atomically does two things: (1) it adds the given objects
+// using the Sync or Replace DeltaType and then (2) it does some deletions.
+// 1, 为给定的 objects 添加一个 Sync / Replace 的Delta数据
+// 2, 添加一些 Deleted 数据
+// 
+// In particular: for every pre-existing key K that is not the key of
+// an object in `list` there is the effect of
+// `Delete(DeletedFinalStateUnknown{K, O})` where O is current object
+// of K. 
+// 对于所有存在于 list 中，但不存在于 pre-existing 中的Key K，
+// 添加一个 Deleted 的 DeletedFinalStateUnknown 数据。
+// 对于 pre-existing 和评定，和 K 对应 Object，在下面有详细说明
+// 
+// If `f.knownObjects == nil` then the pre-existing keys are
+// those in `f.items` and the current object of K is the `.Newest()`
+// of the Deltas associated with K.  Otherwise the pre-existing keys
+// are those listed by `f.knownObjects` and the current object of K is
+// what `f.knownObjects.GetByKey(K)` returns.
+// 1, 当 f.knownObjects == nil
+// pre-existing 为 f.items, 对应的 object 为 Newest()(即Deltas数组中的最后一个)
+// 2, 当 f.knownObjects != nil,
+// pre-existing 为 f.knownObjects.ListKeys(), 对应的 object 为 f.knownObjects.GetByKey(k)
+func (f *DeltaFIFO) Replace(list []interface{}, _ string) error {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+	keys := make(sets.String, len(list))
+
+	// keep backwards compat for old clients
+	action := Sync
+	if f.emitDeltaTypeReplaced {
+		action = Replaced
+	}
+
+	// Add Sync/Replaced action for each new item.
+	for _, item := range list {
+		key, err := f.KeyOf(item)
+		if err != nil {
+			return KeyError{item, err}
+		}
+		keys.Insert(key)
+		if err := f.queueActionLocked(action, item); err != nil {
+			return fmt.Errorf("couldn't enqueue object: %v", err)
+		}
+	}
+
+	if f.knownObjects == nil {
+		// Do deletion detection against our own list.
+		queuedDeletions := 0
+		for k, oldItem := range f.items {
+			if keys.Has(k) {
+				continue
+			}
+			// Delete pre-existing items not in the new list.
+			// This could happen if watch deletion event was missed while
+			// disconnected from apiserver.
+			var deletedObj interface{}
+			if n := oldItem.Newest(); n != nil {
+				deletedObj = n.Object
+			}
+			queuedDeletions++
+			if err := f.queueActionLocked(Deleted, DeletedFinalStateUnknown{k, deletedObj}); err != nil {
+				return err
+			}
+		}
+
+		if !f.populated {
+			f.populated = true
+			// While there shouldn't be any queued deletions in the initial
+			// population of the queue, it's better to be on the safe side.
+			f.initialPopulationCount = keys.Len() + queuedDeletions
+		}
+
+		return nil
+	}
+
+	// Detect deletions not already in the queue.
+	knownKeys := f.knownObjects.ListKeys()
+	queuedDeletions := 0
+	for _, k := range knownKeys {
+		if keys.Has(k) {
+			continue
+		}
+
+		deletedObj, exists, err := f.knownObjects.GetByKey(k)
+		if err != nil {
+			deletedObj = nil
+			klog.Errorf("Unexpected error %v during lookup of key %v, placing DeleteFinalStateUnknown marker without object", err, k)
+		} else if !exists {
+			deletedObj = nil
+			klog.Infof("Key %v does not exist in known objects store, placing DeleteFinalStateUnknown marker without object", k)
+		}
+		queuedDeletions++
+		if err := f.queueActionLocked(Deleted, DeletedFinalStateUnknown{k, deletedObj}); err != nil {
+			return err
+		}
+	}
+
+	if !f.populated {
+		f.populated = true
+		f.initialPopulationCount = keys.Len() + queuedDeletions
+	}
+
+	return nil
+}
+```
+
+Replace() 的逻辑在注释中已经说的非常详细。
 
 
 
@@ -404,7 +511,58 @@ f.Delete(mkFifoObj("foo", 15))
 
  Resync() 可以视为生产者，生产类型为 Sync 的 Delta 数据
 
+```go
+// Resync adds, with a Sync type of Delta, every object listed by
+// `f.knownObjects` whose key is not already queued for processing.
+// If `f.knownObjects` is `nil` then Resync does nothing.
+func (f *DeltaFIFO) Resync() error {
+   f.lock.Lock()
+   defer f.lock.Unlock()
 
+   if f.knownObjects == nil {
+      return nil
+   }
+
+   keys := f.knownObjects.ListKeys()
+   for _, k := range keys {
+      if err := f.syncKeyLocked(k); err != nil {
+         return err
+      }
+   }
+   return nil
+}
+```
+
+```go
+func (f *DeltaFIFO) syncKeyLocked(key string) error {
+   obj, exists, err := f.knownObjects.GetByKey(key)
+   if err != nil {
+      klog.Errorf("Unexpected error %v during lookup of key %v, unable to queue object for sync", err, key)
+      return nil
+   } else if !exists {
+      klog.Infof("Key %v does not exist in known objects store, unable to queue object for sync", key)
+      return nil
+   }
+
+   // If we are doing Resync() and there is already an event queued for that object,
+   // we ignore the Resync for it. This is to avoid the race, in which the resync
+   // comes with the previous value of object (since queueing an event for the object
+   // doesn't trigger changing the underlying store <knownObjects>.
+   // 对于 f.items 中已经存在的 Object，不添加 Sync Delta数据。
+   id, err := f.KeyOf(obj)
+   if err != nil {
+      return KeyError{obj, err}
+   }
+   if len(f.items[id]) > 0 {
+      return nil
+   }
+
+   if err := f.queueActionLocked(Sync, obj); err != nil {
+      return fmt.Errorf("couldn't queue object: %v", err)
+   }
+   return nil
+}
+```
 
 
 
@@ -412,16 +570,84 @@ f.Delete(mkFifoObj("foo", 15))
 
 Pop() 可以视为消费者
 
+```go
+// Pop blocks until the queue has some items, and then returns one.  If
+// multiple items are ready, they are returned in the order in which they were
+// added/updated. The item is removed from the queue (and the store) before it
+// is returned, so if you don't successfully process it, you need to add it back
+// with AddIfNotPresent().
+// process function is called under lock, so it is safe to update data structures
+// in it that need to be in sync with the queue (e.g. knownKeys). The PopProcessFunc
+// may return an instance of ErrRequeue with a nested error to indicate the current
+// item should be requeued (equivalent to calling AddIfNotPresent under the lock).
+// process should avoid expensive I/O operation so that other queue operations, i.e.
+// Add() and Get(), won't be blocked for too long.
+// process 函数是在锁定的情况下调用的，因此可以安全地更新其中需要与队列同步的数据结构（例如 knownKeys）。 PopProcessFunc 可能会返回一个带有嵌套错误的 ErrRequeue 实例，以指示当前项目应该重新排队（相当于在锁下调用 AddIfNotPresent）。进程应避免昂贵的 IO 操作，以便其他队列操作，即 Add() 和 Get() 不会被阻塞太久。
+//
+// Pop returns a 'Deltas', which has a complete list of all the things
+// that happened to the object (deltas) while it was sitting in the queue.
+// Pop 返回一个“Deltas”，其中包含对象（deltas）在队列中时发生的所有事情的完整列表。
+func (f *DeltaFIFO) Pop(process PopProcessFunc) (interface{}, error) {
+   f.lock.Lock()
+   defer f.lock.Unlock()
+   for {
+      for len(f.queue) == 0 {
+         // When the queue is empty, invocation of Pop() is blocked until new item is enqueued.
+         // When Close() is called, the f.closed is set and the condition is broadcasted.
+         // Which causes this loop to continue and return from the Pop().
+         if f.closed {
+            return nil, ErrFIFOClosed
+         }
 
+         f.cond.Wait()
+      }
+      isInInitialList := !f.hasSynced_locked()
+      id := f.queue[0]
+      f.queue = f.queue[1:]
+      depth := len(f.queue)
+      if f.initialPopulationCount > 0 {
+         f.initialPopulationCount--
+      }
+      item, ok := f.items[id]
+      if !ok {
+         // This should never happen
+         klog.Errorf("Inconceivable! %q was in f.queue but not f.items; ignoring.", id)
+         continue
+      }
+      delete(f.items, id)
+      // Only log traces if the queue depth is greater than 10 and it takes more than
+      // 100 milliseconds to process one item from the queue.
+      // Queue depth never goes high because processing an item is locking the queue,
+      // and new items can't be added until processing finish.
+      // https://github.com/kubernetes/kubernetes/issues/103789
+      if depth > 10 {
+         trace := utiltrace.New("DeltaFIFO Pop Process",
+            utiltrace.Field{Key: "ID", Value: id},
+            utiltrace.Field{Key: "Depth", Value: depth},
+            utiltrace.Field{Key: "Reason", Value: "slow event handlers blocking the queue"})
+         defer trace.LogIfLong(100 * time.Millisecond)
+      }
+      err := process(item, isInInitialList)
+      if e, ok := err.(ErrRequeue); ok {
+         f.addIfNotPresent(id, item)
+         err = e.Err
+      }
+      // Don't need to copyDeltas here, because we're transferring
+      // ownership to the caller.
+      return item, err
+   }
+}
+```
 
 ### 组合
 
-
-
 #### UndeltaStore
+
+kubelet 中，Reflector 使用 UndeltaStore 作为 store，向 apiserver 中获取数据
 
 
 
 #### watchCache
 
+apiserver 中，Reflector 使用 watchCache 作为 store，向 etcd 中获取数据
 

@@ -3,9 +3,17 @@
         <title>Yuyu&#39;s Blog</title>
         <link>https://yzxiu.github.io/</link>
         <description>Yuyu&#39;s Blog</description>
-        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Thu, 12 Jan 2023 21:39:15 &#43;0800</lastBuildDate>
+        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Sat, 14 Jan 2023 23:45:36 &#43;0800</lastBuildDate>
             <atom:link href="https://yzxiu.github.io/index.xml" rel="self" type="application/rss+xml" />
         <item>
+    <title>client-go解析(3) - cache.Reflector</title>
+    <link>https://yzxiu.github.io/2023-01-14-client-go-3-reflector/</link>
+    <pubDate>Sat, 14 Jan 2023 23:45:36 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2023-01-14-client-go-3-reflector/</guid>
+    <description><![CDATA[概述]]></description>
+</item>
+<item>
     <title>client-go解析(2) - cache.Store</title>
     <link>https://yzxiu.github.io/2023-01-12-client-go-2-cache-store/</link>
     <pubDate>Thu, 12 Jan 2023 21:39:15 &#43;0800</pubDate>
@@ -76,14 +84,6 @@
     <author>Yuyu</author>
     <guid>https://yzxiu.github.io/2022-11-13-containerd-6-restart/</guid>
     <description><![CDATA[概述 在runc的start命令代码如下： 1 2 3 4 5 6 7 8 9 10 11 switch status { // 对于一个已经处于Created状态的容器，执行Exec case libcontainer.Created: return container.Exec() case libcontainer.Stopped: return errors.New(&#34;cannot]]></description>
-</item>
-<item>
-    <title>Containerd解析(4) - Mount Rootfs</title>
-    <link>https://yzxiu.github.io/2022-11-03-containerd-4-mount-rootfs/</link>
-    <pubDate>Thu, 03 Nov 2022 10:20:01 &#43;0800</pubDate>
-    <author>Yuyu</author>
-    <guid>https://yzxiu.github.io/2022-11-03-containerd-4-mount-rootfs/</guid>
-    <description><![CDATA[]]></description>
 </item>
 </channel>
 </rss>

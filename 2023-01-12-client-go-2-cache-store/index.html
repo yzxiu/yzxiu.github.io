@@ -17,7 +17,7 @@
 <meta name="twitter:title" content="client-go解析(2) - cache.Store"/>
 <meta name="twitter:description" content="概述 如果把k8s当成资源管理系统, 那cache.Store无疑是最核心的接口, 用于缓存,存储资源 。 reflector 依赖于 cache.Store 的实现做存储，根据不同的实现有不"/>
 <meta name="application-name" content="Yuyu&#39;s Blog">
-<meta name="apple-mobile-web-app-title" content="Yuyu&#39;s Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="icon" href="/images/avataaars.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://yzxiu.github.io/2023-01-12-client-go-2-cache-store/" /><link rel="prev" href="https://yzxiu.github.io/2023-01-12-client-go-1/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<meta name="apple-mobile-web-app-title" content="Yuyu&#39;s Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="icon" href="/images/avataaars.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://yzxiu.github.io/2023-01-12-client-go-2-cache-store/" /><link rel="prev" href="https://yzxiu.github.io/2023-01-12-client-go-1/" /><link rel="next" href="https://yzxiu.github.io/2023-01-14-client-go-3-reflector/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"></noscript><link rel="preload" href="/lib/animate/animate.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="/lib/animate/animate.min.css"></noscript><script type="application/ld+json">
     {
@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2023-01-12-client-go-2-cache-store\/"
-        },"genre": "posts","keywords": "client-go, cache.Store","wordcount":  2229 ,
+        },"genre": "posts","keywords": "client-go, cache.Store","wordcount":  3943 ,
         "url": "https:\/\/yzxiu.github.io\/2023-01-12-client-go-2-cache-store\/","datePublished": "2023-01-12T21:39:15+08:00","dateModified": "2023-01-12T21:39:15+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,8 +102,8 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">client-go解析(2) - cache.Store</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-12">2023-01-12</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 2229 字&nbsp;
-                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 5 分钟&nbsp;</div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-12">2023-01-12</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 3943 字&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 8 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
                     <span>目录</span>
@@ -145,7 +145,7 @@
 </nav></div>
             </div><div class="content" id="content"><h2 id="概述">概述</h2>
 <p>如果把<code>k8s</code>当成<code>资源管理系统</code>, 那<code>cache.Store</code>无疑是<code>最核心</code>的接口, 用于<code>缓存</code>,<code>存储</code>资源 。</p>
-<p>reflector 依赖于 cache.Store 的实现做存储，根据不同的实现有不同的功能。所以，正确的理解cache.Store的不同实现，是理解 reflector 的关键。</p>
+<p>reflector  依赖于 cache.Store 的实现做存储，根据不同的实现有不同的功能。所以，正确的理解cache.Store的不同实现，是理解 reflector 的关键。</p>
 <p>接口定义如下：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -601,7 +601,7 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><p>关于FIFO, 需要注意的事,如果pop处理失败,会重新放入队列</p>
+</div><p>关于FIFO, 需要注意的是,如果pop处理失败,会重新放入队列</p>
 <p>FIFO在client-go/k8s中并不多见,重点是下面的 DeltaFIFO</p>
 <h4 id="deltafifo">DeltaFIFO</h4>
 <p>定义:</p>
@@ -643,8 +643,7 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><p>通过单元测试来了解特性</p>
-<h5 id="add--update--delete">Add() / Update() / Delete()</h5>
+</div><h5 id="add--update--delete">Add() / Update() / Delete()</h5>
 <p>add() / update() / delete() 可以视为生产者，生产类型为 Added / Updated / Deleted 的 <code>Delta</code> 数据</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -790,7 +789,7 @@
 </span></span><span class="line"><span class="cl"><span class="nx">f</span><span class="p">.</span><span class="nf">Delete</span><span class="p">(</span><span class="nf">mkFifoObj</span><span class="p">(</span><span class="s">&#34;foo&#34;</span><span class="p">,</span> <span class="mi">15</span><span class="p">))</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><p><figure><a class="lightgallery" href="https://raw.githubusercontent.com/yzxiu/images/blog/2023-01/20230113-165312.png" title="image-20230113165311586" data-thumbnail="https://raw.githubusercontent.com/yzxiu/images/blog/2023-01/20230113-165312.png" data-sub-html="<h2>DeltaFIFO</h2><p>image-20230113165311586</p>">
+</div><p><figure><a class="lightgallery" href="https://raw.githubusercontent.com/yzxiu/images/blog/2023-01/20230113-165312.png" title="image-20230113165311586" data-thumbnail="https://raw.githubusercontent.com/yzxiu/images/blog/2023-01/20230113-165312.png" data-sub-html="<h2>Add() / Update() / Delete() </h2><p>image-20230113165311586</p>">
         <img
             class="lazyload"
             src="/svg/loading.min.svg"
@@ -798,17 +797,478 @@
             data-srcset="https://raw.githubusercontent.com/yzxiu/images/blog/2023-01/20230113-165312.png, https://raw.githubusercontent.com/yzxiu/images/blog/2023-01/20230113-165312.png 1.5x, https://raw.githubusercontent.com/yzxiu/images/blog/2023-01/20230113-165312.png 2x"
             data-sizes="auto"
             alt="https://raw.githubusercontent.com/yzxiu/images/blog/2023-01/20230113-165312.png" />
-    </a><figcaption class="image-caption">DeltaFIFO</figcaption>
+    </a><figcaption class="image-caption">Add() / Update() / Delete() </figcaption>
     </figure></p>
 <h5 id="replace">Replace()</h5>
 <p>Replace() 可以视为生产者，生产类型为 Sync / Replaced 的 Delta 数据</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// Replace atomically does two things: (1) it adds the given objects
+</span></span></span><span class="line"><span class="cl"><span class="c1">// using the Sync or Replace DeltaType and then (2) it does some deletions.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 1, 为给定的 objects 添加一个 Sync / Replace 的Delta数据
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 2, 添加一些 Deleted 数据
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 
+</span></span></span><span class="line"><span class="cl"><span class="c1">// In particular: for every pre-existing key K that is not the key of
+</span></span></span><span class="line"><span class="cl"><span class="c1">// an object in `list` there is the effect of
+</span></span></span><span class="line"><span class="cl"><span class="c1">// `Delete(DeletedFinalStateUnknown{K, O})` where O is current object
+</span></span></span><span class="line"><span class="cl"><span class="c1">// of K. 
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 对于所有存在于 list 中，但不存在于 pre-existing 中的Key K，
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 添加一个 Deleted 的 DeletedFinalStateUnknown 数据。
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 对于 pre-existing 和评定，和 K 对应 Object，在下面有详细说明
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 
+</span></span></span><span class="line"><span class="cl"><span class="c1">// If `f.knownObjects == nil` then the pre-existing keys are
+</span></span></span><span class="line"><span class="cl"><span class="c1">// those in `f.items` and the current object of K is the `.Newest()`
+</span></span></span><span class="line"><span class="cl"><span class="c1">// of the Deltas associated with K.  Otherwise the pre-existing keys
+</span></span></span><span class="line"><span class="cl"><span class="c1">// are those listed by `f.knownObjects` and the current object of K is
+</span></span></span><span class="line"><span class="cl"><span class="c1">// what `f.knownObjects.GetByKey(K)` returns.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 1, 当 f.knownObjects == nil
+</span></span></span><span class="line"><span class="cl"><span class="c1">// pre-existing 为 f.items, 对应的 object 为 Newest()(即Deltas数组中的最后一个)
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 2, 当 f.knownObjects != nil,
+</span></span></span><span class="line"><span class="cl"><span class="c1">// pre-existing 为 f.knownObjects.ListKeys(), 对应的 object 为 f.knownObjects.GetByKey(k)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">f</span> <span class="o">*</span><span class="nx">DeltaFIFO</span><span class="p">)</span> <span class="nf">Replace</span><span class="p">(</span><span class="nx">list</span> <span class="p">[]</span><span class="kd">interface</span><span class="p">{},</span> <span class="nx">_</span> <span class="kt">string</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">f</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="nx">f</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">keys</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="nx">sets</span><span class="p">.</span><span class="nx">String</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">list</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// keep backwards compat for old clients
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">action</span> <span class="o">:=</span> <span class="nx">Sync</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">f</span><span class="p">.</span><span class="nx">emitDeltaTypeReplaced</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">action</span> <span class="p">=</span> <span class="nx">Replaced</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// Add Sync/Replaced action for each new item.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">item</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">list</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">key</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">f</span><span class="p">.</span><span class="nf">KeyOf</span><span class="p">(</span><span class="nx">item</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">KeyError</span><span class="p">{</span><span class="nx">item</span><span class="p">,</span> <span class="nx">err</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">keys</span><span class="p">.</span><span class="nf">Insert</span><span class="p">(</span><span class="nx">key</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">f</span><span class="p">.</span><span class="nf">queueActionLocked</span><span class="p">(</span><span class="nx">action</span><span class="p">,</span> <span class="nx">item</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;couldn&#39;t enqueue object: %v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">f</span><span class="p">.</span><span class="nx">knownObjects</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// Do deletion detection against our own list.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nx">queuedDeletions</span> <span class="o">:=</span> <span class="mi">0</span>
+</span></span><span class="line"><span class="cl">		<span class="k">for</span> <span class="nx">k</span><span class="p">,</span> <span class="nx">oldItem</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">f</span><span class="p">.</span><span class="nx">items</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">keys</span><span class="p">.</span><span class="nf">Has</span><span class="p">(</span><span class="nx">k</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">continue</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// Delete pre-existing items not in the new list.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// This could happen if watch deletion event was missed while
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// disconnected from apiserver.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="kd">var</span> <span class="nx">deletedObj</span> <span class="kd">interface</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">n</span> <span class="o">:=</span> <span class="nx">oldItem</span><span class="p">.</span><span class="nf">Newest</span><span class="p">();</span> <span class="nx">n</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">deletedObj</span> <span class="p">=</span> <span class="nx">n</span><span class="p">.</span><span class="nx">Object</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">queuedDeletions</span><span class="o">++</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">f</span><span class="p">.</span><span class="nf">queueActionLocked</span><span class="p">(</span><span class="nx">Deleted</span><span class="p">,</span> <span class="nx">DeletedFinalStateUnknown</span><span class="p">{</span><span class="nx">k</span><span class="p">,</span> <span class="nx">deletedObj</span><span class="p">});</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="p">!</span><span class="nx">f</span><span class="p">.</span><span class="nx">populated</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">f</span><span class="p">.</span><span class="nx">populated</span> <span class="p">=</span> <span class="kc">true</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// While there shouldn&#39;t be any queued deletions in the initial
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// population of the queue, it&#39;s better to be on the safe side.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="nx">f</span><span class="p">.</span><span class="nx">initialPopulationCount</span> <span class="p">=</span> <span class="nx">keys</span><span class="p">.</span><span class="nf">Len</span><span class="p">()</span> <span class="o">+</span> <span class="nx">queuedDeletions</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// Detect deletions not already in the queue.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">knownKeys</span> <span class="o">:=</span> <span class="nx">f</span><span class="p">.</span><span class="nx">knownObjects</span><span class="p">.</span><span class="nf">ListKeys</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">queuedDeletions</span> <span class="o">:=</span> <span class="mi">0</span>
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">k</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">knownKeys</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">keys</span><span class="p">.</span><span class="nf">Has</span><span class="p">(</span><span class="nx">k</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">continue</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="nx">deletedObj</span><span class="p">,</span> <span class="nx">exists</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">f</span><span class="p">.</span><span class="nx">knownObjects</span><span class="p">.</span><span class="nf">GetByKey</span><span class="p">(</span><span class="nx">k</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">deletedObj</span> <span class="p">=</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">klog</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;Unexpected error %v during lookup of key %v, placing DeleteFinalStateUnknown marker without object&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">,</span> <span class="nx">k</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">!</span><span class="nx">exists</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">deletedObj</span> <span class="p">=</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">klog</span><span class="p">.</span><span class="nf">Infof</span><span class="p">(</span><span class="s">&#34;Key %v does not exist in known objects store, placing DeleteFinalStateUnknown marker without object&#34;</span><span class="p">,</span> <span class="nx">k</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">queuedDeletions</span><span class="o">++</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">f</span><span class="p">.</span><span class="nf">queueActionLocked</span><span class="p">(</span><span class="nx">Deleted</span><span class="p">,</span> <span class="nx">DeletedFinalStateUnknown</span><span class="p">{</span><span class="nx">k</span><span class="p">,</span> <span class="nx">deletedObj</span><span class="p">});</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="p">!</span><span class="nx">f</span><span class="p">.</span><span class="nx">populated</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">f</span><span class="p">.</span><span class="nx">populated</span> <span class="p">=</span> <span class="kc">true</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">f</span><span class="p">.</span><span class="nx">initialPopulationCount</span> <span class="p">=</span> <span class="nx">keys</span><span class="p">.</span><span class="nf">Len</span><span class="p">()</span> <span class="o">+</span> <span class="nx">queuedDeletions</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>Replace() 的逻辑在注释中已经说的非常详细。</p>
 <h5 id="resync">Resync()</h5>
 <p>Resync() 可以视为生产者，生产类型为 Sync 的 Delta 数据</p>
-<h5 id="pop">Pop()</h5>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// Resync adds, with a Sync type of Delta, every object listed by
+</span></span></span><span class="line"><span class="cl"><span class="c1">// `f.knownObjects` whose key is not already queued for processing.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// If `f.knownObjects` is `nil` then Resync does nothing.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">f</span> <span class="o">*</span><span class="nx">DeltaFIFO</span><span class="p">)</span> <span class="nf">Resync</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">f</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="k">defer</span> <span class="nx">f</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">f</span><span class="p">.</span><span class="nx">knownObjects</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">keys</span> <span class="o">:=</span> <span class="nx">f</span><span class="p">.</span><span class="nx">knownObjects</span><span class="p">.</span><span class="nf">ListKeys</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">k</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">keys</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">f</span><span class="p">.</span><span class="nf">syncKeyLocked</span><span class="p">(</span><span class="nx">k</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">f</span> <span class="o">*</span><span class="nx">DeltaFIFO</span><span class="p">)</span> <span class="nf">syncKeyLocked</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">obj</span><span class="p">,</span> <span class="nx">exists</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">f</span><span class="p">.</span><span class="nx">knownObjects</span><span class="p">.</span><span class="nf">GetByKey</span><span class="p">(</span><span class="nx">key</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">klog</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;Unexpected error %v during lookup of key %v, unable to queue object for sync&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">,</span> <span class="nx">key</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">!</span><span class="nx">exists</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">klog</span><span class="p">.</span><span class="nf">Infof</span><span class="p">(</span><span class="s">&#34;Key %v does not exist in known objects store, unable to queue object for sync&#34;</span><span class="p">,</span> <span class="nx">key</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// If we are doing Resync() and there is already an event queued for that object,
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// we ignore the Resync for it. This is to avoid the race, in which the resync
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// comes with the previous value of object (since queueing an event for the object
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// doesn&#39;t trigger changing the underlying store &lt;knownObjects&gt;.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// 对于 f.items 中已经存在的 Object，不添加 Sync Delta数据。
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">id</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">f</span><span class="p">.</span><span class="nf">KeyOf</span><span class="p">(</span><span class="nx">obj</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">KeyError</span><span class="p">{</span><span class="nx">obj</span><span class="p">,</span> <span class="nx">err</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">f</span><span class="p">.</span><span class="nx">items</span><span class="p">[</span><span class="nx">id</span><span class="p">])</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">f</span><span class="p">.</span><span class="nf">queueActionLocked</span><span class="p">(</span><span class="nx">Sync</span><span class="p">,</span> <span class="nx">obj</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;couldn&#39;t queue object: %v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h5 id="pop">Pop()</h5>
 <p>Pop() 可以视为消费者</p>
-<h3 id="组合">组合</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// Pop blocks until the queue has some items, and then returns one.  If
+</span></span></span><span class="line"><span class="cl"><span class="c1">// multiple items are ready, they are returned in the order in which they were
+</span></span></span><span class="line"><span class="cl"><span class="c1">// added/updated. The item is removed from the queue (and the store) before it
+</span></span></span><span class="line"><span class="cl"><span class="c1">// is returned, so if you don&#39;t successfully process it, you need to add it back
+</span></span></span><span class="line"><span class="cl"><span class="c1">// with AddIfNotPresent().
+</span></span></span><span class="line"><span class="cl"><span class="c1">// process function is called under lock, so it is safe to update data structures
+</span></span></span><span class="line"><span class="cl"><span class="c1">// in it that need to be in sync with the queue (e.g. knownKeys). The PopProcessFunc
+</span></span></span><span class="line"><span class="cl"><span class="c1">// may return an instance of ErrRequeue with a nested error to indicate the current
+</span></span></span><span class="line"><span class="cl"><span class="c1">// item should be requeued (equivalent to calling AddIfNotPresent under the lock).
+</span></span></span><span class="line"><span class="cl"><span class="c1">// process should avoid expensive I/O operation so that other queue operations, i.e.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// Add() and Get(), won&#39;t be blocked for too long.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// process 函数是在锁定的情况下调用的，因此可以安全地更新其中需要与队列同步的数据结构（例如 knownKeys）。 PopProcessFunc 可能会返回一个带有嵌套错误的 ErrRequeue 实例，以指示当前项目应该重新排队（相当于在锁下调用 AddIfNotPresent）。进程应避免昂贵的 IO 操作，以便其他队列操作，即 Add() 和 Get() 不会被阻塞太久。
+</span></span></span><span class="line"><span class="cl"><span class="c1">//
+</span></span></span><span class="line"><span class="cl"><span class="c1">// Pop returns a &#39;Deltas&#39;, which has a complete list of all the things
+</span></span></span><span class="line"><span class="cl"><span class="c1">// that happened to the object (deltas) while it was sitting in the queue.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// Pop 返回一个“Deltas”，其中包含对象（deltas）在队列中时发生的所有事情的完整列表。
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">f</span> <span class="o">*</span><span class="nx">DeltaFIFO</span><span class="p">)</span> <span class="nf">Pop</span><span class="p">(</span><span class="nx">process</span> <span class="nx">PopProcessFunc</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">f</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="k">defer</span> <span class="nx">f</span><span class="p">.</span><span class="nx">lock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">for</span> <span class="nb">len</span><span class="p">(</span><span class="nx">f</span><span class="p">.</span><span class="nx">queue</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="c1">// When the queue is empty, invocation of Pop() is blocked until new item is enqueued.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>         <span class="c1">// When Close() is called, the f.closed is set and the condition is broadcasted.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>         <span class="c1">// Which causes this loop to continue and return from the Pop().
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>         <span class="k">if</span> <span class="nx">f</span><span class="p">.</span><span class="nx">closed</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">ErrFIFOClosed</span>
+</span></span><span class="line"><span class="cl">         <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">         <span class="nx">f</span><span class="p">.</span><span class="nx">cond</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">isInInitialList</span> <span class="o">:=</span> <span class="p">!</span><span class="nx">f</span><span class="p">.</span><span class="nf">hasSynced_locked</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">id</span> <span class="o">:=</span> <span class="nx">f</span><span class="p">.</span><span class="nx">queue</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">f</span><span class="p">.</span><span class="nx">queue</span> <span class="p">=</span> <span class="nx">f</span><span class="p">.</span><span class="nx">queue</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">depth</span> <span class="o">:=</span> <span class="nb">len</span><span class="p">(</span><span class="nx">f</span><span class="p">.</span><span class="nx">queue</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">f</span><span class="p">.</span><span class="nx">initialPopulationCount</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">f</span><span class="p">.</span><span class="nx">initialPopulationCount</span><span class="o">--</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">item</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">f</span><span class="p">.</span><span class="nx">items</span><span class="p">[</span><span class="nx">id</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="c1">// This should never happen
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>         <span class="nx">klog</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;Inconceivable! %q was in f.queue but not f.items; ignoring.&#34;</span><span class="p">,</span> <span class="nx">id</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="k">continue</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="nb">delete</span><span class="p">(</span><span class="nx">f</span><span class="p">.</span><span class="nx">items</span><span class="p">,</span> <span class="nx">id</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">// Only log traces if the queue depth is greater than 10 and it takes more than
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// 100 milliseconds to process one item from the queue.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// Queue depth never goes high because processing an item is locking the queue,
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// and new items can&#39;t be added until processing finish.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// https://github.com/kubernetes/kubernetes/issues/103789
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="k">if</span> <span class="nx">depth</span> <span class="p">&gt;</span> <span class="mi">10</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">trace</span> <span class="o">:=</span> <span class="nx">utiltrace</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;DeltaFIFO Pop Process&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">utiltrace</span><span class="p">.</span><span class="nx">Field</span><span class="p">{</span><span class="nx">Key</span><span class="p">:</span> <span class="s">&#34;ID&#34;</span><span class="p">,</span> <span class="nx">Value</span><span class="p">:</span> <span class="nx">id</span><span class="p">},</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">utiltrace</span><span class="p">.</span><span class="nx">Field</span><span class="p">{</span><span class="nx">Key</span><span class="p">:</span> <span class="s">&#34;Depth&#34;</span><span class="p">,</span> <span class="nx">Value</span><span class="p">:</span> <span class="nx">depth</span><span class="p">},</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">utiltrace</span><span class="p">.</span><span class="nx">Field</span><span class="p">{</span><span class="nx">Key</span><span class="p">:</span> <span class="s">&#34;Reason&#34;</span><span class="p">,</span> <span class="nx">Value</span><span class="p">:</span> <span class="s">&#34;slow event handlers blocking the queue&#34;</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">         <span class="k">defer</span> <span class="nx">trace</span><span class="p">.</span><span class="nf">LogIfLong</span><span class="p">(</span><span class="mi">100</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">err</span> <span class="o">:=</span> <span class="nf">process</span><span class="p">(</span><span class="nx">item</span><span class="p">,</span> <span class="nx">isInInitialList</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">e</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">err</span><span class="p">.(</span><span class="nx">ErrRequeue</span><span class="p">);</span> <span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">f</span><span class="p">.</span><span class="nf">addIfNotPresent</span><span class="p">(</span><span class="nx">id</span><span class="p">,</span> <span class="nx">item</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">err</span> <span class="p">=</span> <span class="nx">e</span><span class="p">.</span><span class="nx">Err</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">// Don&#39;t need to copyDeltas here, because we&#39;re transferring
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// ownership to the caller.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="k">return</span> <span class="nx">item</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="组合">组合</h3>
 <h4 id="undeltastore">UndeltaStore</h4>
+<p>kubelet 中，Reflector 使用 UndeltaStore 作为 store，向 apiserver 中获取数据</p>
 <h4 id="watchcache">watchCache</h4>
+<p>apiserver 中，Reflector 使用 watchCache 作为 store，向 etcd 中获取数据</p>
 </div><div class="post-footer" id="post-footer">
     <div class="post-info">
         <div class="post-info-line">
@@ -832,7 +1292,8 @@
         </section>
     </div>
 
-    <div class="post-nav"><a href="/2023-01-12-client-go-1/" class="prev" rel="prev" title="client-go解析(1)"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>client-go解析(1)</a></div>
+    <div class="post-nav"><a href="/2023-01-12-client-go-1/" class="prev" rel="prev" title="client-go解析(1)"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>client-go解析(1)</a>
+            <a href="/2023-01-14-client-go-3-reflector/" class="next" rel="next" title="client-go解析(3) - cache.Reflector">client-go解析(3) - cache.Reflector<i class="fas fa-angle-right fa-fw" aria-hidden="true"></i></a></div>
 </div>
 <div id="comments"><div id="giscus" class="comment"></div><noscript>
                 Please enable JavaScript to view the comments powered by <a href="https://giscus.app">Giscus</a>.
