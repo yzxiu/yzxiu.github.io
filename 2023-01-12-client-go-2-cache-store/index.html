@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2023-01-12-client-go-2-cache-store\/"
-        },"genre": "posts","keywords": "client-go, cache.Store","wordcount":  3928 ,
+        },"genre": "posts","keywords": "client-go, cache.Store","wordcount":  3933 ,
         "url": "https:\/\/yzxiu.github.io\/2023-01-12-client-go-2-cache-store\/","datePublished": "2023-01-12T21:39:15+08:00","dateModified": "2023-01-12T21:39:15+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,7 +102,7 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">client-go解析(2) - cache.Store</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-12">2023-01-12</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 3928 字&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-12">2023-01-12</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 3933 字&nbsp;
                 <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 8 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
@@ -1193,6 +1193,9 @@
 </span><span class="lnt">64
 </span><span class="lnt">65
 </span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
 </span></code></pre></td>
 <td class="lntd">
 <pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// Pop blocks until the queue has some items, and then returns one.  If
@@ -1206,7 +1209,10 @@
 </span></span></span><span class="line"><span class="cl"><span class="c1">// item should be requeued (equivalent to calling AddIfNotPresent under the lock).
 </span></span></span><span class="line"><span class="cl"><span class="c1">// process should avoid expensive I/O operation so that other queue operations, i.e.
 </span></span></span><span class="line"><span class="cl"><span class="c1">// Add() and Get(), won&#39;t be blocked for too long.
-</span></span></span><span class="line"><span class="cl"><span class="c1">// process 函数是在锁定的情况下调用的，因此可以安全地更新其中需要与队列同步的数据结构（例如 knownKeys）。 PopProcessFunc 可能会返回一个带有嵌套错误的 ErrRequeue 实例，以指示当前项目应该重新排队（相当于在锁下调用 AddIfNotPresent）。进程应避免昂贵的 IO 操作，以便其他队列操作，即 Add() 和 Get() 不会被阻塞太久。
+</span></span></span><span class="line"><span class="cl"><span class="c1">// process 函数是在锁定的情况下调用的，因此可以安全地更新其中需要与队列同步的数据结构（例如 knownKeys）。 
+</span></span></span><span class="line"><span class="cl"><span class="c1">// PopProcessFunc 可能会返回一个带有嵌套错误的 ErrRequeue 实例，
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 以指示当前项目应该重新排队（相当于在锁下调用 AddIfNotPresent）。
+</span></span></span><span class="line"><span class="cl"><span class="c1">// process 应避免昂贵的 IO 操作，以便其他队列操作，即 Add() 和 Get() 不会被阻塞太久。
 </span></span></span><span class="line"><span class="cl"><span class="c1">//
 </span></span></span><span class="line"><span class="cl"><span class="c1">// Pop returns a &#39;Deltas&#39;, which has a complete list of all the things
 </span></span></span><span class="line"><span class="cl"><span class="c1">// that happened to the object (deltas) while it was sitting in the queue.

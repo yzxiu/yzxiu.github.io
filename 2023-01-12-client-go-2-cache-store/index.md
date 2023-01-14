@@ -580,7 +580,10 @@ Pop() 可以视为消费者
 // item should be requeued (equivalent to calling AddIfNotPresent under the lock).
 // process should avoid expensive I/O operation so that other queue operations, i.e.
 // Add() and Get(), won't be blocked for too long.
-// process 函数是在锁定的情况下调用的，因此可以安全地更新其中需要与队列同步的数据结构（例如 knownKeys）。 PopProcessFunc 可能会返回一个带有嵌套错误的 ErrRequeue 实例，以指示当前项目应该重新排队（相当于在锁下调用 AddIfNotPresent）。进程应避免昂贵的 IO 操作，以便其他队列操作，即 Add() 和 Get() 不会被阻塞太久。
+// process 函数是在锁定的情况下调用的，因此可以安全地更新其中需要与队列同步的数据结构（例如 knownKeys）。 
+// PopProcessFunc 可能会返回一个带有嵌套错误的 ErrRequeue 实例，
+// 以指示当前项目应该重新排队（相当于在锁下调用 AddIfNotPresent）。
+// process 应避免昂贵的 IO 操作，以便其他队列操作，即 Add() 和 Get() 不会被阻塞太久。
 //
 // Pop returns a 'Deltas', which has a complete list of all the things
 // that happened to the object (deltas) while it was sitting in the queue.
