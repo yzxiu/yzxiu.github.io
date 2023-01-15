@@ -189,6 +189,38 @@ func testStoreIndexFunc(obj interface{}) ([]string, error) {
 
 该函数定义了一个索引 "by_val", 具体是使用对象的 val 作为索引值.
 
+##### Add()
+
+```go
+// Add inserts an item into the cache.
+func (c *cache) Add(obj interface{}) error {
+   key, err := c.keyFunc(obj)
+   if err != nil {
+      return KeyError{obj, err}
+   }
+   c.cacheStorage.Add(key, obj)
+   return nil
+}
+```
+
+```go
+func (c *threadSafeMap) Add(key string, obj interface{}) {
+   c.Update(key, obj)
+}
+```
+
+```go
+func (c *threadSafeMap) Update(key string, obj interface{}) {
+   c.lock.Lock()
+   defer c.lock.Unlock()
+   oldObject := c.items[key]
+   c.items[key] = obj
+   c.index.updateIndices(oldObject, obj, key)
+}
+```
+
+
+
 添加元素后, indexer内容如下:
 
 ```go
@@ -206,7 +238,44 @@ indexer.Add(mkObj("g", "h"))
 
 `indices` 存储了具体的索引数据
 
+##### update()
 
+```go
+// Update sets an item in the cache to its updated state.
+func (c *cache) Update(obj interface{}) error {
+   key, err := c.keyFunc(obj)
+   if err != nil {
+      return KeyError{obj, err}
+   }
+   c.cacheStorage.Update(key, obj)
+   return nil
+}
+```
+
+##### delete()
+
+```go
+// Delete removes an item from the cache.
+func (c *cache) Delete(obj interface{}) error {
+   key, err := c.keyFunc(obj)
+   if err != nil {
+      return KeyError{obj, err}
+   }
+   c.cacheStorage.Delete(key)
+   return nil
+}
+```
+
+```go
+func (c *threadSafeMap) Delete(key string) {
+   c.lock.Lock()
+   defer c.lock.Unlock()
+   if obj, exists := c.items[key]; exists {
+      c.index.updateIndices(obj, nil, key)
+      delete(c.items, key)
+   }
+}
+```
 
 ### 队列
 

@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2023-01-14-client-go-3-reflector\/"
-        },"genre": "posts","keywords": "client-go, cache.Reflector","wordcount":  144 ,
+        },"genre": "posts","keywords": "client-go, cache.Reflector","wordcount":  635 ,
         "url": "https:\/\/yzxiu.github.io\/2023-01-14-client-go-3-reflector\/","datePublished": "2023-01-14T23:45:36+08:00","dateModified": "2023-01-14T23:45:36+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,8 +102,8 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">client-go解析(3) - cache.Reflector</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-14">2023-01-14</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 144 字&nbsp;
-                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 1 分钟&nbsp;</div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-14">2023-01-14</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 635 字&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 2 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
                     <span>目录</span>
@@ -112,6 +112,7 @@
                 <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
   <ul>
     <li><a href="#概述">概述</a></li>
+    <li><a href="#定义">定义</a></li>
   </ul>
 </nav></div>
             </div><div class="content" id="content"><h2 id="概述">概述</h2>
@@ -119,7 +120,128 @@
 <p>在服务端(apiserver) ，使用 reflector 向 etcd 获取资源数据。</p>
 <p>在连接端(informer、kubelet)，使用 reflector 向 apiserver 获取资源数据。</p>
 <p>k8s的整个逻辑流程中，所有这些获取资源数据相关的操作，都封装在 reflector 里面，可以看出 reflector 对于理解 k8s 的重要性。</p>
-</div><div class="post-footer" id="post-footer">
+<h2 id="定义">定义</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// Reflector watches a specified resource and causes all changes to be reflected in the given store.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">Reflector</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// name identifies this reflector. By default it will be a file:line if possible.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">name</span> <span class="kt">string</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// The name of the type we expect to place in the store. The name
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// will be the stringification of expectedGVK if provided, and the
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// stringification of expectedType otherwise. It is for display
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// only, and should not be used for parsing or comparison.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">typeDescription</span> <span class="kt">string</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// An example object of the type we expect to place in the store.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// Only the type needs to be right, except that when that is
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// `unstructured.Unstructured` the object&#39;s `&#34;apiVersion&#34;` and
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// `&#34;kind&#34;` must also be right.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">expectedType</span> <span class="nx">reflect</span><span class="p">.</span><span class="nx">Type</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// The GVK of the object we expect to place in the store if unstructured.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">expectedGVK</span> <span class="o">*</span><span class="nx">schema</span><span class="p">.</span><span class="nx">GroupVersionKind</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// The destination to sync up with the watch source
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">store</span> <span class="nx">Store</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// listerWatcher is used to perform lists and watches.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">listerWatcher</span> <span class="nx">ListerWatcher</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// backoff manages backoff of ListWatch
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">backoffManager</span> <span class="nx">wait</span><span class="p">.</span><span class="nx">BackoffManager</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// initConnBackoffManager manages backoff the initial connection with the Watch call of ListAndWatch.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">initConnBackoffManager</span> <span class="nx">wait</span><span class="p">.</span><span class="nx">BackoffManager</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// MaxInternalErrorRetryDuration defines how long we should retry internal errors returned by watch.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">MaxInternalErrorRetryDuration</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">resyncPeriod</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// ShouldResync is invoked periodically and whenever it returns `true` the Store&#39;s Resync operation is invoked
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">ShouldResync</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">bool</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// clock allows tests to manipulate time
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">clock</span> <span class="nx">clock</span><span class="p">.</span><span class="nx">Clock</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// paginatedResult defines whether pagination should be forced for list calls.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// It is set based on the result of the initial list call.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">paginatedResult</span> <span class="kt">bool</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// lastSyncResourceVersion is the resource version token last
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// observed when doing a sync with the underlying store
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// it is thread safe, but not synchronized with the underlying store
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">lastSyncResourceVersion</span> <span class="kt">string</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// isLastSyncResourceVersionUnavailable is true if the previous list or watch request with
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// lastSyncResourceVersion failed with an &#34;expired&#34; or &#34;too large resource version&#34; error.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">isLastSyncResourceVersionUnavailable</span> <span class="kt">bool</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// lastSyncResourceVersionMutex guards read/write access to lastSyncResourceVersion
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">lastSyncResourceVersionMutex</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">RWMutex</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// WatchListPageSize is the requested chunk size of initial and resync watch lists.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// If unset, for consistent reads (RV=&#34;&#34;) or reads that opt-into arbitrarily old data
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// (RV=&#34;0&#34;) it will default to pager.PageSize, for the rest (RV != &#34;&#34; &amp;&amp; RV != &#34;0&#34;)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// it will turn off pagination to allow serving them from watch cache.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// NOTE: It should be used carefully as paginated lists are always served directly from
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// etcd, which is significantly less efficient and may lead to serious performance and
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// scalability problems.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">WatchListPageSize</span> <span class="kt">int64</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// Called whenever the ListAndWatch drops the connection with an error.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">watchErrorHandler</span> <span class="nx">WatchErrorHandler</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div></div><div class="post-footer" id="post-footer">
     <div class="post-info">
         <div class="post-info-line">
             <div class="post-info-mod">
