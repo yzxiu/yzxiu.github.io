@@ -1,6 +1,12 @@
 # client-go解析(4) - cache.Controller
 
 
+## 概述
+
+本文中提到的 reflector, 特指 informer 中的 reflector, 即传入的 cache.Store 为 DeltaFIFO
+
+
+
 ## Controller
 
 ```go

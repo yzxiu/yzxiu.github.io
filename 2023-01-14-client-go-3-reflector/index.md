@@ -387,10 +387,16 @@ loop:
 Relector 在 Run 起来之后, 通过传入的 lw, 先获取指定资源, 然后存入对应的 store 中.
 
 {{< admonition info >}}
-具体到 `informer` 中的reflector, list 会产生一系列 `Sync/Replace` 的 `Delta` 数据, 然后通过watch, 根据 event.Type, 产生  `Added / Updated / Deleted` 的 `Delta` 数据. 
+具体到 `informer` 中的reflector:
+
+list 会产生一系列 `Sync/Replace` 的 `Delta` 数据, 然后通过watch, 根据 event.Type, 产生  `Added / Updated / Deleted` 的 `Delta` 数据. 
 
 reflector `Run()` 起来之后,就作为`生产者`产生 `Delta` 数据, 至于怎么`消费(Pop)`这些 `Delta` 数据, 可以关注cache.controller 怎么调用Pop()
 {{< /admonition >}}
+
+
+
+
 
 
 

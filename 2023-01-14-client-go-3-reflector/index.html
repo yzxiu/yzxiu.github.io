@@ -810,7 +810,8 @@
             <i class="icon fas fa-info-circle fa-fw" aria-hidden="true"></i>信息<i class="details-icon fas fa-angle-right fa-fw" aria-hidden="true"></i>
         </div>
         <div class="details-content">
-            <div class="admonition-content"><p>具体到 <code>informer</code> 中的reflector, list 会产生一系列 <code>Sync/Replace</code> 的 <code>Delta</code> 数据, 然后通过watch, 根据 event.Type, 产生  <code>Added / Updated / Deleted</code> 的 <code>Delta</code> 数据.</p>
+            <div class="admonition-content"><p>具体到 <code>informer</code> 中的reflector:</p>
+<p>list 会产生一系列 <code>Sync/Replace</code> 的 <code>Delta</code> 数据, 然后通过watch, 根据 event.Type, 产生  <code>Added / Updated / Deleted</code> 的 <code>Delta</code> 数据.</p>
 <p>reflector <code>Run()</code> 起来之后,就作为<code>生产者</code>产生 <code>Delta</code> 数据, 至于怎么<code>消费(Pop)</code>这些 <code>Delta</code> 数据, 可以关注cache.controller 怎么调用Pop()</p>
 </div>
         </div>
