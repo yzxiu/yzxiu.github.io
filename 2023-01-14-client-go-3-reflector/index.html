@@ -17,7 +17,7 @@
 <meta name="twitter:title" content="client-go解析(3) - cache.Reflector"/>
 <meta name="twitter:description" content="概述 cache.Reflector 可以说是k8s最重要的组件，它串联起k8s的整个流程。 在服务端(apiserver) ，使用 reflector 向 etcd 获取资源数据。 在连接端(informe"/>
 <meta name="application-name" content="Yuyu&#39;s Blog">
-<meta name="apple-mobile-web-app-title" content="Yuyu&#39;s Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="icon" href="/images/avataaars.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://yzxiu.github.io/2023-01-14-client-go-3-reflector/" /><link rel="prev" href="https://yzxiu.github.io/2023-01-12-client-go-2-cache-store/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<meta name="apple-mobile-web-app-title" content="Yuyu&#39;s Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="icon" href="/images/avataaars.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://yzxiu.github.io/2023-01-14-client-go-3-reflector/" /><link rel="prev" href="https://yzxiu.github.io/2023-01-12-client-go-2-cache-store/" /><link rel="next" href="https://yzxiu.github.io/2023-01-15-client-go-4-cache-controller/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"></noscript><link rel="preload" href="/lib/animate/animate.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="/lib/animate/animate.min.css"></noscript><script type="application/ld+json">
     {
@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2023-01-14-client-go-3-reflector\/"
-        },"genre": "posts","keywords": "client-go, cache.Reflector","wordcount":  635 ,
+        },"genre": "posts","keywords": "client-go, cache.Reflector","wordcount":  643 ,
         "url": "https:\/\/yzxiu.github.io\/2023-01-14-client-go-3-reflector\/","datePublished": "2023-01-14T23:45:36+08:00","dateModified": "2023-01-14T23:45:36+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,7 +102,7 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">client-go解析(3) - cache.Reflector</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-14">2023-01-14</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 635 字&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-14">2023-01-14</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 643 字&nbsp;
                 <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 2 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
@@ -117,8 +117,8 @@
 </nav></div>
             </div><div class="content" id="content"><h2 id="概述">概述</h2>
 <p><code>cache.Reflector</code> 可以说是k8s最重要的组件，它串联起k8s的整个流程。</p>
-<p>在服务端(apiserver) ，使用 reflector 向 etcd 获取资源数据。</p>
-<p>在连接端(informer、kubelet)，使用 reflector 向 apiserver 获取资源数据。</p>
+<p>在服务端(<code>apiserver</code>) ，使用 reflector 向 etcd 获取资源数据。</p>
+<p>在连接端(<code>informer</code>、<code>kubelet</code> &hellip;)，使用 reflector 向 apiserver 获取资源数据。</p>
 <p>k8s的整个逻辑流程中，所有这些获取资源数据相关的操作，都封装在 reflector 里面，可以看出 reflector 对于理解 k8s 的重要性。</p>
 <h2 id="定义">定义</h2>
 <div class="highlight"><div class="chroma">
@@ -264,7 +264,8 @@
         </section>
     </div>
 
-    <div class="post-nav"><a href="/2023-01-12-client-go-2-cache-store/" class="prev" rel="prev" title="client-go解析(2) - cache.Store"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>client-go解析(2) - cache.Store</a></div>
+    <div class="post-nav"><a href="/2023-01-12-client-go-2-cache-store/" class="prev" rel="prev" title="client-go解析(2) - cache.Store"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>client-go解析(2) - cache.Store</a>
+            <a href="/2023-01-15-client-go-4-cache-controller/" class="next" rel="next" title="client-go解析(4) - cache.Controller">client-go解析(4) - cache.Controller<i class="fas fa-angle-right fa-fw" aria-hidden="true"></i></a></div>
 </div>
 <div id="comments"><div id="giscus" class="comment"></div><noscript>
                 Please enable JavaScript to view the comments powered by <a href="https://giscus.app">Giscus</a>.

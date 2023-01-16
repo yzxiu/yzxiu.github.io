@@ -726,4 +726,3 @@ kubelet 中，Reflector 使用 UndeltaStore 作为 store，向 apiserver 中获�
 #### watchCache
 
 apiserver 中，Reflector 使用 watchCache 作为 store，向 etcd 中获取数据
-

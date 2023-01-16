@@ -3,9 +3,17 @@
         <title>Yuyu&#39;s Blog</title>
         <link>https://yzxiu.github.io/</link>
         <description>Yuyu&#39;s Blog</description>
-        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Sat, 14 Jan 2023 23:45:36 &#43;0800</lastBuildDate>
+        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Sun, 15 Jan 2023 18:35:14 &#43;0800</lastBuildDate>
             <atom:link href="https://yzxiu.github.io/index.xml" rel="self" type="application/rss+xml" />
         <item>
+    <title>client-go解析(4) - cache.Controller</title>
+    <link>https://yzxiu.github.io/2023-01-15-client-go-4-cache-controller/</link>
+    <pubDate>Sun, 15 Jan 2023 18:35:14 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2023-01-15-client-go-4-cache-controller/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
     <title>client-go解析(3) - cache.Reflector</title>
     <link>https://yzxiu.github.io/2023-01-14-client-go-3-reflector/</link>
     <pubDate>Sat, 14 Jan 2023 23:45:36 &#43;0800</pubDate>
@@ -76,14 +84,6 @@
     <author>Yuyu</author>
     <guid>https://yzxiu.github.io/2022-11-14-containerd-7-log/</guid>
     <description><![CDATA[概述 容器日志处理，其实就是处理runc程序的标准输出，标准错误。 这里我们分析 containerd-shim-runc-v2 与 runc 查看 shim 调用runc的代码 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17]]></description>
-</item>
-<item>
-    <title>Containerd解析(6) - restart</title>
-    <link>https://yzxiu.github.io/2022-11-13-containerd-6-restart/</link>
-    <pubDate>Sun, 13 Nov 2022 11:55:58 &#43;0800</pubDate>
-    <author>Yuyu</author>
-    <guid>https://yzxiu.github.io/2022-11-13-containerd-6-restart/</guid>
-    <description><![CDATA[概述 在runc的start命令代码如下： 1 2 3 4 5 6 7 8 9 10 11 switch status { // 对于一个已经处于Created状态的容器，执行Exec case libcontainer.Created: return container.Exec() case libcontainer.Stopped: return errors.New(&#34;cannot]]></description>
 </item>
 </channel>
 </rss>
