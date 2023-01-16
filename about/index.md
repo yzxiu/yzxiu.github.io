@@ -20,6 +20,7 @@
     - [#1636](https://github.com/containerd/nerdctl/pull/1636)
     - [#1642](https://github.com/containerd/nerdctl/pull/1642)
     - [#1775](https://github.com/containerd/nerdctl/pull/1775)
+    - [#1851](https://github.com/containerd/nerdctl/pull/1851)
 
 <br>
 
