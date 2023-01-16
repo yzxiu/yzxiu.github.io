@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2023-01-15-client-go-4-cache-controller\/"
-        },"genre": "posts","keywords": "client-go, cache.Reflector, cache.Controller","wordcount":  924 ,
+        },"genre": "posts","keywords": "client-go, cache.Reflector, cache.Controller","wordcount":  862 ,
         "url": "https:\/\/yzxiu.github.io\/2023-01-15-client-go-4-cache-controller\/","datePublished": "2023-01-15T18:35:14+08:00","dateModified": "2023-01-15T18:35:14+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,7 +102,7 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">client-go解析(4) - cache.Controller</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-15">2023-01-15</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 924 字&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-15">2023-01-15</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 862 字&nbsp;
                 <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 2 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
@@ -463,8 +463,7 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><p>processDeltas() 这个方法非常重要，它是 消费 Deltas 数据的统一方法。</p>
-<p>无论是什么类型的 Delta ，都是先更新 clientState(也就是DeltaFIFO中的<code>knownObjects</code>). 即我们可以认为，knownObjects 等同于apiserver中的资源数据。然后再交给 <code>handler</code> 去处理。</p>
+</div><p>无论是什么类型的 Delta ，都是先更新 clientState(也就是DeltaFIFO中的<code>knownObjects</code>). 然后再交给 <code>handler</code> 去处理。</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1

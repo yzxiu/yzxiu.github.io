@@ -187,9 +187,7 @@ func processDeltas(
 }
 ```
 
-processDeltas() 这个方法非常重要，它是 消费 Deltas 数据的统一方法。
-
-无论是什么类型的 Delta ，都是先更新 clientState(也就是DeltaFIFO中的`knownObjects`). 即我们可以认为，knownObjects 等同于apiserver中的资源数据。然后再交给 `handler` 去处理。
+无论是什么类型的 Delta ，都是先更新 clientState(也就是DeltaFIFO中的`knownObjects`). 然后再交给 `handler` 去处理。
 
 ```go
 type ResourceEventHandler interface {
