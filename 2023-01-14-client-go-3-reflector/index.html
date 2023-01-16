@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2023-01-14-client-go-3-reflector\/"
-        },"genre": "posts","keywords": "client-go, cache.Reflector","wordcount":  2191 ,
+        },"genre": "posts","keywords": "client-go, cache.Reflector","wordcount":  2190 ,
         "url": "https:\/\/yzxiu.github.io\/2023-01-14-client-go-3-reflector\/","datePublished": "2023-01-14T23:45:36+08:00","dateModified": "2023-01-14T23:45:36+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,7 +102,7 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">client-go解析(3) - cache.Reflector</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-14">2023-01-14</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 2191 字&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-14">2023-01-14</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 2190 字&nbsp;
                 <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 5 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
@@ -811,7 +811,7 @@
         </div>
         <div class="details-content">
             <div class="admonition-content"><p>具体到 <code>informer</code> 中的reflector:</p>
-<p>list 会产生一系列 <code>Sync/Replace</code> 的 <code>Delta</code> 数据, 然后通过watch, 根据 event.Type, 产生  <code>Added / Updated / Deleted</code> 的 <code>Delta</code> 数据.</p>
+<p>list 会产生一些 <code>Sync/Replace</code> 的 <code>Delta</code> 数据, 然后通过watch, 根据 event.Type, 产生  <code>Added / Updated / Deleted</code> 的 <code>Delta</code> 数据.</p>
 <p>reflector <code>Run()</code> 起来之后,就作为<code>生产者</code>产生 <code>Delta</code> 数据, 至于怎么<code>消费(Pop)</code>这些 <code>Delta</code> 数据, 可以关注cache.controller 怎么调用Pop()</p>
 </div>
         </div>

@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="robots" content="noodp" />
         <title>client-go解析(4) - cache.Controller - Yuyu&#39;s Blog</title><meta name="Description" content=""><meta property="og:title" content="client-go解析(4) - cache.Controller" />
-<meta property="og:description" content="概述 本文中提到的 reflector, 特指 informer 中的 reflector, 即传入的 cache.Store 为 DeltaFIFO Controller 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 // Controller is a low-level controller that is parameterized by a // Config and used in sharedIndexInformer. type Controller interface { // Run does two things. One is to" />
+<meta property="og:description" content="概述 本文中提到的 reflector, 特指 informer 中的 reflector, 即传入的 cache.Store 为 DeltaFIFO。 Controller 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 // Controller is a low-level controller that is parameterized by a // Config and used in sharedIndexInformer. type" />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://yzxiu.github.io/2023-01-15-client-go-4-cache-controller/" /><meta property="og:image" content="https://yzxiu.github.io/logo.png"/><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2023-01-15T18:35:14+08:00" />
@@ -15,9 +15,9 @@
 <meta name="twitter:image" content="https://yzxiu.github.io/logo.png"/>
 
 <meta name="twitter:title" content="client-go解析(4) - cache.Controller"/>
-<meta name="twitter:description" content="概述 本文中提到的 reflector, 特指 informer 中的 reflector, 即传入的 cache.Store 为 DeltaFIFO Controller 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 // Controller is a low-level controller that is parameterized by a // Config and used in sharedIndexInformer. type Controller interface { // Run does two things. One is to"/>
+<meta name="twitter:description" content="概述 本文中提到的 reflector, 特指 informer 中的 reflector, 即传入的 cache.Store 为 DeltaFIFO。 Controller 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 // Controller is a low-level controller that is parameterized by a // Config and used in sharedIndexInformer. type"/>
 <meta name="application-name" content="Yuyu&#39;s Blog">
-<meta name="apple-mobile-web-app-title" content="Yuyu&#39;s Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="icon" href="/images/avataaars.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://yzxiu.github.io/2023-01-15-client-go-4-cache-controller/" /><link rel="prev" href="https://yzxiu.github.io/2023-01-14-client-go-3-reflector/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<meta name="apple-mobile-web-app-title" content="Yuyu&#39;s Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="icon" href="/images/avataaars.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://yzxiu.github.io/2023-01-15-client-go-4-cache-controller/" /><link rel="prev" href="https://yzxiu.github.io/2023-01-14-client-go-3-reflector/" /><link rel="next" href="https://yzxiu.github.io/2023-01-16-client-go-5-informer/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"></noscript><link rel="preload" href="/lib/animate/animate.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="/lib/animate/animate.min.css"></noscript><script type="application/ld+json">
     {
@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2023-01-15-client-go-4-cache-controller\/"
-        },"genre": "posts","keywords": "client-go, cache.Reflector, cache.Controller","wordcount":  178 ,
+        },"genre": "posts","keywords": "client-go, cache.Reflector, cache.Controller","wordcount":  924 ,
         "url": "https:\/\/yzxiu.github.io\/2023-01-15-client-go-4-cache-controller\/","datePublished": "2023-01-15T18:35:14+08:00","dateModified": "2023-01-15T18:35:14+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,8 +102,8 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">client-go解析(4) - cache.Controller</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-15">2023-01-15</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 178 字&nbsp;
-                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 1 分钟&nbsp;</div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-15">2023-01-15</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 924 字&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 2 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
                     <span>目录</span>
@@ -113,10 +113,11 @@
   <ul>
     <li><a href="#概述">概述</a></li>
     <li><a href="#controller">Controller</a></li>
+    <li><a href="#run">Run()</a></li>
   </ul>
 </nav></div>
             </div><div class="content" id="content"><h2 id="概述">概述</h2>
-<p>本文中提到的 reflector, 特指 informer 中的 reflector, 即传入的 cache.Store 为 DeltaFIFO</p>
+<p>本文中提到的 reflector, 特指 informer 中的 reflector, 即传入的 cache.Store 为 DeltaFIFO。</p>
 <h2 id="controller">Controller</h2>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -138,6 +139,8 @@
 </span><span class="lnt">16
 </span><span class="lnt">17
 </span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
 </span></code></pre></td>
 <td class="lntd">
 <pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// Controller is a low-level controller that is parameterized by a
@@ -149,6 +152,8 @@
 </span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// on that Queue.  The other is to repeatedly Pop from the Queue
 </span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// and process with the Config&#39;s ProcessFunc.  Both of these
 </span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// continue until `stopCh` is closed.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// 1, 构建并启动Reflector
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// 2, Pop from the Queue and process with the Config&#39;s ProcessFunc
 </span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nf">Run</span><span class="p">(</span><span class="nx">stopCh</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{})</span>
 </span></span><span class="line"><span class="cl">
 </span></span><span class="line"><span class="cl">   <span class="c1">// HasSynced delegates to the Config&#39;s Queue
@@ -180,6 +185,302 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
+</div><h2 id="run">Run()</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// Run begins processing items, and will continue until a value is sent down stopCh or it is closed.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// It&#39;s an error to call Run more than once.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// Run blocks; call via go.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">controller</span><span class="p">)</span> <span class="nf">Run</span><span class="p">(</span><span class="nx">stopCh</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{})</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="k">defer</span> <span class="nx">utilruntime</span><span class="p">.</span><span class="nf">HandleCrash</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="o">&lt;-</span><span class="nx">stopCh</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">Queue</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}()</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// 构建Reflector
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">r</span> <span class="o">:=</span> <span class="nf">NewReflectorWithOptions</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">ListerWatcher</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">ObjectType</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">Queue</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">ReflectorOptions</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">ResyncPeriod</span><span class="p">:</span>    <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">FullResyncPeriod</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">TypeDescription</span><span class="p">:</span> <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">ObjectDescription</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="p">},</span>
+</span></span><span class="line"><span class="cl">   <span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">r</span><span class="p">.</span><span class="nx">ShouldResync</span> <span class="p">=</span> <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">ShouldResync</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">r</span><span class="p">.</span><span class="nx">WatchListPageSize</span> <span class="p">=</span> <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">WatchListPageSize</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">r</span><span class="p">.</span><span class="nx">clock</span> <span class="p">=</span> <span class="nx">c</span><span class="p">.</span><span class="nx">clock</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">WatchErrorHandler</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">r</span><span class="p">.</span><span class="nx">watchErrorHandler</span> <span class="p">=</span> <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">WatchErrorHandler</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">c</span><span class="p">.</span><span class="nx">reflectorMutex</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">c</span><span class="p">.</span><span class="nx">reflector</span> <span class="p">=</span> <span class="nx">r</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">c</span><span class="p">.</span><span class="nx">reflectorMutex</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="kd">var</span> <span class="nx">wg</span> <span class="nx">wait</span><span class="p">.</span><span class="nx">Group</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// run reflector
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">wg</span><span class="p">.</span><span class="nf">StartWithChannel</span><span class="p">(</span><span class="nx">stopCh</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">Run</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// 启动消费者
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">wait</span><span class="p">.</span><span class="nf">Until</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">processLoop</span><span class="p">,</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span> <span class="nx">stopCh</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">controller</span><span class="p">)</span> <span class="nf">processLoop</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">obj</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">Queue</span><span class="p">.</span><span class="nf">Pop</span><span class="p">(</span><span class="nf">PopProcessFunc</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">Process</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">if</span> <span class="nx">err</span> <span class="o">==</span> <span class="nx">ErrFIFOClosed</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">return</span>
+</span></span><span class="line"><span class="cl">         <span class="p">}</span>
+</span></span><span class="line"><span class="cl">         <span class="k">if</span> <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">RetryOnError</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="c1">// This is the safe way to re-enqueue.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">Queue</span><span class="p">.</span><span class="nf">AddIfNotPresent</span><span class="p">(</span><span class="nx">obj</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到, reflector 在 processLoop() 中进行消费，最终交给 c.config.Process 处理。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">newInformer</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">lw</span> <span class="nx">ListerWatcher</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">objType</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">Object</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">resyncPeriod</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">h</span> <span class="nx">ResourceEventHandler</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">clientState</span> <span class="nx">Store</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">transformer</span> <span class="nx">TransformFunc</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span> <span class="nx">Controller</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// This will hold incoming changes. Note how we pass clientState in as a
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// KeyLister, that way resync operations will result in the correct set
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// of update/delete deltas.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">fifo</span> <span class="o">:=</span> <span class="nf">NewDeltaFIFOWithOptions</span><span class="p">(</span><span class="nx">DeltaFIFOOptions</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">KnownObjects</span><span class="p">:</span>          <span class="nx">clientState</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">EmitDeltaTypeReplaced</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">cfg</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">Config</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">Queue</span><span class="p">:</span>            <span class="nx">fifo</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">ListerWatcher</span><span class="p">:</span>    <span class="nx">lw</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">ObjectType</span><span class="p">:</span>       <span class="nx">objType</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">FullResyncPeriod</span><span class="p">:</span> <span class="nx">resyncPeriod</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">RetryOnError</span><span class="p">:</span>     <span class="kc">false</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="nx">Process</span><span class="p">:</span> <span class="kd">func</span><span class="p">(</span><span class="nx">obj</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">isInInitialList</span> <span class="kt">bool</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">deltas</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">obj</span><span class="p">.(</span><span class="nx">Deltas</span><span class="p">);</span> <span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span> <span class="nf">processDeltas</span><span class="p">(</span><span class="nx">h</span><span class="p">,</span> <span class="nx">clientState</span><span class="p">,</span> <span class="nx">transformer</span><span class="p">,</span> <span class="nx">deltas</span><span class="p">,</span> <span class="nx">isInInitialList</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;object given as Process argument is not Deltas&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">},</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nf">New</span><span class="p">(</span><span class="nx">cfg</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// Multiplexes updates in the form of a list of Deltas into a Store, and informs
+</span></span></span><span class="line"><span class="cl"><span class="c1">// a given handler of events OnUpdate, OnAdd, OnDelete
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">processDeltas</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// Object which receives event notifications from the given deltas
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">handler</span> <span class="nx">ResourceEventHandler</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">clientState</span> <span class="nx">Store</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">transformer</span> <span class="nx">TransformFunc</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">deltas</span> <span class="nx">Deltas</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">isInInitialList</span> <span class="kt">bool</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// from oldest to newest
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">d</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">deltas</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">obj</span> <span class="o">:=</span> <span class="nx">d</span><span class="p">.</span><span class="nx">Object</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">transformer</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">obj</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nf">transformer</span><span class="p">(</span><span class="nx">obj</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">         <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="k">switch</span> <span class="nx">d</span><span class="p">.</span><span class="nx">Type</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">case</span> <span class="nx">Sync</span><span class="p">,</span> <span class="nx">Replaced</span><span class="p">,</span> <span class="nx">Added</span><span class="p">,</span> <span class="nx">Updated</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">         <span class="k">if</span> <span class="nx">old</span><span class="p">,</span> <span class="nx">exists</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">clientState</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="nx">obj</span><span class="p">);</span> <span class="nx">err</span> <span class="o">==</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nx">exists</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">clientState</span><span class="p">.</span><span class="nf">Update</span><span class="p">(</span><span class="nx">obj</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">               <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">handler</span><span class="p">.</span><span class="nf">OnUpdate</span><span class="p">(</span><span class="nx">old</span><span class="p">,</span> <span class="nx">obj</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">clientState</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="nx">obj</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">               <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">handler</span><span class="p">.</span><span class="nf">OnAdd</span><span class="p">(</span><span class="nx">obj</span><span class="p">,</span> <span class="nx">isInInitialList</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="k">case</span> <span class="nx">Deleted</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">         <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">clientState</span><span class="p">.</span><span class="nf">Delete</span><span class="p">(</span><span class="nx">obj</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">         <span class="p">}</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">handler</span><span class="p">.</span><span class="nf">OnDelete</span><span class="p">(</span><span class="nx">obj</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>processDeltas() 这个方法非常重要，它是 消费 Deltas 数据的统一方法。</p>
+<p>无论是什么类型的 Delta ，都是先更新 clientState(也就是DeltaFIFO中的<code>knownObjects</code>). 即我们可以认为，knownObjects 等同于apiserver中的资源数据。然后再交给 <code>handler</code> 去处理。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">ResourceEventHandler</span> <span class="kd">interface</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nf">OnAdd</span><span class="p">(</span><span class="nx">obj</span> <span class="kd">interface</span><span class="p">{})</span>
+</span></span><span class="line"><span class="cl">   <span class="nf">OnUpdate</span><span class="p">(</span><span class="nx">oldObj</span><span class="p">,</span> <span class="nx">newObj</span> <span class="kd">interface</span><span class="p">{})</span>
+</span></span><span class="line"><span class="cl">   <span class="nf">OnDelete</span><span class="p">(</span><span class="nx">obj</span> <span class="kd">interface</span><span class="p">{})</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
 </div></div><div class="post-footer" id="post-footer">
     <div class="post-info">
         <div class="post-info-line">
@@ -203,7 +504,8 @@
         </section>
     </div>
 
-    <div class="post-nav"><a href="/2023-01-14-client-go-3-reflector/" class="prev" rel="prev" title="client-go解析(3) - cache.Reflector"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>client-go解析(3) - cache.Reflector</a></div>
+    <div class="post-nav"><a href="/2023-01-14-client-go-3-reflector/" class="prev" rel="prev" title="client-go解析(3) - cache.Reflector"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>client-go解析(3) - cache.Reflector</a>
+            <a href="/2023-01-16-client-go-5-informer/" class="next" rel="next" title="client-go解析(5) - informer">client-go解析(5) - informer<i class="fas fa-angle-right fa-fw" aria-hidden="true"></i></a></div>
 </div>
 <div id="comments"><div id="giscus" class="comment"></div><noscript>
                 Please enable JavaScript to view the comments powered by <a href="https://giscus.app">Giscus</a>.
