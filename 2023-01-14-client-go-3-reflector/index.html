@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2023-01-14-client-go-3-reflector\/"
-        },"genre": "posts","keywords": "client-go, cache.Reflector","wordcount":  645 ,
+        },"genre": "posts","keywords": "client-go, cache.Reflector","wordcount":  2191 ,
         "url": "https:\/\/yzxiu.github.io\/2023-01-14-client-go-3-reflector\/","datePublished": "2023-01-14T23:45:36+08:00","dateModified": "2023-01-14T23:45:36+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,8 +102,8 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">client-go解析(3) - cache.Reflector</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-14">2023-01-14</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 645 字&nbsp;
-                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 2 分钟&nbsp;</div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-14">2023-01-14</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 2191 字&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 5 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
                     <span>目录</span>
@@ -113,7 +113,21 @@
   <ul>
     <li><a href="#概述">概述</a></li>
     <li><a href="#定义">定义</a></li>
-    <li><a href="#构造">构造</a></li>
+    <li><a href="#使用">使用</a>
+      <ul>
+        <li><a href="#apiserver">apiserver</a></li>
+        <li><a href="#kubelet">kubelet</a></li>
+        <li><a href="#informercachecontroller">informer(cache.controller)</a></li>
+      </ul>
+    </li>
+    <li><a href="#run">Run()</a></li>
+    <li><a href="#listandwatch">ListAndWatch()</a>
+      <ul>
+        <li><a href="#rliststopch">r.list(stopCh)</a></li>
+        <li><a href="#watchhandler">watchHandler()</a></li>
+      </ul>
+    </li>
+    <li><a href="#小结">小结</a></li>
   </ul>
 </nav></div>
             </div><div class="content" id="content"><h2 id="概述">概述</h2>
@@ -242,7 +256,565 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h2 id="构造">构造</h2>
+</div><h2 id="使用">使用</h2>
+<p>看一下 reflector 在k8s中的几处应用</p>
+<h3 id="apiserver">apiserver</h3>
+<p>apiserver 中，Reflector 使用 watchCache 作为 store，向 etcd 中获取数据</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">staging</span><span class="o">/</span><span class="nx">src</span><span class="o">/</span><span class="nx">k8s</span><span class="p">.</span><span class="nx">io</span><span class="o">/</span><span class="nx">apiserver</span><span class="o">/</span><span class="nx">pkg</span><span class="o">/</span><span class="nx">storage</span><span class="o">/</span><span class="nx">cacher</span><span class="o">/</span><span class="nx">cacher</span><span class="p">.</span><span class="k">go</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">NewCacherFromConfig</span><span class="p">(</span><span class="nx">config</span> <span class="nx">Config</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">Cacher</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="o">...</span>
+</span></span><span class="line"><span class="cl">	<span class="o">...</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cacher</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">Cacher</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="o">...</span>
+</span></span><span class="line"><span class="cl">		<span class="o">...</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="o">...</span>
+</span></span><span class="line"><span class="cl">	<span class="o">...</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">watchCache</span> <span class="o">:=</span> <span class="nf">newWatchCache</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">config</span><span class="p">.</span><span class="nx">KeyFunc</span><span class="p">,</span> <span class="nx">cacher</span><span class="p">.</span><span class="nx">processEvent</span><span class="p">,</span> <span class="nx">config</span><span class="p">.</span><span class="nx">GetAttrsFunc</span><span class="p">,</span> <span class="nx">config</span><span class="p">.</span><span class="nx">Versioner</span><span class="p">,</span> <span class="nx">config</span><span class="p">.</span><span class="nx">Indexers</span><span class="p">,</span> <span class="nx">config</span><span class="p">.</span><span class="nx">Clock</span><span class="p">,</span> <span class="nx">config</span><span class="p">.</span><span class="nx">GroupResource</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">listerWatcher</span> <span class="o">:=</span> <span class="nf">NewCacherListerWatcher</span><span class="p">(</span><span class="nx">config</span><span class="p">.</span><span class="nx">Storage</span><span class="p">,</span> <span class="nx">config</span><span class="p">.</span><span class="nx">ResourcePrefix</span><span class="p">,</span> <span class="nx">config</span><span class="p">.</span><span class="nx">NewListFunc</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">reflectorName</span> <span class="o">:=</span> <span class="s">&#34;storage/cacher.go:&#34;</span> <span class="o">+</span> <span class="nx">config</span><span class="p">.</span><span class="nx">ResourcePrefix</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">reflector</span> <span class="o">:=</span> <span class="nx">cache</span><span class="p">.</span><span class="nf">NewNamedReflector</span><span class="p">(</span><span class="nx">reflectorName</span><span class="p">,</span> <span class="nx">listerWatcher</span><span class="p">,</span> <span class="nx">obj</span><span class="p">,</span> <span class="nx">watchCache</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="o">...</span>
+</span></span><span class="line"><span class="cl">	<span class="o">...</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cacher</span><span class="p">.</span><span class="nx">watchCache</span> <span class="p">=</span> <span class="nx">watchCache</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cacher</span><span class="p">.</span><span class="nx">reflector</span> <span class="p">=</span> <span class="nx">reflector</span>
+</span></span><span class="line"><span class="cl">	<span class="o">...</span>
+</span></span><span class="line"><span class="cl">	<span class="o">...</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">cacher</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="kubelet">kubelet</h3>
+<p>kubelet 中，Reflector 使用 UndeltaStore 作为 store，向 apiserver 中获取数据</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-gO" data-lang="gO"><span class="line"><span class="cl"><span class="o">/</span><span class="nx">home</span><span class="o">/</span><span class="nx">xiu</span><span class="o">/</span><span class="nx">Github</span><span class="o">/</span><span class="nx">kubernetes</span><span class="o">/</span><span class="nx">pkg</span><span class="o">/</span><span class="nx">kubelet</span><span class="o">/</span><span class="nx">config</span><span class="o">/</span><span class="nx">apiserver</span><span class="p">.</span><span class="k">go</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// newSourceApiserverFromLW holds creates a config source that watches and pulls from the apiserver.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">newSourceApiserverFromLW</span><span class="p">(</span><span class="nx">lw</span> <span class="nx">cache</span><span class="p">.</span><span class="nx">ListerWatcher</span><span class="p">,</span> <span class="nx">updates</span> <span class="kd">chan</span><span class="o">&lt;-</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="o">...</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">///
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">r</span> <span class="o">:=</span> <span class="nx">cache</span><span class="p">.</span><span class="nf">NewReflector</span><span class="p">(</span><span class="nx">lw</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">v1</span><span class="p">.</span><span class="nx">Pod</span><span class="p">{},</span> <span class="nx">cache</span><span class="p">.</span><span class="nf">NewUndeltaStore</span><span class="p">(</span><span class="nx">send</span><span class="p">,</span> <span class="nx">cache</span><span class="p">.</span><span class="nx">MetaNamespaceKeyFunc</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">go</span> <span class="nx">r</span><span class="p">.</span><span class="nf">Run</span><span class="p">(</span><span class="nx">wait</span><span class="p">.</span><span class="nx">NeverStop</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="informercachecontroller">informer(cache.controller)</h3>
+<p>informer(cache.controller) 中, Reflector 使用 DeltaFIFO 作为 store，向 apiserver 中获取数据</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// Run begins processing items, and will continue until a value is sent down stopCh or it is closed.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// It&#39;s an error to call Run more than once.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// Run blocks; call via go.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">controller</span><span class="p">)</span> <span class="nf">Run</span><span class="p">(</span><span class="nx">stopCh</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{})</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="k">defer</span> <span class="nx">utilruntime</span><span class="p">.</span><span class="nf">HandleCrash</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="o">&lt;-</span><span class="nx">stopCh</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">Queue</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}()</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">r</span> <span class="o">:=</span> <span class="nf">NewReflectorWithOptions</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">ListerWatcher</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">ObjectType</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">Queue</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">ReflectorOptions</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">ResyncPeriod</span><span class="p">:</span>    <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">FullResyncPeriod</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">TypeDescription</span><span class="p">:</span> <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">ObjectDescription</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="p">},</span>
+</span></span><span class="line"><span class="cl">   <span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">r</span><span class="p">.</span><span class="nx">ShouldResync</span> <span class="p">=</span> <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">ShouldResync</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">r</span><span class="p">.</span><span class="nx">WatchListPageSize</span> <span class="p">=</span> <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">WatchListPageSize</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">r</span><span class="p">.</span><span class="nx">clock</span> <span class="p">=</span> <span class="nx">c</span><span class="p">.</span><span class="nx">clock</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">WatchErrorHandler</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">r</span><span class="p">.</span><span class="nx">watchErrorHandler</span> <span class="p">=</span> <span class="nx">c</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">WatchErrorHandler</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">c</span><span class="p">.</span><span class="nx">reflectorMutex</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">c</span><span class="p">.</span><span class="nx">reflector</span> <span class="p">=</span> <span class="nx">r</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">c</span><span class="p">.</span><span class="nx">reflectorMutex</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="kd">var</span> <span class="nx">wg</span> <span class="nx">wait</span><span class="p">.</span><span class="nx">Group</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">wg</span><span class="p">.</span><span class="nf">StartWithChannel</span><span class="p">(</span><span class="nx">stopCh</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">Run</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">wait</span><span class="p">.</span><span class="nf">Until</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">processLoop</span><span class="p">,</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span> <span class="nx">stopCh</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="run">Run()</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// Run repeatedly uses the reflector&#39;s ListAndWatch to fetch all the
+</span></span></span><span class="line"><span class="cl"><span class="c1">// objects and subsequent deltas.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// Run will exit when stopCh is closed.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="o">*</span><span class="nx">Reflector</span><span class="p">)</span> <span class="nf">Run</span><span class="p">(</span><span class="nx">stopCh</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{})</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">klog</span><span class="p">.</span><span class="nf">V</span><span class="p">(</span><span class="mi">3</span><span class="p">).</span><span class="nf">Infof</span><span class="p">(</span><span class="s">&#34;Starting reflector %s (%s) from %s&#34;</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">typeDescription</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">resyncPeriod</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">name</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">wait</span><span class="p">.</span><span class="nf">BackoffUntil</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">r</span><span class="p">.</span><span class="nf">ListAndWatch</span><span class="p">(</span><span class="nx">stopCh</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">r</span><span class="p">.</span><span class="nf">watchErrorHandler</span><span class="p">(</span><span class="nx">r</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">},</span> <span class="nx">r</span><span class="p">.</span><span class="nx">backoffManager</span><span class="p">,</span> <span class="kc">true</span><span class="p">,</span> <span class="nx">stopCh</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">klog</span><span class="p">.</span><span class="nf">V</span><span class="p">(</span><span class="mi">3</span><span class="p">).</span><span class="nf">Infof</span><span class="p">(</span><span class="s">&#34;Stopping reflector %s (%s) from %s&#34;</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">typeDescription</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">resyncPeriod</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">name</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>在 <code>wait.BackoffUntil(func(){}, , r.backoffManager, true, stopCh)</code> 调用 <code>ListAndWatch</code>.</p>
+<p>先了解一下 <code>BackoffUntil</code> 的运行规则:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">TestBackoffUntil</span><span class="p">(</span><span class="nx">t</span> <span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">stopCh</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{})</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">realClock</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">clock</span><span class="p">.</span><span class="nx">RealClock</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">backoffManager</span> <span class="o">:=</span> <span class="nf">NewExponentialBackoffManager</span><span class="p">(</span><span class="mi">800</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">,</span> <span class="mi">30</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Minute</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="nx">realClock</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">i</span> <span class="o">:=</span> <span class="mi">1</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">t1</span> <span class="o">:=</span> <span class="nx">time</span><span class="p">.</span><span class="nf">Now</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="nf">BackoffUntil</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">t</span><span class="p">.</span><span class="nf">Logf</span><span class="p">(</span><span class="s">&#34;第 %d 次运行, 时间差: %v&#34;</span><span class="p">,</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">time</span><span class="p">.</span><span class="nf">Now</span><span class="p">().</span><span class="nf">Sub</span><span class="p">(</span><span class="nx">t1</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">t1</span> <span class="p">=</span> <span class="nx">time</span><span class="p">.</span><span class="nf">Now</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">i</span><span class="o">++</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span>
+</span></span><span class="line"><span class="cl">	<span class="p">},</span> <span class="nx">backoffManager</span><span class="p">,</span> <span class="kc">true</span><span class="p">,</span> <span class="nx">stopCh</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="o">==</span><span class="p">=</span> <span class="nx">RUN</span>   <span class="nx">TestBackoffUntil</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">wait_test</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">41</span><span class="p">:</span> <span class="nx">第</span> <span class="mi">1</span> <span class="nx">次运行</span><span class="p">,</span> <span class="nx">时间差</span><span class="p">:</span> <span class="mi">185</span><span class="nx">ns</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">wait_test</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">41</span><span class="p">:</span> <span class="nx">第</span> <span class="mi">2</span> <span class="nx">次运行</span><span class="p">,</span> <span class="nx">时间差</span><span class="p">:</span> <span class="mf">1.284438667</span><span class="nx">s</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">wait_test</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">41</span><span class="p">:</span> <span class="nx">第</span> <span class="mi">3</span> <span class="nx">次运行</span><span class="p">,</span> <span class="nx">时间差</span><span class="p">:</span> <span class="mf">3.105450176</span><span class="nx">s</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">wait_test</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">41</span><span class="p">:</span> <span class="nx">第</span> <span class="mi">4</span> <span class="nx">次运行</span><span class="p">,</span> <span class="nx">时间差</span><span class="p">:</span> <span class="mf">5.330910046</span><span class="nx">s</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">wait_test</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">41</span><span class="p">:</span> <span class="nx">第</span> <span class="mi">5</span> <span class="nx">次运行</span><span class="p">,</span> <span class="nx">时间差</span><span class="p">:</span> <span class="mf">9.201774039</span><span class="nx">s</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">wait_test</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">41</span><span class="p">:</span> <span class="nx">第</span> <span class="mi">6</span> <span class="nx">次运行</span><span class="p">,</span> <span class="nx">时间差</span><span class="p">:</span> <span class="mf">18.253303837</span><span class="nx">s</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">wait_test</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">41</span><span class="p">:</span> <span class="nx">第</span> <span class="mi">7</span> <span class="nx">次运行</span><span class="p">,</span> <span class="nx">时间差</span><span class="p">:</span> <span class="mf">43.22295292</span><span class="nx">s</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">wait_test</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">41</span><span class="p">:</span> <span class="nx">第</span> <span class="mi">8</span> <span class="nx">次运行</span><span class="p">,</span> <span class="nx">时间差</span><span class="p">:</span> <span class="mf">31.998912477</span><span class="nx">s</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">wait_test</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">41</span><span class="p">:</span> <span class="nx">第</span> <span class="mi">9</span> <span class="nx">次运行</span><span class="p">,</span> <span class="nx">时间差</span><span class="p">:</span> <span class="mf">34.72983897</span><span class="nx">s</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">wait_test</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">41</span><span class="p">:</span> <span class="nx">第</span> <span class="mi">10</span> <span class="nx">次运行</span><span class="p">,</span> <span class="nx">时间差</span><span class="p">:</span> <span class="mf">32.941101108</span><span class="nx">s</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">wait_test</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">41</span><span class="p">:</span> <span class="nx">第</span> <span class="mi">11</span> <span class="nx">次运行</span><span class="p">,</span> <span class="nx">时间差</span><span class="p">:</span> <span class="mf">39.06361719</span><span class="nx">s</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">wait_test</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">41</span><span class="p">:</span> <span class="nx">第</span> <span class="mi">12</span> <span class="nx">次运行</span><span class="p">,</span> <span class="nx">时间差</span><span class="p">:</span> <span class="mf">45.498957001</span><span class="nx">s</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">wait_test</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">41</span><span class="p">:</span> <span class="nx">第</span> <span class="mi">13</span> <span class="nx">次运行</span><span class="p">,</span> <span class="nx">时间差</span><span class="p">:</span> <span class="mf">54.462938656</span><span class="nx">s</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">wait_test</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">41</span><span class="p">:</span> <span class="nx">第</span> <span class="mi">14</span> <span class="nx">次运行</span><span class="p">,</span> <span class="nx">时间差</span><span class="p">:</span> <span class="mf">36.463043438</span><span class="nx">s</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">wait_test</span><span class="p">.</span><span class="k">go</span><span class="p">:</span><span class="mi">41</span><span class="p">:</span> <span class="nx">第</span> <span class="mi">15</span> <span class="nx">次运行</span><span class="p">,</span> <span class="nx">时间差</span><span class="p">:</span> <span class="mf">41.460279724</span><span class="nx">s</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>所以,当 <code>ListAndWatch</code> 错误退出的时候, reflector会根据配置, 在一段之间后重新执行.</p>
+<h2 id="listandwatch">ListAndWatch()</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// ListAndWatch first lists all items and get the resource version at the moment of call,
+</span></span></span><span class="line"><span class="cl"><span class="c1">// and then use the resource version to watch.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// It returns error if ListAndWatch didn&#39;t even try to initialize watch.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="o">*</span><span class="nx">Reflector</span><span class="p">)</span> <span class="nf">ListAndWatch</span><span class="p">(</span><span class="nx">stopCh</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{})</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="o">...</span>
+</span></span><span class="line"><span class="cl">	<span class="o">...</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 获取资源数据,然后调用 cache.Store.Replace()
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">// 设置 ResourceVersion
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">r</span><span class="p">.</span><span class="nf">list</span><span class="p">(</span><span class="nx">stopCh</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="o">...</span>
+</span></span><span class="line"><span class="cl">	<span class="o">...</span>
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="o">...</span>
+</span></span><span class="line"><span class="cl">		<span class="o">...</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">w</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">r</span><span class="p">.</span><span class="nx">listerWatcher</span><span class="p">.</span><span class="nf">Watch</span><span class="p">(</span><span class="nx">options</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="o">...</span>
+</span></span><span class="line"><span class="cl">		<span class="o">...</span><span class="p">.</span>
+</span></span><span class="line"><span class="cl">        <span class="c1">// 获取增量数据
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nx">err</span> <span class="p">=</span> <span class="nf">watchHandler</span><span class="p">(</span><span class="nx">start</span><span class="p">,</span> <span class="nx">w</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">store</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">expectedType</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">expectedGVK</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">name</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">typeDescription</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">setLastSyncResourceVersion</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">clock</span><span class="p">,</span> <span class="nx">resyncerrc</span><span class="p">,</span> <span class="nx">stopCh</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="o">...</span>
+</span></span><span class="line"><span class="cl">		<span class="o">...</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="rliststopch">r.list(stopCh)</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// list simply lists all items and records a resource version obtained from the server at the moment of the call.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// the resource version can be used for further progress notification (aka. watch).
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="o">*</span><span class="nx">Reflector</span><span class="p">)</span> <span class="nf">list</span><span class="p">(</span><span class="nx">stopCh</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{})</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="o">...</span>
+</span></span><span class="line"><span class="cl">   <span class="o">...</span>
+</span></span><span class="line"><span class="cl">   <span class="kd">var</span> <span class="nx">list</span> <span class="nx">runtime</span><span class="p">.</span><span class="nx">Object</span>
+</span></span><span class="line"><span class="cl">   <span class="kd">var</span> <span class="nx">paginatedResult</span> <span class="kt">bool</span>
+</span></span><span class="line"><span class="cl">   <span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">listCh</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{},</span> <span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">panicCh</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">interface</span><span class="p">{},</span> <span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="o">...</span>
+</span></span><span class="line"><span class="cl">      <span class="o">...</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">list</span><span class="p">,</span> <span class="nx">paginatedResult</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">pager</span><span class="p">.</span><span class="nf">List</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">options</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="o">...</span>
+</span></span><span class="line"><span class="cl">      <span class="o">...</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}()</span>
+</span></span><span class="line"><span class="cl">   <span class="o">...</span>
+</span></span><span class="line"><span class="cl">   <span class="o">...</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">listMetaInterface</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">meta</span><span class="p">.</span><span class="nf">ListAccessor</span><span class="p">(</span><span class="nx">list</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="o">...</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">resourceVersion</span> <span class="p">=</span> <span class="nx">listMetaInterface</span><span class="p">.</span><span class="nf">GetResourceVersion</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="o">...</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">items</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">meta</span><span class="p">.</span><span class="nf">ExtractList</span><span class="p">(</span><span class="nx">list</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="o">...</span>
+</span></span><span class="line"><span class="cl">   <span class="o">...</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">r</span><span class="p">.</span><span class="nf">syncWith</span><span class="p">(</span><span class="nx">items</span><span class="p">,</span> <span class="nx">resourceVersion</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;unable to sync list result: %v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="o">...</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">r</span><span class="p">.</span><span class="nf">setLastSyncResourceVersion</span><span class="p">(</span><span class="nx">resourceVersion</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="o">...</span>
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// syncWith replaces the store&#39;s items with the given list.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="o">*</span><span class="nx">Reflector</span><span class="p">)</span> <span class="nf">syncWith</span><span class="p">(</span><span class="nx">items</span> <span class="p">[]</span><span class="nx">runtime</span><span class="p">.</span><span class="nx">Object</span><span class="p">,</span> <span class="nx">resourceVersion</span> <span class="kt">string</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">found</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kd">interface</span><span class="p">{},</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">items</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">   <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">item</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">items</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">found</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">found</span><span class="p">,</span> <span class="nx">item</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="nx">r</span><span class="p">.</span><span class="nx">store</span><span class="p">.</span><span class="nf">Replace</span><span class="p">(</span><span class="nx">found</span><span class="p">,</span> <span class="nx">resourceVersion</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="watchhandler">watchHandler()</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// watchHandler watches w and sets setLastSyncResourceVersion
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">watchHandler</span><span class="p">(</span><span class="nx">start</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Time</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">w</span> <span class="nx">watch</span><span class="p">.</span><span class="nx">Interface</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">store</span> <span class="nx">Store</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">expectedType</span> <span class="nx">reflect</span><span class="p">.</span><span class="nx">Type</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">expectedGVK</span> <span class="o">*</span><span class="nx">schema</span><span class="p">.</span><span class="nx">GroupVersionKind</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">name</span> <span class="kt">string</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">expectedTypeName</span> <span class="kt">string</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">setLastSyncResourceVersion</span> <span class="kd">func</span><span class="p">(</span><span class="kt">string</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">clock</span> <span class="nx">clock</span><span class="p">.</span><span class="nx">Clock</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">errc</span> <span class="kd">chan</span> <span class="kt">error</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">stopCh</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{},</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">eventCount</span> <span class="o">:=</span> <span class="mi">0</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// Stopping the watcher should be idempotent and if we return from this function there&#39;s no way
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// we&#39;re coming back in with the same watch interface.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">defer</span> <span class="nx">w</span><span class="p">.</span><span class="nf">Stop</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nx">loop</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">   <span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">select</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">case</span> <span class="o">&lt;-</span><span class="nx">stopCh</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="nx">errorStopRequested</span>
+</span></span><span class="line"><span class="cl">      <span class="k">case</span> <span class="nx">err</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">errc</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">      <span class="k">case</span> <span class="nx">event</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">w</span><span class="p">.</span><span class="nf">ResultChan</span><span class="p">():</span>
+</span></span><span class="line"><span class="cl">         <span class="o">...</span>
+</span></span><span class="line"><span class="cl">         <span class="o">...</span>
+</span></span><span class="line"><span class="cl">         <span class="k">switch</span> <span class="nx">event</span><span class="p">.</span><span class="nx">Type</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">case</span> <span class="nx">watch</span><span class="p">.</span><span class="nx">Added</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">err</span> <span class="o">:=</span> <span class="nx">store</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">Object</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">               <span class="nx">utilruntime</span><span class="p">.</span><span class="nf">HandleError</span><span class="p">(</span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;%s: unable to add watch event object (%#v) to store: %v&#34;</span><span class="p">,</span> <span class="nx">name</span><span class="p">,</span> <span class="nx">event</span><span class="p">.</span><span class="nx">Object</span><span class="p">,</span> <span class="nx">err</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">         <span class="k">case</span> <span class="nx">watch</span><span class="p">.</span><span class="nx">Modified</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">err</span> <span class="o">:=</span> <span class="nx">store</span><span class="p">.</span><span class="nf">Update</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">Object</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">               <span class="nx">utilruntime</span><span class="p">.</span><span class="nf">HandleError</span><span class="p">(</span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;%s: unable to update watch event object (%#v) to store: %v&#34;</span><span class="p">,</span> <span class="nx">name</span><span class="p">,</span> <span class="nx">event</span><span class="p">.</span><span class="nx">Object</span><span class="p">,</span> <span class="nx">err</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">         <span class="k">case</span> <span class="nx">watch</span><span class="p">.</span><span class="nx">Deleted</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">            <span class="c1">// TODO: Will any consumers need access to the &#34;last known
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="c1">// state&#34;, which is passed in event.Object? If so, may need
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="c1">// to change this.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="nx">err</span> <span class="o">:=</span> <span class="nx">store</span><span class="p">.</span><span class="nf">Delete</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">Object</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">               <span class="nx">utilruntime</span><span class="p">.</span><span class="nf">HandleError</span><span class="p">(</span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;%s: unable to delete watch event object (%#v) from store: %v&#34;</span><span class="p">,</span> <span class="nx">name</span><span class="p">,</span> <span class="nx">event</span><span class="p">.</span><span class="nx">Object</span><span class="p">,</span> <span class="nx">err</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">         <span class="k">case</span> <span class="nx">watch</span><span class="p">.</span><span class="nx">Bookmark</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">            <span class="c1">// A `Bookmark` means watch has synced here, just update the resourceVersion
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>         <span class="k">default</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">utilruntime</span><span class="p">.</span><span class="nf">HandleError</span><span class="p">(</span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;%s: unable to understand watch event %#v&#34;</span><span class="p">,</span> <span class="nx">name</span><span class="p">,</span> <span class="nx">event</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">         <span class="p">}</span>
+</span></span><span class="line"><span class="cl">         <span class="o">...</span>
+</span></span><span class="line"><span class="cl">         <span class="o">...</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="o">...</span>
+</span></span><span class="line"><span class="cl">   <span class="o">...</span>
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="小结">小结</h2>
+<p>Relector 在 Run 起来之后, 通过传入的 lw, 先获取指定资源, 然后存入对应的 store 中.</p>
+<div class="details admonition info open">
+        <div class="details-summary admonition-title">
+            <i class="icon fas fa-info-circle fa-fw" aria-hidden="true"></i>信息<i class="details-icon fas fa-angle-right fa-fw" aria-hidden="true"></i>
+        </div>
+        <div class="details-content">
+            <div class="admonition-content"><p>具体到 <code>informer</code> 中的reflector, list 会产生一系列 <code>Sync/Replace</code> 的 <code>Delta</code> 数据, 然后通过watch, 根据 event.Type, 产生  <code>Added / Updated / Deleted</code> 的 <code>Delta</code> 数据.</p>
+<p>reflector <code>Run()</code> 起来之后,就作为<code>生产者</code>产生 <code>Delta</code> 数据, 至于怎么<code>消费(Pop)</code>这些 <code>Delta</code> 数据, 可以关注cache.controller 怎么调用Pop()</p>
+</div>
+        </div>
+    </div>
 </div><div class="post-footer" id="post-footer">
     <div class="post-info">
         <div class="post-info-line">

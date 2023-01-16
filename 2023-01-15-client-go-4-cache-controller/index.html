@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="robots" content="noodp" />
         <title>client-go解析(4) - cache.Controller - Yuyu&#39;s Blog</title><meta name="Description" content=""><meta property="og:title" content="client-go解析(4) - cache.Controller" />
-<meta property="og:description" content="" />
+<meta property="og:description" content="Controller 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 // Controller is a low-level controller that is parameterized by a // Config and used in sharedIndexInformer. type Controller interface { // Run does two things. One is to construct and run a Reflector // to pump objects/notifications from the Config&#39;s ListerWatcher // to the Config&#39;s Queue and possibly invoke the" />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://yzxiu.github.io/2023-01-15-client-go-4-cache-controller/" /><meta property="og:image" content="https://yzxiu.github.io/logo.png"/><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2023-01-15T18:35:14+08:00" />
@@ -15,7 +15,7 @@
 <meta name="twitter:image" content="https://yzxiu.github.io/logo.png"/>
 
 <meta name="twitter:title" content="client-go解析(4) - cache.Controller"/>
-<meta name="twitter:description" content=""/>
+<meta name="twitter:description" content="Controller 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 // Controller is a low-level controller that is parameterized by a // Config and used in sharedIndexInformer. type Controller interface { // Run does two things. One is to construct and run a Reflector // to pump objects/notifications from the Config&#39;s ListerWatcher // to the Config&#39;s Queue and possibly invoke the"/>
 <meta name="application-name" content="Yuyu&#39;s Blog">
 <meta name="apple-mobile-web-app-title" content="Yuyu&#39;s Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="icon" href="/images/avataaars.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://yzxiu.github.io/2023-01-15-client-go-4-cache-controller/" /><link rel="prev" href="https://yzxiu.github.io/2023-01-14-client-go-3-reflector/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"></noscript><link rel="preload" href="/lib/animate/animate.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2023-01-15-client-go-4-cache-controller\/"
-        },"genre": "posts","keywords": "client-go, cache.Reflector, cache.Controller","wordcount":  0 ,
+        },"genre": "posts","keywords": "client-go, cache.Reflector, cache.Controller","wordcount":  156 ,
         "url": "https:\/\/yzxiu.github.io\/2023-01-15-client-go-4-cache-controller\/","datePublished": "2023-01-15T18:35:14+08:00","dateModified": "2023-01-15T18:35:14+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,15 +102,82 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">client-go解析(4) - cache.Controller</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-15">2023-01-15</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 0 字&nbsp;
-                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 0 分钟&nbsp;</div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-15">2023-01-15</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 156 字&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 1 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
                     <span>目录</span>
                     <span><i class="details-icon fas fa-angle-right" aria-hidden="true"></i></span>
                 </div>
-                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents"></nav></div>
-            </div><div class="content" id="content"></div><div class="post-footer" id="post-footer">
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#controller">Controller</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><h2 id="controller">Controller</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// Controller is a low-level controller that is parameterized by a
+</span></span></span><span class="line"><span class="cl"><span class="c1">// Config and used in sharedIndexInformer.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">Controller</span> <span class="kd">interface</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// Run does two things.  One is to construct and run a Reflector
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// to pump objects/notifications from the Config&#39;s ListerWatcher
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// to the Config&#39;s Queue and possibly invoke the occasional Resync
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// on that Queue.  The other is to repeatedly Pop from the Queue
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// and process with the Config&#39;s ProcessFunc.  Both of these
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// continue until `stopCh` is closed.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nf">Run</span><span class="p">(</span><span class="nx">stopCh</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// HasSynced delegates to the Config&#39;s Queue
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nf">HasSynced</span><span class="p">()</span> <span class="kt">bool</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// LastSyncResourceVersion delegates to the Reflector when there
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// is one, otherwise returns the empty string
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nf">LastSyncResourceVersion</span><span class="p">()</span> <span class="kt">string</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// `*controller` implements Controller
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">controller</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">config</span>         <span class="nx">Config</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">reflector</span>      <span class="o">*</span><span class="nx">Reflector</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">reflectorMutex</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">RWMutex</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">clock</span>          <span class="nx">clock</span><span class="p">.</span><span class="nx">Clock</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div></div><div class="post-footer" id="post-footer">
     <div class="post-info">
         <div class="post-info-line">
             <div class="post-info-mod">

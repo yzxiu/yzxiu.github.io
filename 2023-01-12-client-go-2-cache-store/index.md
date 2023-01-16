@@ -277,6 +277,53 @@ func (c *threadSafeMap) Delete(key string) {
 }
 ```
 
+##### Replace()
+
+Store & Indexer 对于replace的处理比较简单, 直接替换 **items**, 然后更新索引.
+
+```go
+// Replace will delete the contents of 'c', using instead the given list.
+// 'c' takes ownership of the list, you should not reference the list again
+// after calling this function.
+func (c *cache) Replace(list []interface{}, resourceVersion string) error {
+   items := make(map[string]interface{}, len(list))
+   for _, item := range list {
+      key, err := c.keyFunc(item)
+      if err != nil {
+         return KeyError{item, err}
+      }
+      items[key] = item
+   }
+   c.cacheStorage.Replace(items, resourceVersion)
+   return nil
+}
+```
+
+```go
+func (c *threadSafeMap) Replace(items map[string]interface{}, resourceVersion string) {
+   c.lock.Lock()
+   defer c.lock.Unlock()
+   c.items = items
+
+   // rebuild any index
+   c.index.reset()
+   for key, item := range c.items {
+      c.index.updateIndices(nil, item, key)
+   }
+}
+```
+
+##### Resync()
+
+```go
+// Resync is meaningless for one of these
+func (c *cache) Resync() error {
+   return nil
+}
+```
+
+
+
 ### 队列
 
 队列接口定义如下
