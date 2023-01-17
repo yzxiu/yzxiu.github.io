@@ -7,7 +7,9 @@
 
 
 
-## Controller
+## 接口
+
+### cache.Controller
 
 ```go
 // Controller is a low-level controller that is parameterized by a
@@ -197,8 +199,11 @@ type ResourceEventHandler interface {
 }
 ```
 
+## 小结
 
+cache.controller 逻辑比较简单。
 
+在 Run 方法中初始化并启动 Reflector，并启动消费者进行消费。
 
-
+具体的消费方法，是 `cache.Config.Process`。
 

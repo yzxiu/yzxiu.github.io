@@ -9,7 +9,7 @@
     <pubDate>Mon, 16 Jan 2023 22:03:11 &#43;0800</pubDate>
     <author>Yuyu</author>
     <guid>https://yzxiu.github.io/2023-01-16-client-go-5-informer/</guid>
-    <description><![CDATA[概述 NewSharedIndexInformer() 是出镜率非常高的函数，最终创建了一个 sharedIndexInformer。所以，我们这里暂且将 informer 等同于 sharedIndexInfo]]></description>
+    <description><![CDATA[概述 NewSharedIndexInformer() 是出镜率非常高的函数，最终创建了一个 sharedIndexInformer。 我们这里暂且将 informer 等同于 sharedIndexInforme]]></description>
 </item>
 <item>
     <title>client-go解析(4) - cache.Controller</title>
@@ -17,7 +17,7 @@
     <pubDate>Sun, 15 Jan 2023 18:35:14 &#43;0800</pubDate>
     <author>Yuyu</author>
     <guid>https://yzxiu.github.io/2023-01-15-client-go-4-cache-controller/</guid>
-    <description><![CDATA[概述 本文中提到的 reflector, 特指 informer 中的 reflector, 即传入的 cache.Store 为 DeltaFIFO。 Controller 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 // Controller is a low-level controller that is parameterized by a // Config and used in sharedIndexInformer. type]]></description>
+    <description><![CDATA[概述 本文中提到的 reflector, 特指 informer 中的 reflector, 即传入的 cache.Store 为 DeltaFIFO。 接口 cache.Controller 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 // Controller is a low-level controller that is parameterized by a // Config and used in]]></description>
 </item>
 <item>
     <title>client-go解析(3) - cache.Reflector</title>

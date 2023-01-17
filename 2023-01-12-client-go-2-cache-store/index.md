@@ -322,6 +322,33 @@ func (c *cache) Resync() error {
 }
 ```
 
+##### AddIndexers()
+
+索引函数只能在 Index 为空的时候添加
+
+```go
+func (c *cache) AddIndexers(newIndexers Indexers) error {
+   return c.cacheStorage.AddIndexers(newIndexers)
+}
+```
+
+```go
+func (c *threadSafeMap) AddIndexers(newIndexers Indexers) error {
+   c.lock.Lock()
+   defer c.lock.Unlock()
+
+   if len(c.items) > 0 {
+      return fmt.Errorf("cannot add indexers to running index")
+   }
+
+   return c.index.addIndexers(newIndexers)
+}
+```
+
+
+
+
+
 
 
 ### 队列
