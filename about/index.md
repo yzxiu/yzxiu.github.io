@@ -21,6 +21,7 @@
     - [#1642](https://github.com/containerd/nerdctl/pull/1642)
     - [#1775](https://github.com/containerd/nerdctl/pull/1775)
     - [#1851](https://github.com/containerd/nerdctl/pull/1851)
+    - [#1870](https://github.com/containerd/nerdctl/pull/1870)
 
 <br>
 
