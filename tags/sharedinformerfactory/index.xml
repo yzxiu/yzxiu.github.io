@@ -1,0 +1,15 @@
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title>SharedInformerFactory - 标签 - Yuyu&#39;s Blog</title>
+        <link>https://yzxiu.github.io/tags/sharedinformerfactory/</link>
+        <description>SharedInformerFactory - 标签 - Yuyu&#39;s Blog</description>
+        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Tue, 31 Jan 2023 11:02:24 &#43;0800</lastBuildDate><atom:link href="https://yzxiu.github.io/tags/sharedinformerfactory/" rel="self" type="application/rss+xml" /><item>
+    <title>client-go解析(6) - SharedInformerFactory</title>
+    <link>https://yzxiu.github.io/2023-01-31-client-go-6-informer-factory/</link>
+    <pubDate>Tue, 31 Jan 2023 11:02:24 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2023-01-31-client-go-6-informer-factory/</guid>
+    <description><![CDATA[概述]]></description>
+</item>
+</channel>
+</rss>

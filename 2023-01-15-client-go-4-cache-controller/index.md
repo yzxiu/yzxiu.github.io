@@ -133,6 +133,7 @@ func newInformer(
 
 		Process: func(obj interface{}, isInInitialList bool) error {
 			if deltas, ok := obj.(Deltas); ok {
+                // processDeltas
 				return processDeltas(h, clientState, transformer, deltas, isInInitialList)
 			}
 			return errors.New("object given as Process argument is not Deltas")
@@ -142,6 +143,12 @@ func newInformer(
 }
 
 ```
+
+
+
+## processDeltas
+
+processDeltas 是一个比较重要的函数，它更像是一个处理 `Deltas` 数据的通用**模板**，在后面的 `sharedIndexInformer` 也使用到
 
 ```go
 // Multiplexes updates in the form of a list of Deltas into a Store, and informs
@@ -165,6 +172,9 @@ func processDeltas(
          }
       }
 
+      // 将前面的多种史类型，如 Sync, Replaced, Added, Updated, Deleted 等，
+      // 简化成 3 种事件，OnUpdate，OnAdd，OnDelete
+      // 也就是 曾删改
       switch d.Type {
       case Sync, Replaced, Added, Updated:
          if old, exists, err := clientState.Get(obj); err == nil && exists {

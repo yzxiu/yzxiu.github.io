@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="robots" content="noodp" />
-        <title>Containerd解析(12) network - Yuyu&#39;s Blog</title><meta name="Description" content=""><meta property="og:title" content="Containerd解析(12) network" />
+        <title>Containerd解析(12) - network - Yuyu&#39;s Blog</title><meta name="Description" content=""><meta property="og:title" content="Containerd解析(12) - network" />
 <meta property="og:description" content="概述 分析containerd网络，从不同的上层应用： nerdctl run -d &ndash;name runcdev -p 8080:80 nginx kubectl run nginx &ndash;image=nginx 根据containerd 的 Scope and principles The following table specifies the various components of containerd and general features of container runtimes. The" />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/" /><meta property="og:image" content="https://yzxiu.github.io/logo.png"/><meta property="article:section" content="posts" />
@@ -14,7 +14,7 @@
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:image" content="https://yzxiu.github.io/logo.png"/>
 
-<meta name="twitter:title" content="Containerd解析(12) network"/>
+<meta name="twitter:title" content="Containerd解析(12) - network"/>
 <meta name="twitter:description" content="概述 分析containerd网络，从不同的上层应用： nerdctl run -d &ndash;name runcdev -p 8080:80 nginx kubectl run nginx &ndash;image=nginx 根据containerd 的 Scope and principles The following table specifies the various components of containerd and general features of container runtimes. The"/>
 <meta name="application-name" content="Yuyu&#39;s Blog">
 <meta name="apple-mobile-web-app-title" content="Yuyu&#39;s Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="icon" href="/images/avataaars.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/" /><link rel="prev" href="https://yzxiu.github.io/2022-11-23-containerd-11-go-events/" /><link rel="next" href="https://yzxiu.github.io/2023-01-12-client-go-1/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -23,7 +23,7 @@
     {
         "@context": "http://schema.org",
         "@type": "BlogPosting",
-        "headline": "Containerd解析(12) network",
+        "headline": "Containerd解析(12) - network",
         "inLanguage": "zh-CN",
         "mainEntityOfPage": {
             "@type": "WebPage",
@@ -100,7 +100,7 @@
                 <div class="container"><div class="toc" id="toc-auto">
             <h2 class="toc-title">目录</h2>
             <div class="toc-content always-active" id="toc-content-auto"></div>
-        </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Containerd解析(12) network</h1><div class="post-meta">
+        </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Containerd解析(12) - network</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
             <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-12-02">2022-12-02</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 2029 字&nbsp;
                 <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 5 分钟&nbsp;</div>
@@ -868,7 +868,7 @@
                             <a class="link-to-markdown" href="/2022-12-02-containerd-12-containerd-network/index.md" target="_blank">阅读原始文档</a>
                         </span></div>
             <div class="post-info-share">
-                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/" data-title="Containerd解析(12) network" data-via="xxxx" data-hashtags="containerd,network,hook"><i class="fab fa-twitter fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/" data-hashtag="containerd"><i class="fab fa-facebook-square fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/" data-title="Containerd解析(12) network"><i class="fab fa-hacker-news fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/" data-title="Containerd解析(12) network"><i data-svg-src="/lib/simple-icons/icons/line.min.svg" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/" data-title="Containerd解析(12) network"><i class="fab fa-weibo fa-fw" aria-hidden="true"></i></a></span>
+                <span><a href="javascript:void(0);" title="分享到 Twitter" data-sharer="twitter" data-url="https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/" data-title="Containerd解析(12) - network" data-via="xxxx" data-hashtags="containerd,network,hook"><i class="fab fa-twitter fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 Facebook" data-sharer="facebook" data-url="https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/" data-hashtag="containerd"><i class="fab fa-facebook-square fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 Hacker News" data-sharer="hackernews" data-url="https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/" data-title="Containerd解析(12) - network"><i class="fab fa-hacker-news fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 Line" data-sharer="line" data-url="https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/" data-title="Containerd解析(12) - network"><i data-svg-src="/lib/simple-icons/icons/line.min.svg" aria-hidden="true"></i></a><a href="javascript:void(0);" title="分享到 微博" data-sharer="weibo" data-url="https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/" data-title="Containerd解析(12) - network"><i class="fab fa-weibo fa-fw" aria-hidden="true"></i></a></span>
             </div>
         </div>
     </div>

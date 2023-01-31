@@ -17,7 +17,7 @@
 <meta name="twitter:title" content="client-go解析(5) - informer &amp; sharedIndexInformer"/>
 <meta name="twitter:description" content="概述 NewSharedIndexInformer() 是出镜率非常高的函数，最终创建了一个 sharedIndexInformer。 我们这里暂且将常说的 “informer” 等同于 shared"/>
 <meta name="application-name" content="Yuyu&#39;s Blog">
-<meta name="apple-mobile-web-app-title" content="Yuyu&#39;s Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="icon" href="/images/avataaars.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://yzxiu.github.io/2023-01-16-client-go-5-informer/" /><link rel="prev" href="https://yzxiu.github.io/2023-01-15-client-go-4-cache-controller/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<meta name="apple-mobile-web-app-title" content="Yuyu&#39;s Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="icon" href="/images/avataaars.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://yzxiu.github.io/2023-01-16-client-go-5-informer/" /><link rel="prev" href="https://yzxiu.github.io/2023-01-15-client-go-4-cache-controller/" /><link rel="next" href="https://yzxiu.github.io/2023-01-31-client-go-6-informer-factory/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"></noscript><link rel="preload" href="/lib/animate/animate.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="/lib/animate/animate.min.css"></noscript><script type="application/ld+json">
     {
@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2023-01-16-client-go-5-informer\/"
-        },"genre": "posts","keywords": "client-go, informer","wordcount":  1431 ,
+        },"genre": "posts","keywords": "client-go, informer","wordcount":  2760 ,
         "url": "https:\/\/yzxiu.github.io\/2023-01-16-client-go-5-informer\/","datePublished": "2023-01-16T22:03:11+08:00","dateModified": "2023-01-16T22:03:11+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,8 +102,8 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">client-go解析(5) - informer & sharedIndexInformer</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-16">2023-01-16</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 1431 字&nbsp;
-                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 3 分钟&nbsp;</div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-16">2023-01-16</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 2760 字&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 6 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
                     <span>目录</span>
@@ -124,6 +124,12 @@
       </ul>
     </li>
     <li><a href="#sharedprocessor">sharedProcessor</a></li>
+    <li><a href="#processorlistener">processorListener</a>
+      <ul>
+        <li><a href="#processorlistenerrun">processorListener.run()</a></li>
+        <li><a href="#processorlistenerpop">processorListener.pop()</a></li>
+      </ul>
+    </li>
     <li><a href="#小结">小结</a></li>
   </ul>
 </nav></div>
@@ -584,7 +590,401 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h2 id="小结">小结</h2>
+</div><p>添加 listener</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">sharedIndexInformer</span><span class="p">)</span> <span class="nf">AddEventHandlerWithResyncPeriod</span><span class="p">(</span><span class="nx">handler</span> <span class="nx">ResourceEventHandler</span><span class="p">,</span> <span class="nx">resyncPeriod</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span><span class="p">)</span> <span class="p">(</span><span class="nx">ResourceEventHandlerRegistration</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">s</span><span class="p">.</span><span class="nx">startedLock</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="k">defer</span> <span class="nx">s</span><span class="p">.</span><span class="nx">startedLock</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">s</span><span class="p">.</span><span class="nx">stopped</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;handler %v was not added to shared informer because it has stopped already&#34;</span><span class="p">,</span> <span class="nx">handler</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">resyncPeriod</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">resyncPeriod</span> <span class="p">&lt;</span> <span class="nx">minimumResyncPeriod</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">klog</span><span class="p">.</span><span class="nf">Warningf</span><span class="p">(</span><span class="s">&#34;resyncPeriod %v is too small. Changing it to the minimum allowed value of %v&#34;</span><span class="p">,</span> <span class="nx">resyncPeriod</span><span class="p">,</span> <span class="nx">minimumResyncPeriod</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">resyncPeriod</span> <span class="p">=</span> <span class="nx">minimumResyncPeriod</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">resyncPeriod</span> <span class="p">&lt;</span> <span class="nx">s</span><span class="p">.</span><span class="nx">resyncCheckPeriod</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">if</span> <span class="nx">s</span><span class="p">.</span><span class="nx">started</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">klog</span><span class="p">.</span><span class="nf">Warningf</span><span class="p">(</span><span class="s">&#34;resyncPeriod %v is smaller than resyncCheckPeriod %v and the informer has already started. Changing it to %v&#34;</span><span class="p">,</span> <span class="nx">resyncPeriod</span><span class="p">,</span> <span class="nx">s</span><span class="p">.</span><span class="nx">resyncCheckPeriod</span><span class="p">,</span> <span class="nx">s</span><span class="p">.</span><span class="nx">resyncCheckPeriod</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">resyncPeriod</span> <span class="p">=</span> <span class="nx">s</span><span class="p">.</span><span class="nx">resyncCheckPeriod</span>
+</span></span><span class="line"><span class="cl">         <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="c1">// if the event handler&#39;s resyncPeriod is smaller than the current resyncCheckPeriod, update
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="c1">// resyncCheckPeriod to match resyncPeriod and adjust the resync periods of all the listeners
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="c1">// accordingly
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>            <span class="nx">s</span><span class="p">.</span><span class="nx">resyncCheckPeriod</span> <span class="p">=</span> <span class="nx">resyncPeriod</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">s</span><span class="p">.</span><span class="nx">processor</span><span class="p">.</span><span class="nf">resyncCheckPeriodChanged</span><span class="p">(</span><span class="nx">resyncPeriod</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">listener</span> <span class="o">:=</span> <span class="nf">newProcessListener</span><span class="p">(</span><span class="nx">handler</span><span class="p">,</span> <span class="nx">resyncPeriod</span><span class="p">,</span> <span class="nf">determineResyncPeriod</span><span class="p">(</span><span class="nx">resyncPeriod</span><span class="p">,</span> <span class="nx">s</span><span class="p">.</span><span class="nx">resyncCheckPeriod</span><span class="p">),</span> <span class="nx">s</span><span class="p">.</span><span class="nx">clock</span><span class="p">.</span><span class="nf">Now</span><span class="p">(),</span> <span class="nx">initialBufferSize</span><span class="p">,</span> <span class="nx">s</span><span class="p">.</span><span class="nx">HasSynced</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="p">!</span><span class="nx">s</span><span class="p">.</span><span class="nx">started</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">s</span><span class="p">.</span><span class="nx">processor</span><span class="p">.</span><span class="nf">addListener</span><span class="p">(</span><span class="nx">listener</span><span class="p">),</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// in order to safely join, we have to
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// 1. stop sending add/update/delete notifications
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// 2. do a list against the store
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// 3. send synthetic &#34;Add&#34; events to the new handler
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// 4. unblock
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">s</span><span class="p">.</span><span class="nx">blockDeltas</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">   <span class="k">defer</span> <span class="nx">s</span><span class="p">.</span><span class="nx">blockDeltas</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">handle</span> <span class="o">:=</span> <span class="nx">s</span><span class="p">.</span><span class="nx">processor</span><span class="p">.</span><span class="nf">addListener</span><span class="p">(</span><span class="nx">listener</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">item</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">s</span><span class="p">.</span><span class="nx">indexer</span><span class="p">.</span><span class="nf">List</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">// Note that we enqueue these notifications with the lock held
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// and before returning the handle. That means there is never a
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// chance for anyone to call the handle&#39;s HasSynced method in a
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// state when it would falsely return true (i.e., when the
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// shared informer is synced but it has not observed an Add
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// with isInitialList being true, nor when the thread
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// processing notifications somehow goes faster than this
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// thread adding them and the counter is temporarily zero).
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="nx">listener</span><span class="p">.</span><span class="nf">add</span><span class="p">(</span><span class="nx">addNotification</span><span class="p">{</span><span class="nx">newObj</span><span class="p">:</span> <span class="nx">item</span><span class="p">,</span> <span class="nx">isInInitialList</span><span class="p">:</span> <span class="kc">true</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="nx">handle</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="processorlistener">processorListener</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// processorListener relays notifications from a sharedProcessor to
+</span></span></span><span class="line"><span class="cl"><span class="c1">// one ResourceEventHandler --- using two goroutines, two unbuffered
+</span></span></span><span class="line"><span class="cl"><span class="c1">// channels, and an unbounded ring buffer.  The `add(notification)`
+</span></span></span><span class="line"><span class="cl"><span class="c1">// function sends the given notification to `addCh`.  One goroutine
+</span></span></span><span class="line"><span class="cl"><span class="c1">// runs `pop()`, which pumps notifications from `addCh` to `nextCh`
+</span></span></span><span class="line"><span class="cl"><span class="c1">// using storage in the ring buffer while `nextCh` is not keeping up.
+</span></span></span><span class="line"><span class="cl"><span class="c1">// Another goroutine runs `run()`, which receives notifications from
+</span></span></span><span class="line"><span class="cl"><span class="c1">// `nextCh` and synchronously invokes the appropriate handler method.
+</span></span></span><span class="line"><span class="cl"><span class="c1">//
+</span></span></span><span class="line"><span class="cl"><span class="c1">// processorListener also keeps track of the adjusted requested resync
+</span></span></span><span class="line"><span class="cl"><span class="c1">// period of the listener.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">processorListener</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">nextCh</span> <span class="kd">chan</span> <span class="kd">interface</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">addCh</span>  <span class="kd">chan</span> <span class="kd">interface</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">handler</span> <span class="nx">ResourceEventHandler</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">syncTracker</span> <span class="o">*</span><span class="nx">synctrack</span><span class="p">.</span><span class="nx">SingleFileTracker</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// pendingNotifications is an unbounded ring buffer that holds all notifications not yet distributed.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// There is one per listener, but a failing/stalled listener will have infinite pendingNotifications
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// added until we OOM.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// TODO: This is no worse than before, since reflectors were backed by unbounded DeltaFIFOs, but
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// we should try to do something better.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">pendingNotifications</span> <span class="nx">buffer</span><span class="p">.</span><span class="nx">RingGrowing</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// requestedResyncPeriod is how frequently the listener wants a
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// full resync from the shared informer, but modified by two
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// adjustments.  One is imposing a lower bound,
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// `minimumResyncPeriod`.  The other is another lower bound, the
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// sharedIndexInformer&#39;s `resyncCheckPeriod`, that is imposed (a) only
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// in AddEventHandlerWithResyncPeriod invocations made after the
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// sharedIndexInformer starts and (b) only if the informer does
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// resyncs at all.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">requestedResyncPeriod</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// resyncPeriod is the threshold that will be used in the logic
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// for this listener.  This value differs from
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// requestedResyncPeriod only when the sharedIndexInformer does
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// not do resyncs, in which case the value here is zero.  The
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// actual time between resyncs depends on when the
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// sharedProcessor&#39;s `shouldResync` function is invoked and when
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// the sharedIndexInformer processes `Sync` type Delta objects.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">resyncPeriod</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// nextResync is the earliest time the listener should get a full resync
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">nextResync</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Time</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// resyncLock guards access to resyncPeriod and nextResync
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">resyncLock</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这里需要注意的是，processorListener 定义了两个 channel，从初始化方法可知，</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">newProcessListener</span><span class="p">(</span><span class="nx">handler</span> <span class="nx">ResourceEventHandler</span><span class="p">,</span> <span class="nx">requestedResyncPeriod</span><span class="p">,</span> <span class="nx">resyncPeriod</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span><span class="p">,</span> <span class="nx">now</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Time</span><span class="p">,</span> <span class="nx">bufferSize</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">hasSynced</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">bool</span><span class="p">)</span> <span class="o">*</span><span class="nx">processorListener</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">ret</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">processorListener</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">nextCh</span><span class="p">:</span>                <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">interface</span><span class="p">{}),</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">addCh</span><span class="p">:</span>                 <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">interface</span><span class="p">{}),</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">handler</span><span class="p">:</span>               <span class="nx">handler</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">syncTracker</span><span class="p">:</span>           <span class="o">&amp;</span><span class="nx">synctrack</span><span class="p">.</span><span class="nx">SingleFileTracker</span><span class="p">{</span><span class="nx">UpstreamHasSynced</span><span class="p">:</span> <span class="nx">hasSynced</span><span class="p">},</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">pendingNotifications</span><span class="p">:</span>  <span class="o">*</span><span class="nx">buffer</span><span class="p">.</span><span class="nf">NewRingGrowing</span><span class="p">(</span><span class="nx">bufferSize</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">requestedResyncPeriod</span><span class="p">:</span> <span class="nx">requestedResyncPeriod</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">resyncPeriod</span><span class="p">:</span>          <span class="nx">resyncPeriod</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="nx">ret</span><span class="p">.</span><span class="nf">determineNextResync</span><span class="p">(</span><span class="nx">now</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="nx">ret</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>nextCh</code> <code>addCh</code> 都是非缓冲 channel，processorListener 启动了两个 goroutine 来处理它们。</p>
+<h3 id="processorlistenerrun">processorListener.run()</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">processorListener</span><span class="p">)</span> <span class="nf">run</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// this call blocks until the channel is closed.  When a panic happens during the notification
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// we will catch it, **the offending item will be skipped!**, and after a short delay (one second)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// the next notification will be attempted.  This is usually better than the alternative of never
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="c1">// delivering again.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">stopCh</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{})</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">wait</span><span class="p">.</span><span class="nf">Until</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">for</span> <span class="nx">next</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">p</span><span class="p">.</span><span class="nx">nextCh</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">switch</span> <span class="nx">notification</span> <span class="o">:=</span> <span class="nx">next</span><span class="p">.(</span><span class="kd">type</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">case</span> <span class="nx">updateNotification</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">p</span><span class="p">.</span><span class="nx">handler</span><span class="p">.</span><span class="nf">OnUpdate</span><span class="p">(</span><span class="nx">notification</span><span class="p">.</span><span class="nx">oldObj</span><span class="p">,</span> <span class="nx">notification</span><span class="p">.</span><span class="nx">newObj</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="k">case</span> <span class="nx">addNotification</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">p</span><span class="p">.</span><span class="nx">handler</span><span class="p">.</span><span class="nf">OnAdd</span><span class="p">(</span><span class="nx">notification</span><span class="p">.</span><span class="nx">newObj</span><span class="p">,</span> <span class="nx">notification</span><span class="p">.</span><span class="nx">isInInitialList</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">				<span class="k">if</span> <span class="nx">notification</span><span class="p">.</span><span class="nx">isInInitialList</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">					<span class="nx">p</span><span class="p">.</span><span class="nx">syncTracker</span><span class="p">.</span><span class="nf">Finished</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">				<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="k">case</span> <span class="nx">deleteNotification</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">p</span><span class="p">.</span><span class="nx">handler</span><span class="p">.</span><span class="nf">OnDelete</span><span class="p">(</span><span class="nx">notification</span><span class="p">.</span><span class="nx">oldObj</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="k">default</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">utilruntime</span><span class="p">.</span><span class="nf">HandleError</span><span class="p">(</span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;unrecognized notification: %T&#34;</span><span class="p">,</span> <span class="nx">next</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// the only way to get here is if the p.nextCh is empty and closed
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nb">close</span><span class="p">(</span><span class="nx">stopCh</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">},</span> <span class="mi">1</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span> <span class="nx">stopCh</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>run() 方法比较简单，从 <code>p.nextCh</code> 拿到数据，根据数据类型，转发给<code> p.handler</code> 的对应方法。</p>
+<h3 id="processorlistenerpop">processorListener.pop()</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">processorListener</span><span class="p">)</span> <span class="nf">pop</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="nx">utilruntime</span><span class="p">.</span><span class="nf">HandleCrash</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="nb">close</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">nextCh</span><span class="p">)</span> <span class="c1">// Tell .run() to stop
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">nextCh</span> <span class="kd">chan</span><span class="o">&lt;-</span> <span class="kd">interface</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">notification</span> <span class="kd">interface</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">select</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="nx">nextCh</span> <span class="o">&lt;-</span> <span class="nx">notification</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// Notification dispatched
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="kd">var</span> <span class="nx">ok</span> <span class="kt">bool</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">notification</span><span class="p">,</span> <span class="nx">ok</span> <span class="p">=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">pendingNotifications</span><span class="p">.</span><span class="nf">ReadOne</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span> <span class="c1">// Nothing to pop
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>				<span class="nx">nextCh</span> <span class="p">=</span> <span class="kc">nil</span> <span class="c1">// Disable this select case
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="nx">notificationToAdd</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">p</span><span class="p">.</span><span class="nx">addCh</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">notification</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span> <span class="c1">// No notification to pop (and pendingNotifications is empty)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>				<span class="c1">// Optimize the case - skip adding to pendingNotifications
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>				<span class="nx">notification</span> <span class="p">=</span> <span class="nx">notificationToAdd</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">nextCh</span> <span class="p">=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">nextCh</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span> <span class="k">else</span> <span class="p">{</span> <span class="c1">// There is already a notification waiting to be dispatched
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>				<span class="nx">p</span><span class="p">.</span><span class="nx">pendingNotifications</span><span class="p">.</span><span class="nf">WriteOne</span><span class="p">(</span><span class="nx">notificationToAdd</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>pop()的逻辑比较复杂，参考：<a href="https://zhuanlan.zhihu.com/p/371394075" target="_blank" rel="noopener noreffer ">k8s client-go informer中的processorlistener数据消费，缓存的分析</a></p>
+<div class="details admonition abstract open">
+        <div class="details-summary admonition-title">
+            <i class="icon fas fa-list-ul fa-fw" aria-hidden="true"></i>摘要<i class="details-icon fas fa-angle-right fa-fw" aria-hidden="true"></i>
+        </div>
+        <div class="details-content">
+            <div class="admonition-content">数据要么放入消费通道(nextCh)，要么放入缓存(pendingNotifications)，缓存中的数据最终也会放入消费通道。这是一种巧妙的设计方式。</div>
+        </div>
+    </div>
+<h2 id="小结">小结</h2>
 </div><div class="post-footer" id="post-footer">
     <div class="post-info">
         <div class="post-info-line">
@@ -608,7 +1008,8 @@
         </section>
     </div>
 
-    <div class="post-nav"><a href="/2023-01-15-client-go-4-cache-controller/" class="prev" rel="prev" title="client-go解析(4) - cache.Controller"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>client-go解析(4) - cache.Controller</a></div>
+    <div class="post-nav"><a href="/2023-01-15-client-go-4-cache-controller/" class="prev" rel="prev" title="client-go解析(4) - cache.Controller"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>client-go解析(4) - cache.Controller</a>
+            <a href="/2023-01-31-client-go-6-informer-factory/" class="next" rel="next" title="client-go解析(6) - SharedInformerFactory">client-go解析(6) - SharedInformerFactory<i class="fas fa-angle-right fa-fw" aria-hidden="true"></i></a></div>
 </div>
 <div id="comments"><div id="giscus" class="comment"></div><noscript>
                 Please enable JavaScript to view the comments powered by <a href="https://giscus.app">Giscus</a>.

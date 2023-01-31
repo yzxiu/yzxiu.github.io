@@ -271,9 +271,216 @@ type sharedProcessor struct {
 }
 ```
 
+添加 listener
 
+```go
+func (s *sharedIndexInformer) AddEventHandlerWithResyncPeriod(handler ResourceEventHandler, resyncPeriod time.Duration) (ResourceEventHandlerRegistration, error) {
+   s.startedLock.Lock()
+   defer s.startedLock.Unlock()
 
+   if s.stopped {
+      return nil, fmt.Errorf("handler %v was not added to shared informer because it has stopped already", handler)
+   }
 
+   if resyncPeriod > 0 {
+      if resyncPeriod < minimumResyncPeriod {
+         klog.Warningf("resyncPeriod %v is too small. Changing it to the minimum allowed value of %v", resyncPeriod, minimumResyncPeriod)
+         resyncPeriod = minimumResyncPeriod
+      }
+
+      if resyncPeriod < s.resyncCheckPeriod {
+         if s.started {
+            klog.Warningf("resyncPeriod %v is smaller than resyncCheckPeriod %v and the informer has already started. Changing it to %v", resyncPeriod, s.resyncCheckPeriod, s.resyncCheckPeriod)
+            resyncPeriod = s.resyncCheckPeriod
+         } else {
+            // if the event handler's resyncPeriod is smaller than the current resyncCheckPeriod, update
+            // resyncCheckPeriod to match resyncPeriod and adjust the resync periods of all the listeners
+            // accordingly
+            s.resyncCheckPeriod = resyncPeriod
+            s.processor.resyncCheckPeriodChanged(resyncPeriod)
+         }
+      }
+   }
+
+   listener := newProcessListener(handler, resyncPeriod, determineResyncPeriod(resyncPeriod, s.resyncCheckPeriod), s.clock.Now(), initialBufferSize, s.HasSynced)
+
+   if !s.started {
+      return s.processor.addListener(listener), nil
+   }
+
+   // in order to safely join, we have to
+   // 1. stop sending add/update/delete notifications
+   // 2. do a list against the store
+   // 3. send synthetic "Add" events to the new handler
+   // 4. unblock
+   s.blockDeltas.Lock()
+   defer s.blockDeltas.Unlock()
+
+   handle := s.processor.addListener(listener)
+   for _, item := range s.indexer.List() {
+      // Note that we enqueue these notifications with the lock held
+      // and before returning the handle. That means there is never a
+      // chance for anyone to call the handle's HasSynced method in a
+      // state when it would falsely return true (i.e., when the
+      // shared informer is synced but it has not observed an Add
+      // with isInitialList being true, nor when the thread
+      // processing notifications somehow goes faster than this
+      // thread adding them and the counter is temporarily zero).
+      listener.add(addNotification{newObj: item, isInInitialList: true})
+   }
+   return handle, nil
+}
+```
+
+## processorListener
+
+```go
+// processorListener relays notifications from a sharedProcessor to
+// one ResourceEventHandler --- using two goroutines, two unbuffered
+// channels, and an unbounded ring buffer.  The `add(notification)`
+// function sends the given notification to `addCh`.  One goroutine
+// runs `pop()`, which pumps notifications from `addCh` to `nextCh`
+// using storage in the ring buffer while `nextCh` is not keeping up.
+// Another goroutine runs `run()`, which receives notifications from
+// `nextCh` and synchronously invokes the appropriate handler method.
+//
+// processorListener also keeps track of the adjusted requested resync
+// period of the listener.
+type processorListener struct {
+   nextCh chan interface{}
+   addCh  chan interface{}
+
+   handler ResourceEventHandler
+
+   syncTracker *synctrack.SingleFileTracker
+
+   // pendingNotifications is an unbounded ring buffer that holds all notifications not yet distributed.
+   // There is one per listener, but a failing/stalled listener will have infinite pendingNotifications
+   // added until we OOM.
+   // TODO: This is no worse than before, since reflectors were backed by unbounded DeltaFIFOs, but
+   // we should try to do something better.
+   pendingNotifications buffer.RingGrowing
+
+   // requestedResyncPeriod is how frequently the listener wants a
+   // full resync from the shared informer, but modified by two
+   // adjustments.  One is imposing a lower bound,
+   // `minimumResyncPeriod`.  The other is another lower bound, the
+   // sharedIndexInformer's `resyncCheckPeriod`, that is imposed (a) only
+   // in AddEventHandlerWithResyncPeriod invocations made after the
+   // sharedIndexInformer starts and (b) only if the informer does
+   // resyncs at all.
+   requestedResyncPeriod time.Duration
+   // resyncPeriod is the threshold that will be used in the logic
+   // for this listener.  This value differs from
+   // requestedResyncPeriod only when the sharedIndexInformer does
+   // not do resyncs, in which case the value here is zero.  The
+   // actual time between resyncs depends on when the
+   // sharedProcessor's `shouldResync` function is invoked and when
+   // the sharedIndexInformer processes `Sync` type Delta objects.
+   resyncPeriod time.Duration
+   // nextResync is the earliest time the listener should get a full resync
+   nextResync time.Time
+   // resyncLock guards access to resyncPeriod and nextResync
+   resyncLock sync.Mutex
+}
+```
+
+这里需要注意的是，processorListener 定义了两个 channel，从初始化方法可知，
+
+```go
+func newProcessListener(handler ResourceEventHandler, requestedResyncPeriod, resyncPeriod time.Duration, now time.Time, bufferSize int, hasSynced func() bool) *processorListener {
+   ret := &processorListener{
+      nextCh:                make(chan interface{}),
+      addCh:                 make(chan interface{}),
+      handler:               handler,
+      syncTracker:           &synctrack.SingleFileTracker{UpstreamHasSynced: hasSynced},
+      pendingNotifications:  *buffer.NewRingGrowing(bufferSize),
+      requestedResyncPeriod: requestedResyncPeriod,
+      resyncPeriod:          resyncPeriod,
+   }
+
+   ret.determineNextResync(now)
+
+   return ret
+}
+```
+
+`nextCh` `addCh` 都是非缓冲 channel，processorListener 启动了两个 goroutine 来处理它们。
+
+### processorListener.run()
+
+```go
+func (p *processorListener) run() {
+	// this call blocks until the channel is closed.  When a panic happens during the notification
+	// we will catch it, **the offending item will be skipped!**, and after a short delay (one second)
+	// the next notification will be attempted.  This is usually better than the alternative of never
+	// delivering again.
+	stopCh := make(chan struct{})
+	wait.Until(func() {
+		for next := range p.nextCh {
+			switch notification := next.(type) {
+			case updateNotification:
+				p.handler.OnUpdate(notification.oldObj, notification.newObj)
+			case addNotification:
+				p.handler.OnAdd(notification.newObj, notification.isInInitialList)
+				if notification.isInInitialList {
+					p.syncTracker.Finished()
+				}
+			case deleteNotification:
+				p.handler.OnDelete(notification.oldObj)
+			default:
+				utilruntime.HandleError(fmt.Errorf("unrecognized notification: %T", next))
+			}
+		}
+		// the only way to get here is if the p.nextCh is empty and closed
+		close(stopCh)
+	}, 1*time.Second, stopCh)
+}
+```
+
+run() 方法比较简单，从 `p.nextCh` 拿到数据，根据数据类型，转发给` p.handler` 的对应方法。
+
+### processorListener.pop()
+
+```go
+func (p *processorListener) pop() {
+	defer utilruntime.HandleCrash()
+	defer close(p.nextCh) // Tell .run() to stop
+
+	var nextCh chan<- interface{}
+	var notification interface{}
+	for {
+		select {
+		case nextCh <- notification:
+			// Notification dispatched
+			var ok bool
+			notification, ok = p.pendingNotifications.ReadOne()
+			if !ok { // Nothing to pop
+				nextCh = nil // Disable this select case
+			}
+		case notificationToAdd, ok := <-p.addCh:
+			if !ok {
+				return
+			}
+			if notification == nil { // No notification to pop (and pendingNotifications is empty)
+				// Optimize the case - skip adding to pendingNotifications
+				notification = notificationToAdd
+				nextCh = p.nextCh
+			} else { // There is already a notification waiting to be dispatched
+				p.pendingNotifications.WriteOne(notificationToAdd)
+			}
+		}
+	}
+}
+```
+
+pop()的逻辑比较复杂，参考：[k8s client-go informer中的processorlistener数据消费，缓存的分析](https://zhuanlan.zhihu.com/p/371394075) 
+
+{{< admonition abstract >}}
+
+数据要么放入消费通道(nextCh)，要么放入缓存(pendingNotifications)，缓存中的数据最终也会放入消费通道。这是一种巧妙的设计方式。
+
+{{< /admonition >}}
 
 
 

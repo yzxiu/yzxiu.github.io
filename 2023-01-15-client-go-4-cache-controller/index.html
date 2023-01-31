@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2023-01-15-client-go-4-cache-controller\/"
-        },"genre": "posts","keywords": "client-go, cache.Reflector, cache.Controller","wordcount":  935 ,
+        },"genre": "posts","keywords": "client-go, cache.Reflector, cache.Controller","wordcount":  1038 ,
         "url": "https:\/\/yzxiu.github.io\/2023-01-15-client-go-4-cache-controller\/","datePublished": "2023-01-15T18:35:14+08:00","dateModified": "2023-01-15T18:35:14+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,8 +102,8 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">client-go解析(4) - cache.Controller</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-15">2023-01-15</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 935 字&nbsp;
-                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 2 分钟&nbsp;</div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-15">2023-01-15</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 1038 字&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 3 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
                     <span>目录</span>
@@ -118,6 +118,7 @@
       </ul>
     </li>
     <li><a href="#run">Run()</a></li>
+    <li><a href="#processdeltas">processDeltas</a></li>
     <li><a href="#小结">小结</a></li>
   </ul>
 </nav></div>
@@ -341,6 +342,7 @@
 </span><span class="lnt">30
 </span><span class="lnt">31
 </span><span class="lnt">32
+</span><span class="lnt">33
 </span></code></pre></td>
 <td class="lntd">
 <pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">newInformer</span><span class="p">(</span>
@@ -368,7 +370,8 @@
 </span></span><span class="line"><span class="cl">
 </span></span><span class="line"><span class="cl">		<span class="nx">Process</span><span class="p">:</span> <span class="kd">func</span><span class="p">(</span><span class="nx">obj</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">isInInitialList</span> <span class="kt">bool</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
 </span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">deltas</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">obj</span><span class="p">.(</span><span class="nx">Deltas</span><span class="p">);</span> <span class="nx">ok</span> <span class="p">{</span>
-</span></span><span class="line"><span class="cl">				<span class="k">return</span> <span class="nf">processDeltas</span><span class="p">(</span><span class="nx">h</span><span class="p">,</span> <span class="nx">clientState</span><span class="p">,</span> <span class="nx">transformer</span><span class="p">,</span> <span class="nx">deltas</span><span class="p">,</span> <span class="nx">isInInitialList</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">                <span class="c1">// processDeltas
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>				<span class="k">return</span> <span class="nf">processDeltas</span><span class="p">(</span><span class="nx">h</span><span class="p">,</span> <span class="nx">clientState</span><span class="p">,</span> <span class="nx">transformer</span><span class="p">,</span> <span class="nx">deltas</span><span class="p">,</span> <span class="nx">isInInitialList</span><span class="p">)</span>
 </span></span><span class="line"><span class="cl">			<span class="p">}</span>
 </span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;object given as Process argument is not Deltas&#34;</span><span class="p">)</span>
 </span></span><span class="line"><span class="cl">		<span class="p">},</span>
@@ -377,7 +380,9 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><div class="highlight"><div class="chroma">
+</div><h2 id="processdeltas">processDeltas</h2>
+<p>processDeltas 是一个比较重要的函数，它更像是一个处理 <code>Deltas</code> 数据的通用<strong>模板</strong>，在后面的 <code>sharedIndexInformer</code> 也使用到</p>
+<div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
 </span><span class="lnt"> 2
@@ -422,6 +427,9 @@
 </span><span class="lnt">41
 </span><span class="lnt">42
 </span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
 </span></code></pre></td>
 <td class="lntd">
 <pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// Multiplexes updates in the form of a list of Deltas into a Store, and informs
@@ -445,7 +453,10 @@
 </span></span><span class="line"><span class="cl">         <span class="p">}</span>
 </span></span><span class="line"><span class="cl">      <span class="p">}</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">      <span class="k">switch</span> <span class="nx">d</span><span class="p">.</span><span class="nx">Type</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">// 将前面的多种史类型，如 Sync, Replaced, Added, Updated, Deleted 等，
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// 简化成 3 种事件，OnUpdate，OnAdd，OnDelete
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// 也就是 曾删改
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="k">switch</span> <span class="nx">d</span><span class="p">.</span><span class="nx">Type</span> <span class="p">{</span>
 </span></span><span class="line"><span class="cl">      <span class="k">case</span> <span class="nx">Sync</span><span class="p">,</span> <span class="nx">Replaced</span><span class="p">,</span> <span class="nx">Added</span><span class="p">,</span> <span class="nx">Updated</span><span class="p">:</span>
 </span></span><span class="line"><span class="cl">         <span class="k">if</span> <span class="nx">old</span><span class="p">,</span> <span class="nx">exists</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">clientState</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="nx">obj</span><span class="p">);</span> <span class="nx">err</span> <span class="o">==</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nx">exists</span> <span class="p">{</span>
 </span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">clientState</span><span class="p">.</span><span class="nf">Update</span><span class="p">(</span><span class="nx">obj</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
