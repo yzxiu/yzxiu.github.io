@@ -9,7 +9,7 @@
     <pubDate>Tue, 31 Jan 2023 11:02:24 &#43;0800</pubDate>
     <author>Yuyu</author>
     <guid>https://yzxiu.github.io/2023-01-31-client-go-6-informer-factory/</guid>
-    <description><![CDATA[概述 sharedIndexInformer 一般不单独使用，通常都是使用 factory 来管理 sharedIndexInformer。 SharedInformerFactory DynamicSharedInformerFactory InformersMap]]></description>
+    <description><![CDATA[概述 sharedIndexInformer 一般不单独使用，通常都是使用 factory 来管理 sharedIndexInformer。 本文主要了解几种常见的 factory 以及它们如何构造和持有 sharedIndexInformer SharedInformerFactory 1 2 3 4]]></description>
 </item>
 </channel>
 </rss>
