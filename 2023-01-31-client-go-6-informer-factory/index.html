@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="robots" content="noodp" />
         <title>client-go解析(6) - SharedInformerFactory - Yuyu&#39;s Blog</title><meta name="Description" content=""><meta property="og:title" content="client-go解析(6) - SharedInformerFactory" />
-<meta property="og:description" content="概述" />
+<meta property="og:description" content="概述 sharedIndexInformer 一般不单独使用，通常都是使用 factory 来管理 sharedIndexInformer。 SharedInformerFactory DynamicSharedInformerFactory InformersMap" />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://yzxiu.github.io/2023-01-31-client-go-6-informer-factory/" /><meta property="og:image" content="https://yzxiu.github.io/logo.png"/><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2023-01-31T11:02:24+08:00" />
@@ -15,7 +15,7 @@
 <meta name="twitter:image" content="https://yzxiu.github.io/logo.png"/>
 
 <meta name="twitter:title" content="client-go解析(6) - SharedInformerFactory"/>
-<meta name="twitter:description" content="概述"/>
+<meta name="twitter:description" content="概述 sharedIndexInformer 一般不单独使用，通常都是使用 factory 来管理 sharedIndexInformer。 SharedInformerFactory DynamicSharedInformerFactory InformersMap"/>
 <meta name="application-name" content="Yuyu&#39;s Blog">
 <meta name="apple-mobile-web-app-title" content="Yuyu&#39;s Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="icon" href="/images/avataaars.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://yzxiu.github.io/2023-01-31-client-go-6-informer-factory/" /><link rel="prev" href="https://yzxiu.github.io/2023-01-16-client-go-5-informer/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"></noscript><link rel="preload" href="/lib/animate/animate.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2023-01-31-client-go-6-informer-factory\/"
-        },"genre": "posts","keywords": "client-go, informer, SharedInformerFactory","wordcount":  2 ,
+        },"genre": "posts","keywords": "client-go, informer, SharedInformerFactory","wordcount":  44 ,
         "url": "https:\/\/yzxiu.github.io\/2023-01-31-client-go-6-informer-factory\/","datePublished": "2023-01-31T11:02:24+08:00","dateModified": "2023-01-31T11:02:24+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,7 +102,7 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">client-go解析(6) - SharedInformerFactory</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-31">2023-01-31</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 2 字&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-31">2023-01-31</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 44 字&nbsp;
                 <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 1 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
@@ -112,9 +112,16 @@
                 <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
   <ul>
     <li><a href="#概述">概述</a></li>
+    <li><a href="#sharedinformerfactory">SharedInformerFactory</a></li>
+    <li><a href="#dynamicsharedinformerfactory">DynamicSharedInformerFactory</a></li>
+    <li><a href="#informersmap">InformersMap</a></li>
   </ul>
 </nav></div>
             </div><div class="content" id="content"><h2 id="概述">概述</h2>
+<p><code>sharedIndexInformer</code> 一般不单独使用，通常都是使用 <code>factory</code> 来管理 sharedIndexInformer。</p>
+<h2 id="sharedinformerfactory">SharedInformerFactory</h2>
+<h2 id="dynamicsharedinformerfactory">DynamicSharedInformerFactory</h2>
+<h2 id="informersmap">InformersMap</h2>
 </div><div class="post-footer" id="post-footer">
     <div class="post-info">
         <div class="post-info-line">
