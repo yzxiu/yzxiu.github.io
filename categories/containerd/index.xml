@@ -1,0 +1,87 @@
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title>containerd - 分类 - Yuyu&#39;s Blog</title>
+        <link>https://yzxiu.github.io/categories/containerd/</link>
+        <description>containerd - 分类 - Yuyu&#39;s Blog</description>
+        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Fri, 02 Dec 2022 09:45:30 &#43;0800</lastBuildDate><atom:link href="https://yzxiu.github.io/categories/containerd/" rel="self" type="application/rss+xml" /><item>
+    <title>Containerd解析(12) - network</title>
+    <link>https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/</link>
+    <pubDate>Fri, 02 Dec 2022 09:45:30 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/</guid>
+    <description><![CDATA[概述 分析containerd网络，从不同的上层应用： nerdctl run -d &ndash;name runcdev -p 8080:80 nginx kubectl run nginx &ndash;image=nginx 根据containerd 的 Scope and principles The following table specifies the various components of containerd and general features of container runtimes. The]]></description>
+</item>
+<item>
+    <title>Containerd解析(11) - event &amp; go-events</title>
+    <link>https://yzxiu.github.io/2022-11-23-containerd-11-go-events/</link>
+    <pubDate>Wed, 23 Nov 2022 16:35:35 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2022-11-23-containerd-11-go-events/</guid>
+    <description><![CDATA[概述 在 containerd 的 event 中，主要用到了 go-events 这个包。 为 Go 实现一个可组合的事件分发包。 初始化 在containerd启动过程中， 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16]]></description>
+</item>
+<item>
+    <title>Containerd解析(10) - Containerd Start</title>
+    <link>https://yzxiu.github.io/2022-11-18-containerd-10-containerd-start/</link>
+    <pubDate>Fri, 18 Nov 2022 11:55:14 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2022-11-18-containerd-10-containerd-start/</guid>
+    <description><![CDATA[概述 了解containerd的启动过程。 重点关注api接口 ContainersClient、 TasksClient的实现。 Container]]></description>
+</item>
+<item>
+    <title>Containerd解析(9) - Containerd,Containerd-shim,runc的依存关系</title>
+    <link>https://yzxiu.github.io/2022-11-18-containerd-9-containerd-containerd-shim-runc/</link>
+    <pubDate>Fri, 18 Nov 2022 09:07:39 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2022-11-18-containerd-9-containerd-containerd-shim-runc/</guid>
+    <description><![CDATA[概述 参考文章，该文时间比较久远，containerd的很多逻辑已经发生变化。 学习该文思路，重新整理Containerd,Containerd]]></description>
+</item>
+<item>
+    <title>Containerd解析(8) - Runc Modes</title>
+    <link>https://yzxiu.github.io/2022-11-15-containerd-8-runc-modes/</link>
+    <pubDate>Tue, 15 Nov 2022 17:04:35 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2022-11-15-containerd-8-runc-modes/</guid>
+    <description><![CDATA[概述 在runc中， 有两种 Terminal Modes，分别是：New Terminal、Pass-Through 有两种 Runc Modes，分别是：Foregroun]]></description>
+</item>
+<item>
+    <title>Containerd解析(7) - log</title>
+    <link>https://yzxiu.github.io/2022-11-14-containerd-7-log/</link>
+    <pubDate>Mon, 14 Nov 2022 11:14:42 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2022-11-14-containerd-7-log/</guid>
+    <description><![CDATA[概述 容器日志处理，其实就是处理runc程序的标准输出，标准错误。 这里我们分析 containerd-shim-runc-v2 与 runc 查看 shim 调用runc的代码 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17]]></description>
+</item>
+<item>
+    <title>Containerd解析(6) - restart</title>
+    <link>https://yzxiu.github.io/2022-11-13-containerd-6-restart/</link>
+    <pubDate>Sun, 13 Nov 2022 11:55:58 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2022-11-13-containerd-6-restart/</guid>
+    <description><![CDATA[概述 在runc的start命令代码如下： 1 2 3 4 5 6 7 8 9 10 11 switch status { // 对于一个已经处于Created状态的容器，执行Exec case libcontainer.Created: return container.Exec() case libcontainer.Stopped: return errors.New(&#34;cannot]]></description>
+</item>
+<item>
+    <title>Containerd解析(4) - Mount Rootfs</title>
+    <link>https://yzxiu.github.io/2022-11-03-containerd-4-mount-rootfs/</link>
+    <pubDate>Thu, 03 Nov 2022 10:20:01 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2022-11-03-containerd-4-mount-rootfs/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>Containerd解析(3) - shim</title>
+    <link>https://yzxiu.github.io/2022-11-02-containerd-3-shim-start/</link>
+    <pubDate>Wed, 02 Nov 2022 21:50:04 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2022-11-02-containerd-3-shim-start/</guid>
+    <description><![CDATA[概述 记录shim相关的疑问和分析 shim如何监控多个容器？ 在k8s中，创建一个pod，如：k run nginx --image=nginx 实际上会创建两个容器，一个是 pause 容器（也称为]]></description>
+</item>
+<item>
+    <title>Containerd解析(2) - layer</title>
+    <link>https://yzxiu.github.io/2022-11-02-containerd-2-layer/</link>
+    <pubDate>Wed, 02 Nov 2022 15:49:56 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2022-11-02-containerd-2-layer/</guid>
+    <description><![CDATA[概述 本文只讨论containerd默认配置下的行为，不涉及docker。 参考：content-flow.md 执行 client.Pull(ctx, &quot;docker.io/library/redis:5.0.9&quot;, containerd.W]]></description>
+</item>
+</channel>
+</rss>

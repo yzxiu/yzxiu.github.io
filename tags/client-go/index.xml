@@ -3,8 +3,16 @@
         <title>client-go - 标签 - Yuyu&#39;s Blog</title>
         <link>https://yzxiu.github.io/tags/client-go/</link>
         <description>client-go - 标签 - Yuyu&#39;s Blog</description>
-        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Tue, 31 Jan 2023 11:02:24 &#43;0800</lastBuildDate><atom:link href="https://yzxiu.github.io/tags/client-go/" rel="self" type="application/rss+xml" /><item>
-    <title>client-go解析(6) - SharedInformerFactory</title>
+        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Wed, 01 Feb 2023 16:47:48 &#43;0800</lastBuildDate><atom:link href="https://yzxiu.github.io/tags/client-go/" rel="self" type="application/rss+xml" /><item>
+    <title>client-go解析(7) - Reconcile</title>
+    <link>https://yzxiu.github.io/2023-02-01-client-go-7-reconcile/</link>
+    <pubDate>Wed, 01 Feb 2023 16:47:48 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2023-02-01-client-go-7-reconcile/</guid>
+    <description><![CDATA[概述 使用过 kubebuilder 开发Operator项目的话，对 Reconcile 函数应该不陌生。 由于 kubebuilder(controller-runtime)的高度封装，]]></description>
+</item>
+<item>
+    <title>client-go解析(6) - Factory</title>
     <link>https://yzxiu.github.io/2023-01-31-client-go-6-informer-factory/</link>
     <pubDate>Tue, 31 Jan 2023 11:02:24 &#43;0800</pubDate>
     <author>Yuyu</author>

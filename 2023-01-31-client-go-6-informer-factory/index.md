@@ -1,4 +1,4 @@
-# client-go解析(6) - SharedInformerFactory
+# client-go解析(6) - Factory
 
 
 ## 概述
@@ -31,6 +31,8 @@ type sharedInformerFactory struct {
    shuttingDown bool
 }
 ```
+
+缓存informer的结构为：
 
 `informers map[reflect.Type]cache.SharedIndexInformer`
 
@@ -259,6 +261,8 @@ type dynamicSharedInformerFactory struct {
 }
 ```
 
+缓存informer的结构为：
+
 `informers map[schema.GroupVersionResource]informers.GenericInformer`
 
 <br>
@@ -467,17 +471,179 @@ func NewFilteredDynamicInformer(client dynamic.Interface, gvr schema.GroupVersio
 
 InformersMap 是 controller-runtime 中的内容，封装比较复杂，这里只了解 sharedIndexInformer 在其中的使用。
 
+```go
+// InformersMap create and caches Informers for (runtime.Object, schema.GroupVersionKind) pairs.
+// It uses a standard parameter codec constructed based on the given generated Scheme.
+type InformersMap struct {
+   // scheme maps runtime.Objects to GroupVersionKinds
+   scheme *runtime.Scheme
+
+   // config is used to talk to the apiserver
+   config *rest.Config
+
+   // mapper maps GroupVersionKinds to Resources
+   mapper meta.RESTMapper
+
+   // informers is the cache of informers keyed by their type and groupVersionKind
+   informers informers
+
+   // codecs is used to create a new REST client
+   codecs serializer.CodecFactory
+
+   // paramCodec is used by list and watch
+   paramCodec runtime.ParameterCodec
+
+   // stop is the stop channel to stop informers
+   stop <-chan struct{}
+
+   // resync is the base frequency the informers are resynced
+   // a 10 percent jitter will be added to the resync period between informers
+   // so that all informers will not send list requests simultaneously.
+   resync time.Duration
+
+   // mu guards access to the map
+   mu sync.RWMutex
+
+   // start is true if the informers have been started
+   started bool
+
+   // startWait is a channel that is closed after the
+   // informer has been started.
+   startWait chan struct{}
+
+   // namespace is the namespace that all ListWatches are restricted to
+   // default or empty string means all namespaces
+   namespace string
+
+   // selectors are the label or field selectors that will be added to the
+   // ListWatch ListOptions.
+   selectors func(gvk schema.GroupVersionKind) Selector
+
+   // disableDeepCopy indicates not to deep copy objects during get or list objects.
+   disableDeepCopy DisableDeepCopyByGVK
+
+   // transform funcs are applied to objects before they are committed to the cache
+   transformers TransformFuncByGVK
+}
+```
+
+缓存informer的结构为：
+
+`informers informers`
+
+其中，informers 结构体如下：
+
+```go
+type informers struct {
+   Structured   map[schema.GroupVersionKind]*MapEntry
+   Unstructured map[schema.GroupVersionKind]*MapEntry
+   Metadata     map[schema.GroupVersionKind]*MapEntry
+}
+```
+
+MapEntry 结构体如下：
+
+```go
+// MapEntry contains the cached data for an Informer.
+type MapEntry struct {
+   // Informer is the cached informer
+   Informer cache.SharedIndexInformer
+
+   // CacheReader wraps Informer and implements the CacheReader interface for a single type
+   Reader CacheReader
+}
+```
 
 
 
+```go
+// controller-runtime/pkg/cache/internal/informers_map.go
+// Get will create a new Informer and add it to the map of specificInformersMap if none exists.  Returns
+// the Informer from the map.
+func (ip *InformersMap) Get(ctx context.Context, gvk schema.GroupVersionKind, obj runtime.Object) (bool, *MapEntry, error) {
+   // Return the informer if it is found
+   i, started, ok := ip.get(gvk, obj)
+   if !ok {
+      var err error
+      if i, started, err = ip.addInformerToMap(gvk, obj); err != nil {
+         return started, nil, err
+      }
+   }
 
+   if started && !i.Informer.HasSynced() {
+      // Wait for it to sync before returning the Informer so that folks don't read from a stale cache.
+      if !cache.WaitForCacheSync(ctx.Done(), i.Informer.HasSynced) {
+         return started, nil, apierrors.NewTimeoutError(fmt.Sprintf("failed waiting for %T Informer to sync", obj), 0)
+      }
+   }
 
+   return started, i, nil
+}
+```
 
+```go
+// controller-runtime/pkg/cache/internal/informers_map.go
 
+func (ip *InformersMap) addInformerToMap(gvk schema.GroupVersionKind, obj runtime.Object) (*MapEntry, bool, error) {
+   ip.mu.Lock()
+   defer ip.mu.Unlock()
 
+   // Check the cache to see if we already have an Informer.  If we do, return the Informer.
+   // This is for the case where 2 routines tried to get the informer when it wasn't in the map
+   // so neither returned early, but the first one created it.
+   if i, ok := ip.informersByType(obj)[gvk]; ok {
+      return i, ip.started, nil
+   }
 
+   // Create a NewSharedIndexInformer and add it to the map.
+   lw, err := ip.makeListWatcher(gvk, obj)
+   if err != nil {
+      return nil, false, err
+   }
+   ni := cache.NewSharedIndexInformer(&cache.ListWatch{
+      ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
+         ip.selectors(gvk).ApplyToList(&opts)
+         return lw.ListFunc(opts)
+      },
+      WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) {
+         ip.selectors(gvk).ApplyToList(&opts)
+         opts.Watch = true // Watch needs to be set to true separately
+         return lw.WatchFunc(opts)
+      },
+   }, obj, resyncPeriod(ip.resync)(), cache.Indexers{
+      cache.NamespaceIndex: cache.MetaNamespaceIndexFunc,
+   })
 
+   // Check to see if there is a transformer for this gvk
+   if err := ni.SetTransform(ip.transformers.Get(gvk)); err != nil {
+      return nil, false, err
+   }
 
+   rm, err := ip.mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+   if err != nil {
+      return nil, false, err
+   }
+
+   i := &MapEntry{
+      Informer: ni,
+      Reader: CacheReader{
+         indexer:          ni.GetIndexer(),
+         groupVersionKind: gvk,
+         scopeName:        rm.Scope.Name(),
+         disableDeepCopy:  ip.disableDeepCopy.IsDisabled(gvk),
+      },
+   }
+   ip.informersByType(obj)[gvk] = i
+
+   // Start the Informer if need by
+   // TODO(seans): write thorough tests and document what happens here - can you add indexers?
+   // can you add eventhandlers?
+   if ip.started {
+      go i.Informer.Run(ip.stop)
+   }
+   return i, ip.started, nil
+}
+```
 
 
 
