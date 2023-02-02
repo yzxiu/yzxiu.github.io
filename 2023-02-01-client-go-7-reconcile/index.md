@@ -11,11 +11,17 @@
 
 ## 控制器
 
-控制器，可以理解为，持有多个 processorListener 和 一个 workqueue，processorListener 用于获取相关事件添加到 workqueue 中。
+控制器，可以理解为，
 
-然后启动若干个 worker 消费 workqueue，而这里的 worker，主要就是调用 `Reconcile` 函数。
+1，持有多个与关注资源相关 processorListener 和 一个 workqueue，
 
-比如 `DeploymentController`
+2，processorListener 用于获取相关事件添加到 workqueue 中。
+
+3，然后启动若干个 worker 消费 workqueue，而这里的 worker，主要就是调用 `Reconcile` 函数。
+
+接下来，看一下这个模式在 kube-controller-manager 和 controller-runtinme 里面的具体实现
+
+### DeploymentController
 
 ```go
 type DeploymentController struct {
@@ -40,6 +46,10 @@ type DeploymentController struct {
 }
 ```
 
+#### processorListener
 
+#### workqueue
+
+#### Reconcile
 
 

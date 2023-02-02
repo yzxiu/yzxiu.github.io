@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2023-02-01-client-go-7-reconcile\/"
-        },"genre": "posts","keywords": "client-go, informer, reconcile","wordcount":  272 ,
+        },"genre": "posts","keywords": "client-go, informer, reconcile","wordcount":  308 ,
         "url": "https:\/\/yzxiu.github.io\/2023-02-01-client-go-7-reconcile\/","datePublished": "2023-02-01T16:47:48+08:00","dateModified": "2023-02-01T16:47:48+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,7 +102,7 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">client-go解析(7) - Reconcile</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/client-go/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>client-go</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-02-01">2023-02-01</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 272 字&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-02-01">2023-02-01</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 308 字&nbsp;
                 <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 1 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
@@ -112,16 +112,29 @@
                 <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
   <ul>
     <li><a href="#概述">概述</a></li>
-    <li><a href="#控制器">控制器</a></li>
+    <li><a href="#控制器">控制器</a>
+      <ul>
+        <li><a href="#deploymentcontroller">DeploymentController</a>
+          <ul>
+            <li><a href="#processorlistener">processorListener</a></li>
+            <li><a href="#workqueue">workqueue</a></li>
+            <li><a href="#reconcile">Reconcile</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
   </ul>
 </nav></div>
             </div><div class="content" id="content"><h2 id="概述">概述</h2>
 <p>使用过 kubebuilder 开发Operator项目的话，对 <code>Reconcile</code> 函数应该不陌生。</p>
 <p>由于 kubebuilder(controller-runtime)的高度封装，我们编写 operator 控制器，重点只需要编写 <code>Reconcile</code> 函数，所以一开始总是不能正确理解 <code>Reconcile</code> 函数的意义。</p>
 <h2 id="控制器">控制器</h2>
-<p>控制器，可以理解为，持有多个 processorListener 和 一个 workqueue，processorListener 用于获取相关事件添加到 workqueue 中。</p>
-<p>然后启动若干个 worker 消费 workqueue，而这里的 worker，主要就是调用 <code>Reconcile</code> 函数。</p>
-<p>比如 <code>DeploymentController</code></p>
+<p>控制器，可以理解为，</p>
+<p>1，持有多个与关注资源相关 processorListener 和 一个 workqueue，</p>
+<p>2，processorListener 用于获取相关事件添加到 workqueue 中。</p>
+<p>3，然后启动若干个 worker 消费 workqueue，而这里的 worker，主要就是调用 <code>Reconcile</code> 函数。</p>
+<p>接下来，看一下这个模式在 kube-controller-manager 和 controller-runtinme 里面的具体实现</p>
+<h3 id="deploymentcontroller">DeploymentController</h3>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -168,7 +181,10 @@
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div></div><div class="post-footer" id="post-footer">
+</div><h4 id="processorlistener">processorListener</h4>
+<h4 id="workqueue">workqueue</h4>
+<h4 id="reconcile">Reconcile</h4>
+</div><div class="post-footer" id="post-footer">
     <div class="post-info">
         <div class="post-info-line">
             <div class="post-info-mod">
