@@ -3,9 +3,17 @@
         <title>Yuyu&#39;s Blog</title>
         <link>https://yzxiu.github.io/</link>
         <description>Yuyu&#39;s Blog</description>
-        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Wed, 01 Feb 2023 16:47:48 &#43;0800</lastBuildDate>
+        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Mon, 06 Feb 2023 09:15:38 &#43;0800</lastBuildDate>
             <atom:link href="https://yzxiu.github.io/index.xml" rel="self" type="application/rss+xml" />
         <item>
+    <title>Docker安装Ceph-Nautilus &amp; ceph-csi使用</title>
+    <link>https://yzxiu.github.io/2023-02-06-docker-ceph-nautilus/</link>
+    <pubDate>Mon, 06 Feb 2023 09:15:38 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2023-02-06-docker-ceph-nautilus/</guid>
+    <description><![CDATA[概述 安装ceph-nautilus测试环境，用于调试/学习ceph-csi 安装ceph-nautilus 0 环境 centos-41 192.168.4.41 CentOS Linux release 7.8.2003 (Core) centos-42 192.168.4.42 CentOS Linux release 7.8.2003 (Core) centos-43]]></description>
+</item>
+<item>
     <title>client-go解析(7) - Reconcile</title>
     <link>https://yzxiu.github.io/2023-02-01-client-go-7-reconcile/</link>
     <pubDate>Wed, 01 Feb 2023 16:47:48 &#43;0800</pubDate>
@@ -76,14 +84,6 @@
     <author>Yuyu</author>
     <guid>https://yzxiu.github.io/2022-11-23-containerd-11-go-events/</guid>
     <description><![CDATA[概述 在 containerd 的 event 中，主要用到了 go-events 这个包。 为 Go 实现一个可组合的事件分发包。 初始化 在containerd启动过程中， 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16]]></description>
-</item>
-<item>
-    <title>Containerd解析(10) - Containerd Start</title>
-    <link>https://yzxiu.github.io/2022-11-18-containerd-10-containerd-start/</link>
-    <pubDate>Fri, 18 Nov 2022 11:55:14 &#43;0800</pubDate>
-    <author>Yuyu</author>
-    <guid>https://yzxiu.github.io/2022-11-18-containerd-10-containerd-start/</guid>
-    <description><![CDATA[概述 了解containerd的启动过程。 重点关注api接口 ContainersClient、 TasksClient的实现。 Container]]></description>
 </item>
 </channel>
 </rss>

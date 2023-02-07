@@ -17,7 +17,7 @@
 <meta name="twitter:title" content="client-go解析(7) - Reconcile"/>
 <meta name="twitter:description" content="概述 使用过 kubebuilder 开发Operator项目的话，对 Reconcile 函数应该不陌生。 由于 kubebuilder(controller-runtime)的高度封装，"/>
 <meta name="application-name" content="Yuyu&#39;s Blog">
-<meta name="apple-mobile-web-app-title" content="Yuyu&#39;s Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="icon" href="/images/avataaars.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://yzxiu.github.io/2023-02-01-client-go-7-reconcile/" /><link rel="prev" href="https://yzxiu.github.io/2023-01-31-client-go-6-informer-factory/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<meta name="apple-mobile-web-app-title" content="Yuyu&#39;s Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="icon" href="/images/avataaars.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://yzxiu.github.io/2023-02-01-client-go-7-reconcile/" /><link rel="prev" href="https://yzxiu.github.io/2023-01-31-client-go-6-informer-factory/" /><link rel="next" href="https://yzxiu.github.io/2023-02-06-docker-ceph-nautilus/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"></noscript><link rel="preload" href="/lib/animate/animate.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="/lib/animate/animate.min.css"></noscript><script type="application/ld+json">
     {
@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2023-02-01-client-go-7-reconcile\/"
-        },"genre": "posts","keywords": "client-go, informer, reconcile","wordcount":  308 ,
+        },"genre": "posts","keywords": "client-go, informer, reconcile","wordcount":  748 ,
         "url": "https:\/\/yzxiu.github.io\/2023-02-01-client-go-7-reconcile\/","datePublished": "2023-02-01T16:47:48+08:00","dateModified": "2023-02-01T16:47:48+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,8 +102,8 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">client-go解析(7) - Reconcile</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/client-go/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>client-go</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-02-01">2023-02-01</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 308 字&nbsp;
-                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 1 分钟&nbsp;</div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-02-01">2023-02-01</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 748 字&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 2 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
                     <span>目录</span>
@@ -129,7 +129,7 @@
 <p>使用过 kubebuilder 开发Operator项目的话，对 <code>Reconcile</code> 函数应该不陌生。</p>
 <p>由于 kubebuilder(controller-runtime)的高度封装，我们编写 operator 控制器，重点只需要编写 <code>Reconcile</code> 函数，所以一开始总是不能正确理解 <code>Reconcile</code> 函数的意义。</p>
 <h2 id="控制器">控制器</h2>
-<p>控制器，可以理解为，</p>
+<p>控制器，可以理解为：</p>
 <p>1，持有多个与关注资源相关 processorListener 和 一个 workqueue，</p>
 <p>2，processorListener 用于获取相关事件添加到 workqueue 中。</p>
 <p>3，然后启动若干个 worker 消费 workqueue，而这里的 worker，主要就是调用 <code>Reconcile</code> 函数。</p>
@@ -182,8 +182,221 @@
 </span></span></code></pre></td></tr></table>
 </div>
 </div><h4 id="processorlistener">processorListener</h4>
-<h4 id="workqueue">workqueue</h4>
-<h4 id="reconcile">Reconcile</h4>
+<p>DeploymentController 中，在 NewDeploymentController 方法初始化 processorListener，如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// NewDeploymentController creates a new DeploymentController.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">NewDeploymentController</span><span class="p">(</span><span class="nx">dInformer</span> <span class="nx">appsinformers</span><span class="p">.</span><span class="nx">DeploymentInformer</span><span class="p">,</span> <span class="nx">rsInformer</span> <span class="nx">appsinformers</span><span class="p">.</span><span class="nx">ReplicaSetInformer</span><span class="p">,</span> <span class="nx">podInformer</span> <span class="nx">coreinformers</span><span class="p">.</span><span class="nx">PodInformer</span><span class="p">,</span> <span class="nx">client</span> <span class="nx">clientset</span><span class="p">.</span><span class="nx">Interface</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">DeploymentController</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">eventBroadcaster</span> <span class="o">:=</span> <span class="nx">record</span><span class="p">.</span><span class="nf">NewBroadcaster</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">dc</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">DeploymentController</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">client</span><span class="p">:</span>           <span class="nx">client</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">eventBroadcaster</span><span class="p">:</span> <span class="nx">eventBroadcaster</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">eventRecorder</span><span class="p">:</span>    <span class="nx">eventBroadcaster</span><span class="p">.</span><span class="nf">NewRecorder</span><span class="p">(</span><span class="nx">scheme</span><span class="p">.</span><span class="nx">Scheme</span><span class="p">,</span> <span class="nx">v1</span><span class="p">.</span><span class="nx">EventSource</span><span class="p">{</span><span class="nx">Component</span><span class="p">:</span> <span class="s">&#34;deployment-controller&#34;</span><span class="p">}),</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">queue</span><span class="p">:</span>            <span class="nx">workqueue</span><span class="p">.</span><span class="nf">NewNamedRateLimitingQueue</span><span class="p">(</span><span class="nx">workqueue</span><span class="p">.</span><span class="nf">DefaultControllerRateLimiter</span><span class="p">(),</span> <span class="s">&#34;deployment&#34;</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">dc</span><span class="p">.</span><span class="nx">rsControl</span> <span class="p">=</span> <span class="nx">controller</span><span class="p">.</span><span class="nx">RealRSControl</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">KubeClient</span><span class="p">:</span> <span class="nx">client</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">Recorder</span><span class="p">:</span>   <span class="nx">dc</span><span class="p">.</span><span class="nx">eventRecorder</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">dInformer</span><span class="p">.</span><span class="nf">Informer</span><span class="p">().</span><span class="nf">AddEventHandler</span><span class="p">(</span><span class="nx">cache</span><span class="p">.</span><span class="nx">ResourceEventHandlerFuncs</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">AddFunc</span><span class="p">:</span>    <span class="nx">dc</span><span class="p">.</span><span class="nx">addDeployment</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">UpdateFunc</span><span class="p">:</span> <span class="nx">dc</span><span class="p">.</span><span class="nx">updateDeployment</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// This will enter the sync loop and no-op, because the deployment has been deleted from the store.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nx">DeleteFunc</span><span class="p">:</span> <span class="nx">dc</span><span class="p">.</span><span class="nx">deleteDeployment</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">rsInformer</span><span class="p">.</span><span class="nf">Informer</span><span class="p">().</span><span class="nf">AddEventHandler</span><span class="p">(</span><span class="nx">cache</span><span class="p">.</span><span class="nx">ResourceEventHandlerFuncs</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">AddFunc</span><span class="p">:</span>    <span class="nx">dc</span><span class="p">.</span><span class="nx">addReplicaSet</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">UpdateFunc</span><span class="p">:</span> <span class="nx">dc</span><span class="p">.</span><span class="nx">updateReplicaSet</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">DeleteFunc</span><span class="p">:</span> <span class="nx">dc</span><span class="p">.</span><span class="nx">deleteReplicaSet</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">podInformer</span><span class="p">.</span><span class="nf">Informer</span><span class="p">().</span><span class="nf">AddEventHandler</span><span class="p">(</span><span class="nx">cache</span><span class="p">.</span><span class="nx">ResourceEventHandlerFuncs</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">DeleteFunc</span><span class="p">:</span> <span class="nx">dc</span><span class="p">.</span><span class="nx">deletePod</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">dc</span><span class="p">.</span><span class="nx">syncHandler</span> <span class="p">=</span> <span class="nx">dc</span><span class="p">.</span><span class="nx">syncDeployment</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">dc</span><span class="p">.</span><span class="nx">enqueueDeployment</span> <span class="p">=</span> <span class="nx">dc</span><span class="p">.</span><span class="nx">enqueue</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">dc</span><span class="p">.</span><span class="nx">dLister</span> <span class="p">=</span> <span class="nx">dInformer</span><span class="p">.</span><span class="nf">Lister</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">dc</span><span class="p">.</span><span class="nx">rsLister</span> <span class="p">=</span> <span class="nx">rsInformer</span><span class="p">.</span><span class="nf">Lister</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">dc</span><span class="p">.</span><span class="nx">podLister</span> <span class="p">=</span> <span class="nx">podInformer</span><span class="p">.</span><span class="nf">Lister</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">dc</span><span class="p">.</span><span class="nx">dListerSynced</span> <span class="p">=</span> <span class="nx">dInformer</span><span class="p">.</span><span class="nf">Informer</span><span class="p">().</span><span class="nx">HasSynced</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">dc</span><span class="p">.</span><span class="nx">rsListerSynced</span> <span class="p">=</span> <span class="nx">rsInformer</span><span class="p">.</span><span class="nf">Informer</span><span class="p">().</span><span class="nx">HasSynced</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">dc</span><span class="p">.</span><span class="nx">podListerSynced</span> <span class="p">=</span> <span class="nx">podInformer</span><span class="p">.</span><span class="nf">Informer</span><span class="p">().</span><span class="nx">HasSynced</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">dc</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="workqueue">workqueue</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">dInformer</span><span class="p">.</span><span class="nf">Informer</span><span class="p">().</span><span class="nf">AddEventHandler</span><span class="p">(</span><span class="nx">cache</span><span class="p">.</span><span class="nx">ResourceEventHandlerFuncs</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">AddFunc</span><span class="p">:</span>    <span class="nx">dc</span><span class="p">.</span><span class="nx">addDeployment</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">UpdateFunc</span><span class="p">:</span> <span class="nx">dc</span><span class="p">.</span><span class="nx">updateDeployment</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// This will enter the sync loop and no-op, because the deployment has been deleted from the store.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">DeleteFunc</span><span class="p">:</span> <span class="nx">dc</span><span class="p">.</span><span class="nx">deleteDeployment</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"><span class="p">})</span>
+</span></span><span class="line"><span class="cl"><span class="nx">rsInformer</span><span class="p">.</span><span class="nf">Informer</span><span class="p">().</span><span class="nf">AddEventHandler</span><span class="p">(</span><span class="nx">cache</span><span class="p">.</span><span class="nx">ResourceEventHandlerFuncs</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">AddFunc</span><span class="p">:</span>    <span class="nx">dc</span><span class="p">.</span><span class="nx">addReplicaSet</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">UpdateFunc</span><span class="p">:</span> <span class="nx">dc</span><span class="p">.</span><span class="nx">updateReplicaSet</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">DeleteFunc</span><span class="p">:</span> <span class="nx">dc</span><span class="p">.</span><span class="nx">deleteReplicaSet</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"><span class="p">})</span>
+</span></span><span class="line"><span class="cl"><span class="nx">podInformer</span><span class="p">.</span><span class="nf">Informer</span><span class="p">().</span><span class="nf">AddEventHandler</span><span class="p">(</span><span class="nx">cache</span><span class="p">.</span><span class="nx">ResourceEventHandlerFuncs</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">DeleteFunc</span><span class="p">:</span> <span class="nx">dc</span><span class="p">.</span><span class="nx">deletePod</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl"><span class="p">})</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>简单查看几个方法</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">dc</span> <span class="o">*</span><span class="nx">DeploymentController</span><span class="p">)</span> <span class="nf">addDeployment</span><span class="p">(</span><span class="nx">obj</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">d</span> <span class="o">:=</span> <span class="nx">obj</span><span class="p">.(</span><span class="o">*</span><span class="nx">apps</span><span class="p">.</span><span class="nx">Deployment</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">klog</span><span class="p">.</span><span class="nf">V</span><span class="p">(</span><span class="mi">4</span><span class="p">).</span><span class="nf">InfoS</span><span class="p">(</span><span class="s">&#34;Adding deployment&#34;</span><span class="p">,</span> <span class="s">&#34;deployment&#34;</span><span class="p">,</span> <span class="nx">klog</span><span class="p">.</span><span class="nf">KObj</span><span class="p">(</span><span class="nx">d</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">dc</span><span class="p">.</span><span class="nf">enqueueDeployment</span><span class="p">(</span><span class="nx">d</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>直接入队</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// addReplicaSet enqueues the deployment that manages a ReplicaSet when the ReplicaSet is created.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">dc</span> <span class="o">*</span><span class="nx">DeploymentController</span><span class="p">)</span> <span class="nf">addReplicaSet</span><span class="p">(</span><span class="nx">obj</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">rs</span> <span class="o">:=</span> <span class="nx">obj</span><span class="p">.(</span><span class="o">*</span><span class="nx">apps</span><span class="p">.</span><span class="nx">ReplicaSet</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">rs</span><span class="p">.</span><span class="nx">DeletionTimestamp</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">// On a restart of the controller manager, it&#39;s possible for an object to
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="c1">// show up in a state that is already pending deletion.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="nx">dc</span><span class="p">.</span><span class="nf">deleteReplicaSet</span><span class="p">(</span><span class="nx">rs</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// If it has a ControllerRef, that&#39;s all that matters.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">if</span> <span class="nx">controllerRef</span> <span class="o">:=</span> <span class="nx">metav1</span><span class="p">.</span><span class="nf">GetControllerOf</span><span class="p">(</span><span class="nx">rs</span><span class="p">);</span> <span class="nx">controllerRef</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">d</span> <span class="o">:=</span> <span class="nx">dc</span><span class="p">.</span><span class="nf">resolveControllerRef</span><span class="p">(</span><span class="nx">rs</span><span class="p">.</span><span class="nx">Namespace</span><span class="p">,</span> <span class="nx">controllerRef</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">d</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">klog</span><span class="p">.</span><span class="nf">V</span><span class="p">(</span><span class="mi">4</span><span class="p">).</span><span class="nf">InfoS</span><span class="p">(</span><span class="s">&#34;ReplicaSet added&#34;</span><span class="p">,</span> <span class="s">&#34;replicaSet&#34;</span><span class="p">,</span> <span class="nx">klog</span><span class="p">.</span><span class="nf">KObj</span><span class="p">(</span><span class="nx">rs</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">dc</span><span class="p">.</span><span class="nf">enqueueDeployment</span><span class="p">(</span><span class="nx">d</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   <span class="c1">// Otherwise, it&#39;s an orphan. Get a list of all matching Deployments and sync
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// them to see if anyone wants to adopt it.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="nx">ds</span> <span class="o">:=</span> <span class="nx">dc</span><span class="p">.</span><span class="nf">getDeploymentsForReplicaSet</span><span class="p">(</span><span class="nx">rs</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">ds</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">klog</span><span class="p">.</span><span class="nf">V</span><span class="p">(</span><span class="mi">4</span><span class="p">).</span><span class="nf">InfoS</span><span class="p">(</span><span class="s">&#34;Orphan ReplicaSet added&#34;</span><span class="p">,</span> <span class="s">&#34;replicaSet&#34;</span><span class="p">,</span> <span class="nx">klog</span><span class="p">.</span><span class="nf">KObj</span><span class="p">(</span><span class="nx">rs</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">   <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">d</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">ds</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">dc</span><span class="p">.</span><span class="nf">enqueueDeployment</span><span class="p">(</span><span class="nx">d</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="reconcile">Reconcile</h4>
 </div><div class="post-footer" id="post-footer">
     <div class="post-info">
         <div class="post-info-line">
@@ -207,7 +420,8 @@
         </section>
     </div>
 
-    <div class="post-nav"><a href="/2023-01-31-client-go-6-informer-factory/" class="prev" rel="prev" title="client-go解析(6) - Factory"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>client-go解析(6) - Factory</a></div>
+    <div class="post-nav"><a href="/2023-01-31-client-go-6-informer-factory/" class="prev" rel="prev" title="client-go解析(6) - Factory"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>client-go解析(6) - Factory</a>
+            <a href="/2023-02-06-docker-ceph-nautilus/" class="next" rel="next" title="Docker安装Ceph-Nautilus &amp; ceph-csi使用">Docker安装Ceph-Nautilus & ceph-csi使用<i class="fas fa-angle-right fa-fw" aria-hidden="true"></i></a></div>
 </div>
 <div id="comments"><div id="giscus" class="comment"></div><noscript>
                 Please enable JavaScript to view the comments powered by <a href="https://giscus.app">Giscus</a>.
