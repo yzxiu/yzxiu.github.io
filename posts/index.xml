@@ -9,7 +9,7 @@
     <pubDate>Mon, 06 Feb 2023 09:15:38 &#43;0800</pubDate>
     <author>Yuyu</author>
     <guid>https://yzxiu.github.io/2023-02-06-docker-ceph-nautilus/</guid>
-    <description><![CDATA[概述 安装ceph-nautilus测试环境，用于调试/学习ceph-csi 安装ceph-nautilus 环境 centos-41 192.168.4.41 CentOS Linux release 7.8.2003 (Core) centos-42 192.168.4.42 CentOS Linux release 7.8.2003 (Core) centos-43 192.168.4.43]]></description>
+    <description><![CDATA[概述 安装ceph-nautilus(14.2.22)测试环境，用于调试/学习ceph-csi 安装ceph-nautilus 环境 centos-41 192.168.4.41 CentOS Linux release 7.8.2003 (Core)]]></description>
 </item>
 <item>
     <title>client-go解析(7) - Reconcile</title>

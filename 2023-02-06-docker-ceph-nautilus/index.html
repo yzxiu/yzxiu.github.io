@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="robots" content="noodp" />
         <title>Docker安装Ceph-Nautilus - Yuyu&#39;s Blog</title><meta name="Description" content=""><meta property="og:title" content="Docker安装Ceph-Nautilus" />
-<meta property="og:description" content="概述 安装ceph-nautilus测试环境，用于调试/学习ceph-csi 安装ceph-nautilus 环境 centos-41 192.168.4.41 CentOS Linux release 7.8.2003 (Core) centos-42 192.168.4.42 CentOS Linux release 7.8.2003 (Core) centos-43 192.168.4.43" />
+<meta property="og:description" content="概述 安装ceph-nautilus(14.2.22)测试环境，用于调试/学习ceph-csi 安装ceph-nautilus 环境 centos-41 192.168.4.41 CentOS Linux release 7.8.2003 (Core)" />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://yzxiu.github.io/2023-02-06-docker-ceph-nautilus/" /><meta property="og:image" content="https://yzxiu.github.io/logo.png"/><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2023-02-06T09:15:38+08:00" />
@@ -15,7 +15,7 @@
 <meta name="twitter:image" content="https://yzxiu.github.io/logo.png"/>
 
 <meta name="twitter:title" content="Docker安装Ceph-Nautilus"/>
-<meta name="twitter:description" content="概述 安装ceph-nautilus测试环境，用于调试/学习ceph-csi 安装ceph-nautilus 环境 centos-41 192.168.4.41 CentOS Linux release 7.8.2003 (Core) centos-42 192.168.4.42 CentOS Linux release 7.8.2003 (Core) centos-43 192.168.4.43"/>
+<meta name="twitter:description" content="概述 安装ceph-nautilus(14.2.22)测试环境，用于调试/学习ceph-csi 安装ceph-nautilus 环境 centos-41 192.168.4.41 CentOS Linux release 7.8.2003 (Core)"/>
 <meta name="application-name" content="Yuyu&#39;s Blog">
 <meta name="apple-mobile-web-app-title" content="Yuyu&#39;s Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="icon" href="/images/avataaars.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://yzxiu.github.io/2023-02-06-docker-ceph-nautilus/" /><link rel="prev" href="https://yzxiu.github.io/2023-02-01-client-go-7-reconcile/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
         <noscript><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"></noscript><link rel="preload" href="/lib/animate/animate.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2023-02-06-docker-ceph-nautilus\/"
-        },"genre": "posts","keywords": "ceph-csi, ceph-nautilus","wordcount":  2198 ,
+        },"genre": "posts","keywords": "ceph-csi, ceph-nautilus","wordcount":  2207 ,
         "url": "https:\/\/yzxiu.github.io\/2023-02-06-docker-ceph-nautilus\/","datePublished": "2023-02-06T09:15:38+08:00","dateModified": "2023-02-06T09:15:38+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,7 +102,7 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Docker安装Ceph-Nautilus</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/ceph/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>ceph</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-02-06">2023-02-06</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 2198 字&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-02-06">2023-02-06</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 2207 字&nbsp;
                 <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 5 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
@@ -145,7 +145,7 @@
   </ul>
 </nav></div>
             </div><div class="content" id="content"><h2 id="概述">概述</h2>
-<p>安装ceph-nautilus测试环境，用于调试/学习ceph-csi</p>
+<p>安装ceph-nautilus(14.2.22)测试环境，用于调试/学习ceph-csi</p>
 <h2 id="安装ceph-nautilus">安装ceph-nautilus</h2>
 <h3 id="环境">环境</h3>
 <p><strong>centos-41</strong>  192.168.4.41 <code>CentOS Linux release 7.8.2003 (Core)</code></p>

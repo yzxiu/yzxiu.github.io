@@ -3,11 +3,11 @@
 
 ## 概述
 
-安装ceph-nautilus测试环境，用于调试/学习ceph-csi
+安装ceph-nautilus(14.2.22)测试环境，用于调试/学习ceph-csi
+
+
 
 ## 安装ceph-nautilus
-
-
 
 ### 环境
 
@@ -16,8 +16,6 @@
 **centos-42**  192.168.4.42 `CentOS Linux release 7.8.2003 (Core)`
 
 **centos-43**  192.168.4.43 `CentOS Linux release 7.8.2003 (Core)`
-
-
 
 
 
