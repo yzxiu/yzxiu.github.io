@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2023-02-06-docker-ceph-nautilus\/"
-        },"genre": "posts","keywords": "ceph-csi, ceph-nautilus","wordcount":  2207 ,
+        },"genre": "posts","keywords": "ceph-csi, ceph-nautilus","wordcount":  2601 ,
         "url": "https:\/\/yzxiu.github.io\/2023-02-06-docker-ceph-nautilus\/","datePublished": "2023-02-06T09:15:38+08:00","dateModified": "2023-02-06T09:15:38+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,8 +102,8 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Docker安装Ceph-Nautilus</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/ceph/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>ceph</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-02-06">2023-02-06</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 2207 字&nbsp;
-                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 5 分钟&nbsp;</div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-02-06">2023-02-06</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 2601 字&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 6 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
                     <span>目录</span>
@@ -568,7 +568,135 @@
 </span></span><span class="line"><span class="cl">    pgs:
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h4 id="mgr">mgr</h4>
+</div><div class="details admonition question open">
+        <div class="details-summary admonition-title">
+            <i class="icon fas fa-question-circle fa-fw" aria-hidden="true"></i>问题<i class="details-icon fas fa-angle-right fa-fw" aria-hidden="true"></i>
+        </div>
+        <div class="details-content">
+            <div class="admonition-content"><p>使用<code>独立磁盘</code>的方式，分配的磁盘是 20G，</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="o">[</span>centos-41<span class="o">]</span> ~ fdisk -l
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Disk /dev/sda: 42.9 GB, <span class="m">42949672960</span> bytes, <span class="m">83886080</span> sectors
+</span></span><span class="line"><span class="cl"><span class="nv">Units</span> <span class="o">=</span> sectors of <span class="m">1</span> * <span class="nv">512</span> <span class="o">=</span> <span class="m">512</span> bytes
+</span></span><span class="line"><span class="cl">Sector size <span class="o">(</span>logical/physical<span class="o">)</span>: <span class="m">512</span> bytes / <span class="m">512</span> bytes
+</span></span><span class="line"><span class="cl">I/O size <span class="o">(</span>minimum/optimal<span class="o">)</span>: <span class="m">512</span> bytes / <span class="m">512</span> bytes
+</span></span><span class="line"><span class="cl">Disk label type: dos
+</span></span><span class="line"><span class="cl">Disk identifier: 0x0009ef1a
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   Device Boot      Start         End      Blocks   Id  System
+</span></span><span class="line"><span class="cl">/dev/sda1   *        <span class="m">2048</span>    <span class="m">83886079</span>    <span class="m">41942016</span>   <span class="m">83</span>  Linux
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Disk /dev/sdb: 21.5 GB, <span class="m">21474836480</span> bytes, <span class="m">41943040</span> sectors
+</span></span><span class="line"><span class="cl"><span class="nv">Units</span> <span class="o">=</span> sectors of <span class="m">1</span> * <span class="nv">512</span> <span class="o">=</span> <span class="m">512</span> bytes
+</span></span><span class="line"><span class="cl">Sector size <span class="o">(</span>logical/physical<span class="o">)</span>: <span class="m">512</span> bytes / <span class="m">512</span> bytes
+</span></span><span class="line"><span class="cl">I/O size <span class="o">(</span>minimum/optimal<span class="o">)</span>: <span class="m">512</span> bytes / <span class="m">512</span> bytes
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>但是创建出来的block为100G</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="o">[</span>centos-41<span class="o">]</span> ~ <span class="nb">cd</span> /dev/osd/ceph-0
+</span></span><span class="line"><span class="cl"><span class="o">[</span>centos-41<span class="o">]</span> ceph-0 ls -lh
+</span></span><span class="line"><span class="cl">total 37M
+</span></span><span class="line"><span class="cl">-rw-r--r--. <span class="m">1</span> <span class="m">167</span> <span class="m">167</span> 100G Feb  <span class="m">7</span> 15:55 block
+</span></span><span class="line"><span class="cl">-rw-------. <span class="m">1</span> <span class="m">167</span> <span class="m">167</span>    <span class="m">2</span> Feb  <span class="m">7</span> 13:20 bluefs
+</span></span><span class="line"><span class="cl">-rw-------. <span class="m">1</span> <span class="m">167</span> <span class="m">167</span>   <span class="m">37</span> Feb  <span class="m">7</span> 13:20 ceph_fsid
+</span></span><span class="line"><span class="cl">-rw-r--r--. <span class="m">1</span> <span class="m">167</span> <span class="m">167</span>   <span class="m">37</span> Feb  <span class="m">7</span> 13:20 fsid
+</span></span><span class="line"><span class="cl">-rw-------. <span class="m">1</span> <span class="m">167</span> <span class="m">167</span>   <span class="m">56</span> Feb  <span class="m">7</span> 13:20 keyring
+</span></span><span class="line"><span class="cl">-rw-------. <span class="m">1</span> <span class="m">167</span> <span class="m">167</span>    <span class="m">8</span> Feb  <span class="m">7</span> 13:20 kv_backend
+</span></span><span class="line"><span class="cl">-rw-------. <span class="m">1</span> <span class="m">167</span> <span class="m">167</span>   <span class="m">21</span> Feb  <span class="m">7</span> 13:20 magic
+</span></span><span class="line"><span class="cl">-rw-------. <span class="m">1</span> <span class="m">167</span> <span class="m">167</span>    <span class="m">4</span> Feb  <span class="m">7</span> 13:20 mkfs_done
+</span></span><span class="line"><span class="cl">-rw-------. <span class="m">1</span> <span class="m">167</span> <span class="m">167</span>    <span class="m">6</span> Feb  <span class="m">7</span> 13:20 ready
+</span></span><span class="line"><span class="cl">-rw-------. <span class="m">1</span> <span class="m">167</span> <span class="m">167</span>    <span class="m">3</span> Feb  <span class="m">7</span> 13:20 require_osd_release
+</span></span><span class="line"><span class="cl">-rw-------. <span class="m">1</span> <span class="m">167</span> <span class="m">167</span>   <span class="m">10</span> Feb  <span class="m">7</span> 13:20 <span class="nb">type</span>
+</span></span><span class="line"><span class="cl">-rw-------. <span class="m">1</span> <span class="m">167</span> <span class="m">167</span>    <span class="m">2</span> Feb  <span class="m">7</span> 13:20 whoami
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>在ceph上显示出来也是100G</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">[centos-41] ceph-0 ceph -s           
+</span></span><span class="line"><span class="cl">  cluster:
+</span></span><span class="line"><span class="cl">    id:     3e8299d4-6f8f-485d-a508-7ad161d36f36
+</span></span><span class="line"><span class="cl">    health: HEALTH_OK
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  services:
+</span></span><span class="line"><span class="cl">    mon: 3 daemons, quorum centos-41,centos-42,centos-43 (age 76m)
+</span></span><span class="line"><span class="cl">    mgr: centos-41(active, since 76m), standbys: centos-42, centos-43
+</span></span><span class="line"><span class="cl">    osd: 3 osds: 3 up (since 76m), 3 in (since 2h)
+</span></span><span class="line"><span class="cl">    rgw: 3 daemons active (centos-41, centos-42, centos-43)
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  task status:
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  data:
+</span></span><span class="line"><span class="cl">    pools:   5 pools, 136 pgs
+</span></span><span class="line"><span class="cl">    objects: 202 objects, 3.2 MiB
+</span></span><span class="line"><span class="cl">    usage:   3.0 GiB used, 297 GiB / 300 GiB avail
+</span></span><span class="line"><span class="cl">    pgs:     136 active+clean
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>待研究&hellip;</p>
+</div>
+        </div>
+    </div>
+<h4 id="mgr">mgr</h4>
 <p>(全部执行) 启动</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">

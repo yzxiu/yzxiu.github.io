@@ -78,8 +78,6 @@ docker pull ceph/daemon:latest-nautilus
 
 ### 磁盘
 
-
-
 3.1 (全部执行) 使用虚拟磁盘文件
 
 ```bash
@@ -286,6 +284,77 @@ ceph -s
     usage:   0 B used, 0 B / 0 B avail
     pgs:
 ```
+
+{{< admonition question >}}
+使用`独立磁盘`的方式，分配的磁盘是 20G，
+
+```bash
+[centos-41] ~ fdisk -l
+
+Disk /dev/sda: 42.9 GB, 42949672960 bytes, 83886080 sectors
+Units = sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disk label type: dos
+Disk identifier: 0x0009ef1a
+
+   Device Boot      Start         End      Blocks   Id  System
+/dev/sda1   *        2048    83886079    41942016   83  Linux
+
+Disk /dev/sdb: 21.5 GB, 21474836480 bytes, 41943040 sectors
+Units = sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+```
+
+但是创建出来的block为100G
+
+```bash
+[centos-41] ~ cd /dev/osd/ceph-0
+[centos-41] ceph-0 ls -lh
+total 37M
+-rw-r--r--. 1 167 167 100G Feb  7 15:55 block
+-rw-------. 1 167 167    2 Feb  7 13:20 bluefs
+-rw-------. 1 167 167   37 Feb  7 13:20 ceph_fsid
+-rw-r--r--. 1 167 167   37 Feb  7 13:20 fsid
+-rw-------. 1 167 167   56 Feb  7 13:20 keyring
+-rw-------. 1 167 167    8 Feb  7 13:20 kv_backend
+-rw-------. 1 167 167   21 Feb  7 13:20 magic
+-rw-------. 1 167 167    4 Feb  7 13:20 mkfs_done
+-rw-------. 1 167 167    6 Feb  7 13:20 ready
+-rw-------. 1 167 167    3 Feb  7 13:20 require_osd_release
+-rw-------. 1 167 167   10 Feb  7 13:20 type
+-rw-------. 1 167 167    2 Feb  7 13:20 whoami
+```
+
+在ceph上显示出来也是100G
+
+```
+[centos-41] ceph-0 ceph -s           
+  cluster:
+    id:     3e8299d4-6f8f-485d-a508-7ad161d36f36
+    health: HEALTH_OK
+ 
+  services:
+    mon: 3 daemons, quorum centos-41,centos-42,centos-43 (age 76m)
+    mgr: centos-41(active, since 76m), standbys: centos-42, centos-43
+    osd: 3 osds: 3 up (since 76m), 3 in (since 2h)
+    rgw: 3 daemons active (centos-41, centos-42, centos-43)
+ 
+  task status:
+ 
+  data:
+    pools:   5 pools, 136 pgs
+    objects: 202 objects, 3.2 MiB
+    usage:   3.0 GiB used, 297 GiB / 300 GiB avail
+    pgs:     136 active+clean
+```
+
+待研究...
+
+{{< /admonition >}}
+
+
 
 
 
