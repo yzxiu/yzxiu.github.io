@@ -637,7 +637,7 @@ status:
 
 ```
 
-imageName: csi-vol-ae2b485c-d4e5-499c-9bec-443b5b62350c 与 ui 查看的项符合
+imageName: csi-vol-ae2b485c-d4e5-499c-9bec-443b5b62350c 与 ui 查看的相符合
 
 ![image-20230207233835808](https://raw.githubusercontent.com/yzxiu/images/blog/2023-02/20230207-233836.png)
 
@@ -685,6 +685,10 @@ enabled application 'rbd' on pool 'kubernetes'
 ```
 
 
+
+<br>
+
+<br>
 
 参考：
 
