@@ -9,7 +9,7 @@
 
 
 
-### 0 环境
+### 环境
 
 **centos-41**  192.168.4.41 `CentOS Linux release 7.8.2003 (Core)`
 
@@ -21,7 +21,7 @@
 
 
 
-### 1 准备
+### 准备
 
 (全部执行) 配置文件夹
 
@@ -59,7 +59,7 @@ yum install -y ntp && systemctl start ntpd && systemctl enable ntpd
 
 
 
-### 2 docker
+### docker
 
 安装docker，略
 
@@ -78,7 +78,7 @@ docker pull ceph/daemon:latest-nautilus
 
 
 
-### 3 磁盘
+### 磁盘
 
 
 
@@ -121,7 +121,7 @@ mount -a
 
 
 
-### 4 部署
+### 部署
 
 在 centos-41执行生成文件
 
