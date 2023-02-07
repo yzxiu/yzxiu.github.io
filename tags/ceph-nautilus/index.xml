@@ -4,7 +4,7 @@
         <link>https://yzxiu.github.io/tags/ceph-nautilus/</link>
         <description>ceph-nautilus - 标签 - Yuyu&#39;s Blog</description>
         <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Mon, 06 Feb 2023 09:15:38 &#43;0800</lastBuildDate><atom:link href="https://yzxiu.github.io/tags/ceph-nautilus/" rel="self" type="application/rss+xml" /><item>
-    <title>Docker安装Ceph-Nautilus &amp; ceph-csi使用</title>
+    <title>Docker安装Ceph-Nautilus</title>
     <link>https://yzxiu.github.io/2023-02-06-docker-ceph-nautilus/</link>
     <pubDate>Mon, 06 Feb 2023 09:15:38 &#43;0800</pubDate>
     <author>Yuyu</author>

@@ -1,4 +1,4 @@
-# Docker安装Ceph-Nautilus & ceph-csi使用
+# Docker安装Ceph-Nautilus
 
 
 ## 概述
