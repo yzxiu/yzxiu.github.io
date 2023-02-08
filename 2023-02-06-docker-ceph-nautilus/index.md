@@ -194,7 +194,7 @@ sh /usr/local/ceph/admin/start_rgw.sh
 
 
 
-#### osd
+#### mon
 
 (在 centos-41 执行)
 
@@ -228,7 +228,7 @@ mgr modules = dashboard
 rgw_frontends = "civetweb port=20003"
 ```
 
-注意 [client.rgw.centos-41]
+注意 `[client.rgw.centos-41]`，修改完后重启一下 `docker restart mon`
 
 复制到其他节点
 
@@ -353,8 +353,6 @@ total 37M
 待研究...
 
 {{< /admonition >}}
-
-
 
 
 

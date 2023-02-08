@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2023-02-06-docker-ceph-nautilus\/"
-        },"genre": "posts","keywords": "ceph-csi, ceph-nautilus","wordcount":  2618 ,
+        },"genre": "posts","keywords": "ceph-csi, ceph-nautilus","wordcount":  2651 ,
         "url": "https:\/\/yzxiu.github.io\/2023-02-06-docker-ceph-nautilus\/","datePublished": "2023-02-06T09:15:38+08:00","dateModified": "2023-02-06T09:15:38+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,7 +102,7 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Docker安装Ceph-Nautilus</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/ceph/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>ceph</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-02-06">2023-02-06</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 2618 字&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-02-06">2023-02-06</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 2651 字&nbsp;
                 <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 6 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
@@ -120,8 +120,8 @@
         <li><a href="#磁盘">磁盘</a></li>
         <li><a href="#部署">部署</a>
           <ul>
+            <li><a href="#mon">mon</a></li>
             <li><a href="#osd">osd</a></li>
-            <li><a href="#osd-1">osd</a></li>
             <li><a href="#mgr">mgr</a></li>
             <li><a href="#rgw">rgw</a></li>
           </ul>
@@ -432,7 +432,7 @@
 </span></span><span class="line"><span class="cl">sh /usr/local/ceph/admin/start_rgw.sh
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h4 id="osd">osd</h4>
+</div><h4 id="mon">mon</h4>
 <p>(在 centos-41 执行)</p>
 <p>先启动centos-41的mon</p>
 <div class="highlight"><div class="chroma">
@@ -483,7 +483,7 @@
 </span></span><span class="line"><span class="cl">rgw_frontends = &#34;civetweb port=20003&#34;
 </span></span></code></pre></td></tr></table>
 </div>
-</div><p>注意 [client.rgw.centos-41]</p>
+</div><p>注意 <code>[client.rgw.centos-41]</code>，修改完后重启一下 <code>docker restart mon</code></p>
 <p>复制到其他节点</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -506,7 +506,7 @@
 </span></span><span class="line"><span class="cl">ssh centos-43 bash /usr/local/ceph/admin/start_mon.sh
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h4 id="osd-1">osd</h4>
+</div><h4 id="osd">osd</h4>
 <p>(全部执行) 启动osd之前，先执行</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
