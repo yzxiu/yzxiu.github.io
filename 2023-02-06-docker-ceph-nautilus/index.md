@@ -119,7 +119,7 @@ mount -a
 
 ### 部署
 
-在 centos-41执行生成文件
+(在 centos-41 执行) 生成文件
 
 ```bash
 cat >/usr/local/ceph/admin/start_mon.sh <<EOF
@@ -430,7 +430,7 @@ ceph version 14.2.22 (ca74598065096e6fcbd8433c8779a2be0c889351) nautilus (stable
 
 ### ceph新建pool
 
-新建pool
+(在 centos-41 执行) 新建pool
 
 ```bash
 # centos-41节点
@@ -446,7 +446,7 @@ ceph version 14.2.22 (ca74598065096e6fcbd8433c8779a2be0c889351) nautilus (stable
 5 kubernetes
 ```
 
-新建ceph用户
+(在 centos-41 执行) 新建ceph用户
 
 ```bash
 [centos-41] ~ ceph auth get-or-create client.kubernetes mon 'profile rbd' osd 'profile rbd pool=kubernetes' mgr 'profile rbd pool=kubernetes'
@@ -455,7 +455,7 @@ ceph version 14.2.22 (ca74598065096e6fcbd8433c8779a2be0c889351) nautilus (stable
     key = AQBnz11fclrxChAAf8TFw8ROzmr8ifftAHQbTw==
 ```
 
-重新查看用户
+(在 centos-41 执行) 重新查看用户
 
 ```bash
 [centos-41] ~ ceph auth get client.kubernetes
@@ -468,7 +468,7 @@ ceph version 14.2.22 (ca74598065096e6fcbd8433c8779a2be0c889351) nautilus (stable
 exported keyring for client.kubernetes
 ```
 
-获取集群信息
+(在 centos-41 执行) 获取集群信息
 
 ```bash
 [centos-41] ~ ceph mon dump
@@ -493,8 +493,6 @@ git clone git@github.com:ceph/ceph-csi.git
 ```
 
 修改配置文件 `ceph-csi/charts/ceph-csi-rbd/values.yaml`
-
-修改几处地方：
 
 csiConfig
 
@@ -524,7 +522,7 @@ provisioner
 ```yaml
 provisioner:
   name: provisioner
-  replicaCount: 1 # 测试环境改为1即可，也可以不该
+  replicaCount: 1 # 测试环境改为1即可，也可以不改
 ```
 
 
@@ -603,16 +601,20 @@ spec:
       storage: 1Gi
   storageClassName: csi-rbd-sc
   
+  
 # 创建pvc
 k apply -f pvc.yaml 
 
 persistentvolumeclaim/rbd-pvc created
+
 
 # 查看pv
 k get pv       
 
 NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM             STORAGECLASS   REASON   AGE
 pvc-18ed32d9-3d09-4af4-b08e-eb2a3199784c   1Gi        RWO            Delete           Bound    default/rbd-pvc   csi-rbd-sc              107s
+
+
 # 查看pod
 cat pod.yaml 
 
@@ -634,10 +636,12 @@ spec:
         claimName: rbd-pvc
         readOnly: false
 
+
 # 创建pod使用pvc
 k apply -f pod.yaml 
 
 pod/csi-rbd-demo-pod created
+
 
 # pod创建成功
 k get pod csi-rbd-demo-pod
