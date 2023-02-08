@@ -710,7 +710,9 @@ imageName: csi-vol-ae2b485c-d4e5-499c-9bec-443b5b62350c 与 ui 查看的相符�
 
 ![image-20230207233835808](https://raw.githubusercontent.com/yzxiu/images/blog/2023-02/20230207-233836.png)
 
-
+{{< admonition >}}
+在k8s中使用 ceph 存储，需要在各个节点上安装 ceph-common
+{{< /admonition >}}
 
 
 
@@ -718,7 +720,9 @@ imageName: csi-vol-ae2b485c-d4e5-499c-9bec-443b5b62350c 与 ui 查看的相符�
 
 ###  [ceph -s 出现 mon is allowing insecure global_id reclaim](https://www.cnblogs.com/lvzhenjiang/p/14856572.html)
 
+```bash
 ceph config set mon auth_allow_insecure_global_id_reclaim false
+```
 
 
 
