@@ -29,10 +29,10 @@
 </item>
 <item>
     <title>Containerd解析(1) - example</title>
-    <link>https://yzxiu.github.io/2022-10-30-containerd-1/</link>
+    <link>https://yzxiu.github.io/2022-10-30-containerd-1-example/</link>
     <pubDate>Sun, 30 Oct 2022 21:48:08 &#43;0800</pubDate>
     <author>Yuyu</author>
-    <guid>https://yzxiu.github.io/2022-10-30-containerd-1/</guid>
+    <guid>https://yzxiu.github.io/2022-10-30-containerd-1-example/</guid>
     <description><![CDATA[<div class="featured-image">
                 <img src="https://raw.githubusercontent.com/yzxiu/images/blog/2022-10/20221030-230138.png" referrerpolicy="no-referrer">
             </div>概述 本文使用containerd默认配置，不涉及docker。 通过一个简单的例子，粗略了解containerd创建并运行一个容器的过程。 主要]]></description>

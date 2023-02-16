@@ -25,6 +25,10 @@ The following table specifies the various components of containerd and general f
 | volumes        | Volume management for external data                          | out    | The API supports mounts, binds, etc where all volumes type systems can be built on top of containerd. |
 | logging        | Persisting container logs                                    | out    | Logging can be build on top of containerd because the container’s STDIO will be provided to the clients and they can persist any way they see fit. There is no io copying of container STDIO in containerd. |
 
+支持：    运行/文件系统/拉取，推送/指标
+
+不支持：网络/构建/外部存储卷/日志
+
 从上表可知，containerd并不负责容器网络的配置工作。
 
 <br>

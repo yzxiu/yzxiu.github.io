@@ -728,6 +728,8 @@ ceph config set mon auth_allow_insecure_global_id_reclaim false
 
 ### [mon重启失败问题](https://blog.csdn.net/hxx688/article/details/103440967#t14)
 
+需要修改 mon 容器里面的启动脚本
+
 ```
 docker cp mon:/opt/ceph-container/bin/start_mon.sh .
 # 注释此行，直接将v2v1复制为2，代表是走V2协议， 以指定IP方式加入集群
@@ -758,6 +760,17 @@ enabled application 'rbd' on pool 'kubernetes'
 ```
 
 
+
+### [Module ‘dashboard‘ has failed: IOError](https://blog.csdn.net/weixin_42440345/article/details/109608856)
+
+有时重启之后，出现dashboard访问不了的情况
+
+```
+# 将 dashboard 迁移到其他节点
+[centos-41] ~ ceph config set mgr mgr/dashboard/server_addr 192.168.4.42
+[centos-41] ~ ceph mgr module disable dashboard
+[centos-41] ~ ceph mgr module enable dashboard
+```
 
 <br>
 

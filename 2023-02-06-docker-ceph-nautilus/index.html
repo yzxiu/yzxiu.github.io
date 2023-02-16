@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2023-02-06-docker-ceph-nautilus\/"
-        },"genre": "posts","keywords": "ceph-csi, ceph-nautilus","wordcount":  2676 ,
+        },"genre": "posts","keywords": "ceph-csi, ceph-nautilus","wordcount":  2766 ,
         "url": "https:\/\/yzxiu.github.io\/2023-02-06-docker-ceph-nautilus\/","datePublished": "2023-02-06T09:15:38+08:00","dateModified": "2023-02-06T09:15:38+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,7 +102,7 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Docker安装Ceph-Nautilus</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/ceph/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>ceph</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-02-06">2023-02-06</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 2676 字&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-02-06">2023-02-06</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 2766 字&nbsp;
                 <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 6 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
@@ -140,6 +140,7 @@
         <li><a href="#ceph--s-出现-mon-is-allowing-insecure-global_id-reclaimhttpswwwcnblogscomlvzhenjiangp14856572html"><a href="https://www.cnblogs.com/lvzhenjiang/p/14856572.html">ceph -s 出现 mon is allowing insecure global_id reclaim</a></a></li>
         <li><a href="#mon重启失败问题httpsblogcsdnnethxx688articledetails103440967t14"><a href="https://blog.csdn.net/hxx688/article/details/103440967#t14">mon重启失败问题</a></a></li>
         <li><a href="#pool_app_not_enabled-application-not-enabled-on-1-poolshttpdbaselifecomproject-3doc-775"><a href="http://dbaselife.com/project-3/doc-775/">POOL_APP_NOT_ENABLED: application not enabled on 1 pool(s)</a></a></li>
+        <li><a href="#module-dashboard-has-failed-ioerrorhttpsblogcsdnnetweixin_42440345articledetails109608856"><a href="https://blog.csdn.net/weixin_42440345/article/details/109608856">Module ‘dashboard‘ has failed: IOError</a></a></li>
       </ul>
     </li>
   </ul>
@@ -1318,6 +1319,7 @@
 </span></span></code></pre></td></tr></table>
 </div>
 </div><h3 id="mon重启失败问题httpsblogcsdnnethxx688articledetails103440967t14"><a href="https://blog.csdn.net/hxx688/article/details/103440967#t14" target="_blank" rel="noopener noreffer ">mon重启失败问题</a></h3>
+<p>需要修改 mon 容器里面的启动脚本</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -1361,6 +1363,22 @@
 <td class="lntd">
 <pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">[centos-41] ~ ceph osd pool application enable kubernetes rbd
 </span></span><span class="line"><span class="cl">enabled application &#39;rbd&#39; on pool &#39;kubernetes&#39;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="module-dashboard-has-failed-ioerrorhttpsblogcsdnnetweixin_42440345articledetails109608856"><a href="https://blog.csdn.net/weixin_42440345/article/details/109608856" target="_blank" rel="noopener noreffer ">Module ‘dashboard‘ has failed: IOError</a></h3>
+<p>有时重启之后，出现dashboard访问不了的情况</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-v" data-lang="v"><span class="line"><span class="cl"><span class="o">#</span> <span class="nv">将</span> <span class="nv">dashboard</span> <span class="nv">迁移到其他节点</span>
+</span></span><span class="line"><span class="cl"><span class="p">[</span><span class="na">centos</span><span class="err">-</span><span class="na">41</span><span class="p">]</span> <span class="o">~</span> <span class="nv">ceph</span> <span class="nv">config</span> <span class="nv">set</span> <span class="nv">mgr</span> <span class="nv">mgr</span><span class="o">/</span><span class="nv">dashboard</span><span class="o">/</span><span class="nv">server_addr</span> <span class="mf">192.168.4.42</span>
+</span></span><span class="line"><span class="cl"><span class="p">[</span><span class="na">centos</span><span class="err">-</span><span class="na">41</span><span class="p">]</span> <span class="o">~</span> <span class="nv">ceph</span> <span class="nv">mgr</span> <span class="kn">module</span> <span class="nv">disable</span> <span class="nv">dashboard</span>
+</span></span><span class="line"><span class="cl"><span class="p">[</span><span class="na">centos</span><span class="err">-</span><span class="na">41</span><span class="p">]</span> <span class="o">~</span> <span class="nv">ceph</span> <span class="nv">mgr</span> <span class="kn">module</span> <span class="nv">enable</span> <span class="nv">dashboard</span>
 </span></span></code></pre></td></tr></table>
 </div>
 </div><br>
