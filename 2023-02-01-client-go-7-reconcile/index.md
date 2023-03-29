@@ -13,7 +13,7 @@
 
 控制器，可以理解为：
 
-1，持有多个与关注资源相关 processorListener 和 一个 workqueue，
+1，持有多个与关注资源相关 processorListener（调用 AddEventHandler 注册processorListener） 和 一个 workqueue，
 
 2，processorListener 用于获取相关事件添加到 workqueue 中。
 

@@ -28,7 +28,7 @@
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": "https:\/\/yzxiu.github.io\/2022-11-14-containerd-7-log\/"
-        },"genre": "posts","keywords": "containerd-shim, log, pipe","wordcount":  4676 ,
+        },"genre": "posts","keywords": "containerd-shim, log, pipe","wordcount":  4858 ,
         "url": "https:\/\/yzxiu.github.io\/2022-11-14-containerd-7-log\/","datePublished": "2022-11-14T11:14:42+08:00","dateModified": "2022-11-14T11:14:42+08:00","publisher": {
             "@type": "Organization",
             "name": ""},"author": {
@@ -102,7 +102,7 @@
             <div class="toc-content always-active" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Containerd解析(7) - log</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span>&nbsp;<span class="post-category">收录于 <a href="/categories/containerd/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>containerd</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-11-14">2022-11-14</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 4676 字&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2022-11-14">2022-11-14</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;约 4858 字&nbsp;
                 <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;预计阅读 10 分钟&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
@@ -116,6 +116,7 @@
       <ul>
         <li><a href="#nerdctl-run--t---name-runcdev1-q946666800runcdev">nerdctl run -t &ndash;name runcdev1 q946666800/runcdev</a></li>
         <li><a href="#nerdctl-run--d---name-runcdev1-q946666800runcdev">nerdctl run -d &ndash;name runcdev1 q946666800/runcdev</a></li>
+        <li><a href="#小结">小结</a></li>
         <li><a href="#nerdctl-log-example">nerdctl-log-example</a></li>
       </ul>
     </li>
@@ -275,6 +276,10 @@
 </span><span class="lnt">39
 </span><span class="lnt">40
 </span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
 </span></code></pre></td>
 <td class="lntd">
 <pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// Create creates a new container and returns its pid if it was created successfully
@@ -288,7 +293,11 @@
 </span></span><span class="line"><span class="cl">      <span class="nx">args</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">args</span><span class="p">,</span> <span class="nx">oargs</span><span class="o">...</span><span class="p">)</span>
 </span></span><span class="line"><span class="cl">   <span class="p">}</span>
 </span></span><span class="line"><span class="cl">   <span class="nx">cmd</span> <span class="o">:=</span> <span class="nx">r</span><span class="p">.</span><span class="nf">command</span><span class="p">(</span><span class="nx">context</span><span class="p">,</span> <span class="nb">append</span><span class="p">(</span><span class="nx">args</span><span class="p">,</span> <span class="nx">id</span><span class="p">)</span><span class="o">...</span><span class="p">)</span>
-</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nx">opts</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">IO</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">// shim 处理 runc 的输入输出，具体看下面
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// nerdctl 的-d 模式，使用binaryIO
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// nerdctl 的 -it 模式，使用 fifo
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="c1">// docker 的所有模式，都使用fifo
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>   <span class="k">if</span> <span class="nx">opts</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">IO</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 </span></span><span class="line"><span class="cl">      <span class="nx">opts</span><span class="p">.</span><span class="nf">Set</span><span class="p">(</span><span class="nx">cmd</span><span class="p">)</span>
 </span></span><span class="line"><span class="cl">   <span class="p">}</span>
 </span></span><span class="line"><span class="cl">   <span class="nx">cmd</span><span class="p">.</span><span class="nx">ExtraFiles</span> <span class="p">=</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">ExtraFiles</span>
@@ -1474,6 +1483,14 @@
 </span></span></code></pre></td></tr></table>
 </div>
 </div><p>最终的日志处理，是使用 <code>jsonfile</code> 框架，将日志保存到 <code>jsonFilePath</code> 路径中。</p>
+<h3 id="小结">小结</h3>
+<p>关于 <code>runc</code> 与 <code>shim</code> 之间的日志处理关系做一个小结：</p>
+<p>这里不考虑runc的前台模式（因为containerd不会使用该模式）。</p>
+<p><strong>NewTerminal &amp; Detached</strong></p>
+<p><code>shim</code>创建sock文件，传递给runc。</p>
+<p>外部驱动再与shim交互</p>
+<p><strong>NewTerminal &amp; Detached</strong></p>
+<p><code>shim</code>直接将 <code>runc</code> 的输入输出，与外部驱动交互。</p>
 <h3 id="nerdctl-log-example">nerdctl-log-example</h3>
 <p>下面通过简单的代码，模拟 <code>nerdctl run -d --name runcdev1 q946666800/runcdev</code>日志的搜集过程。</p>
 <div class="highlight"><div class="chroma">

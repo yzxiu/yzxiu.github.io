@@ -74,6 +74,10 @@ func (r *Runc) Create(context context.Context, id, bundle string, opts *CreateOp
       args = append(args, oargs...)
    }
    cmd := r.command(context, append(args, id)...)
+   // shim 处理 runc 的输入输出，具体看下面
+   // nerdctl 的-d 模式，使用binaryIO
+   // nerdctl 的 -it 模式，使用 fifo
+   // docker 的所有模式，都使用fifo
    if opts != nil && opts.IO != nil {
       opts.Set(cmd)
    }
@@ -742,6 +746,28 @@ func (jsonLogger *JSONLogger) Process(dataStore string, config *logging.Config) 
 最终的日志处理，是使用 `jsonfile` 框架，将日志保存到 `jsonFilePath` 路径中。
 
 
+
+
+
+### 小结
+
+关于 `runc` 与 `shim` 之间的日志处理关系做一个小结：
+
+这里不考虑runc的前台模式（因为containerd不会使用该模式）。
+
+**NewTerminal & Detached**
+
+`shim`创建sock文件，传递给runc。
+
+外部驱动再与shim交互
+
+**NewTerminal & Detached**
+
+`shim`直接将 `runc` 的输入输出，与外部驱动交互。
+
+
+
+ 
 
 ### nerdctl-log-example
 
