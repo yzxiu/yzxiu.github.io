@@ -3,9 +3,17 @@
         <title>Yuyu&#39;s Blog</title>
         <link>https://yzxiu.github.io/</link>
         <description>Yuyu&#39;s Blog</description>
-        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Mon, 06 Feb 2023 09:15:38 &#43;0800</lastBuildDate>
+        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Sat, 10 Jun 2023 20:22:28 &#43;0800</lastBuildDate>
             <atom:link href="https://yzxiu.github.io/index.xml" rel="self" type="application/rss+xml" />
         <item>
+    <title>virtualbox 使用命令行创建虚拟机</title>
+    <link>https://yzxiu.github.io/2023-06-10-virtualbox-client/</link>
+    <pubDate>Sat, 10 Jun 2023 20:22:28 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2023-06-10-virtualbox-client/</guid>
+    <description><![CDATA[概述： virtualbox 使用命令行创建虚拟机，要求使用现有的vdi文件作为硬盘，网络使用enp3s0作为侨接 以下是使用命令行创建虚拟机的步骤： 打开终端，进入]]></description>
+</item>
+<item>
     <title>Docker安装Ceph-Nautilus</title>
     <link>https://yzxiu.github.io/2023-02-06-docker-ceph-nautilus/</link>
     <pubDate>Mon, 06 Feb 2023 09:15:38 &#43;0800</pubDate>
@@ -76,14 +84,6 @@
     <author>Yuyu</author>
     <guid>https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/</guid>
     <description><![CDATA[概述 分析containerd网络，从不同的上层应用： nerdctl run -d &ndash;name runcdev -p 8080:80 nginx kubectl run nginx &ndash;image=nginx 根据containerd 的 Scope and principles The following table specifies the various components of containerd and general features of container runtimes. The]]></description>
-</item>
-<item>
-    <title>Containerd解析(11) - event &amp; go-events</title>
-    <link>https://yzxiu.github.io/2022-11-23-containerd-11-go-events/</link>
-    <pubDate>Wed, 23 Nov 2022 16:35:35 &#43;0800</pubDate>
-    <author>Yuyu</author>
-    <guid>https://yzxiu.github.io/2022-11-23-containerd-11-go-events/</guid>
-    <description><![CDATA[概述 在 containerd 的 event 中，主要用到了 go-events 这个包。 为 Go 实现一个可组合的事件分发包。 初始化 在containerd启动过程中， 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16]]></description>
 </item>
 </channel>
 </rss>
