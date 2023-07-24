@@ -45,12 +45,6 @@
 
 <br>
 
-- [kubernetes](https://github.com/kubernetes)
-  - [kubernetes](https://github.com/kubernetes)/**[website](https://github.com/kubernetes/website)**
-    - [#38678](https://github.com/kubernetes/website/pull/38678)
-
-<br>
-
 - [jumpserver](https://github.com/jumpserver)
   - [jumpserver](https://github.com/jumpserver)/**[helm-charts](https://github.com/jumpserver/helm-charts)**
     - [#131](https://github.com/jumpserver/helm-charts/pull/131)
