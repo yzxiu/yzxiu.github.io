@@ -3,7 +3,15 @@
         <title>所有文章 - Yuyu&#39;s Blog</title>
         <link>https://yzxiu.github.io/posts/</link>
         <description>所有文章 | Yuyu&#39;s Blog</description>
-        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Sat, 10 Jun 2023 20:22:28 &#43;0800</lastBuildDate><atom:link href="https://yzxiu.github.io/posts/" rel="self" type="application/rss+xml" /><item>
+        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Mon, 28 Aug 2023 14:40:40 &#43;0800</lastBuildDate><atom:link href="https://yzxiu.github.io/posts/" rel="self" type="application/rss+xml" /><item>
+    <title>GL-MT3000自定义固件风扇阈值调节</title>
+    <link>https://yzxiu.github.io/2023-08-28-mt3000-temp-edit/</link>
+    <pubDate>Mon, 28 Aug 2023 14:40:40 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2023-08-28-mt3000-temp-edit/</guid>
+    <description><![CDATA[概述 GL-MT3000刷自编译lede固件，调节风扇起转温度 步骤 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38]]></description>
+</item>
+<item>
     <title>virtualbox 使用命令行创建虚拟机</title>
     <link>https://yzxiu.github.io/2023-06-10-virtualbox-client/</link>
     <pubDate>Sat, 10 Jun 2023 20:22:28 &#43;0800</pubDate>
@@ -74,14 +82,6 @@
     <author>Yuyu</author>
     <guid>https://yzxiu.github.io/2023-01-12-client-go-1/</guid>
     <description><![CDATA[概述 k8s许多重要的基础类型，都在client-go中定义。 如 cache.Store、cache.Reflector等。 接下来分析这些重要的]]></description>
-</item>
-<item>
-    <title>Containerd解析(12) - network</title>
-    <link>https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/</link>
-    <pubDate>Fri, 02 Dec 2022 09:45:30 &#43;0800</pubDate>
-    <author>Yuyu</author>
-    <guid>https://yzxiu.github.io/2022-12-02-containerd-12-containerd-network/</guid>
-    <description><![CDATA[概述 分析containerd网络，从不同的上层应用： nerdctl run -d &ndash;name runcdev -p 8080:80 nginx kubectl run nginx &ndash;image=nginx 根据containerd 的 Scope and principles The following table specifies the various components of containerd and general features of container runtimes. The]]></description>
 </item>
 </channel>
 </rss>
