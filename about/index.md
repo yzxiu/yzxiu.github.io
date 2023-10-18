@@ -32,6 +32,11 @@
 <br>
 
 - [kubesphere](https://github.com/kubesphere)
+
+  - [kubesphere](https://github.com/kubesphere)/**[console](https://github.com/kubesphere/console)**
+    - [#3866](https://github.com/kubesphere/console/pull/3866)
+
+
   - [kubesphere](https://github.com/kubesphere)/**[kubesphere](https://github.com/kubesphere/kubesphere)**
     - [#5299](https://github.com/kubesphere/kubesphere/pull/5299)
   - [kubesphere](https://github.com/kubesphere)/**[ks-installer](https://github.com/kubesphere/ks-installer)**
