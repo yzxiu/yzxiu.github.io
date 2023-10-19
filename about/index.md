@@ -31,11 +31,11 @@
     - [#3866](https://github.com/kubesphere/console/pull/3866)
   
   
-    - [kubesphere](https://github.com/kubesphere)/**[kubesphere](https://github.com/kubesphere/kubesphere)**
+  - [kubesphere](https://github.com/kubesphere)/**[kubesphere](https://github.com/kubesphere/kubesphere)**
       - [#5299](https://github.com/kubesphere/kubesphere/pull/5299)
   
   
-    - [kubesphere](https://github.com/kubesphere)/**[ks-installer](https://github.com/kubesphere/ks-installer)**
+  - [kubesphere](https://github.com/kubesphere)/**[ks-installer](https://github.com/kubesphere/ks-installer)**
       - [#2131](https://github.com/kubesphere/ks-installer/pull/2131)
   
 
