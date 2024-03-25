@@ -19,7 +19,7 @@
     <pubDate>Sat, 10 Jun 2023 20:22:28 &#43;0800</pubDate>
     <author>Yuyu</author>
     <guid>https://yzxiu.github.io/2023-06-10-virtualbox-client/</guid>
-    <description><![CDATA[概述： virtualbox 使用命令行创建虚拟机，要求使用现有的vdi文件作为硬盘，网络使用enp3s0作为侨接 以下是使用命令行创建虚拟机的步骤： 打开终端，进入]]></description>
+    <description><![CDATA[概述： 以下内容为ChatGPT生成 virtualbox 使用命令行创建虚拟机，要求使用现有的vdi文件作为硬盘，网络使用enp3s0作为侨接 以下是使用命令行创建]]></description>
 </item>
 <item>
     <title>Docker安装Ceph-Nautilus</title>
