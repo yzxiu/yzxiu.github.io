@@ -166,3 +166,8 @@ func (dc *DeploymentController) addReplicaSet(obj interface{}) {
 #### Reconcile
 
 
+
+
+
+未完待续。。。
+
