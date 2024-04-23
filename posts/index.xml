@@ -3,7 +3,15 @@
         <title>所有文章 - Yuyu&#39;s Blog</title>
         <link>https://yzxiu.github.io/posts/</link>
         <description>所有文章 | Yuyu&#39;s Blog</description>
-        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Mon, 28 Aug 2023 14:40:40 &#43;0800</lastBuildDate><atom:link href="https://yzxiu.github.io/posts/" rel="self" type="application/rss+xml" /><item>
+        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Sun, 31 Mar 2024 23:00:08 &#43;0800</lastBuildDate><atom:link href="https://yzxiu.github.io/posts/" rel="self" type="application/rss+xml" /><item>
+    <title>go相关问题</title>
+    <link>https://yzxiu.github.io/2024-03-31-230008-go-questions/</link>
+    <pubDate>Sun, 31 Mar 2024 23:00:08 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2024-03-31-230008-go-questions/</guid>
+    <description><![CDATA[概述 以下内容为ChatGPT生成 关于golang 的 gmp 相关问题，怎样回答比较简洁 在面试中，如果面试官问到关于Go语言的GMP模型相关的问题，你]]></description>
+</item>
+<item>
     <title>GL-MT3000自定义固件风扇阈值调节</title>
     <link>https://yzxiu.github.io/2023-08-28-mt3000-temp-edit/</link>
     <pubDate>Mon, 28 Aug 2023 14:40:40 &#43;0800</pubDate>
@@ -74,14 +82,6 @@
     <author>Yuyu</author>
     <guid>https://yzxiu.github.io/2023-01-12-client-go-2-cache-store/</guid>
     <description><![CDATA[概述 如果把k8s当成资源管理系统, 那cache.Store无疑是最核心的接口, 用于缓存,存储资源 。 reflector 依赖于 cache.Store 的实现做存储，根据不同的实现有不]]></description>
-</item>
-<item>
-    <title>client-go解析(1)</title>
-    <link>https://yzxiu.github.io/2023-01-12-client-go-1/</link>
-    <pubDate>Thu, 12 Jan 2023 09:52:51 &#43;0800</pubDate>
-    <author>Yuyu</author>
-    <guid>https://yzxiu.github.io/2023-01-12-client-go-1/</guid>
-    <description><![CDATA[概述 k8s许多重要的基础类型，都在client-go中定义。 如 cache.Store、cache.Reflector等。 接下来分析这些重要的]]></description>
 </item>
 </channel>
 </rss>
