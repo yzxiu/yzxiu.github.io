@@ -30,14 +30,6 @@
     <description><![CDATA[概述 helm简单使用 1 2 3 4 5 6 7 8 9 10 11 # 添加仓库 helm repo add openebs https://openebs.github.io/openebs # 更新仓库 helm repo update # 下载压缩包 helm pull openebs/openebs # 下载特定版本压缩包 helm pull openebs/openebs --version 小结]]></description>
 </item>
 <item>
-    <title>go相关问题</title>
-    <link>https://yzxiu.github.io/2024-03-31-230008-go-questions/</link>
-    <pubDate>Sun, 31 Mar 2024 23:00:08 &#43;0800</pubDate>
-    <author>Yuyu</author>
-    <guid>https://yzxiu.github.io/2024-03-31-230008-go-questions/</guid>
-    <description><![CDATA[概述 以下内容为ChatGPT生成 关于golang 的 gmp 相关问题，怎样回答比较简洁 在面试中，如果面试官问到关于Go语言的GMP模型相关的问题，你]]></description>
-</item>
-<item>
     <title>GL-MT3000自定义固件风扇阈值调节</title>
     <link>https://yzxiu.github.io/2023-08-28-mt3000-temp-edit/</link>
     <pubDate>Mon, 28 Aug 2023 14:40:40 &#43;0800</pubDate>
@@ -84,6 +76,14 @@
     <author>Yuyu</author>
     <guid>https://yzxiu.github.io/2023-01-16-client-go-5-informer/</guid>
     <description><![CDATA[概述 NewSharedIndexInformer() 是出镜率非常高的函数，最终创建了一个 sharedIndexInformer。 我们这里暂且将常说的 “informer” 等同于 shared]]></description>
+</item>
+<item>
+    <title>client-go解析(4) - cache.Controller</title>
+    <link>https://yzxiu.github.io/2023-01-15-client-go-4-cache-controller/</link>
+    <pubDate>Sun, 15 Jan 2023 18:35:14 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2023-01-15-client-go-4-cache-controller/</guid>
+    <description><![CDATA[概述 本文中提到的 reflector, 特指 informer 中的 reflector, 即传入的 cache.Store 为 DeltaFIFO。 接口 cache.Controller 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 // Controller is a low-level controller that is parameterized by a // Config and used in]]></description>
 </item>
 </channel>
 </rss>
