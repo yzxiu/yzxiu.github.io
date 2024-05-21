@@ -1,0 +1,15 @@
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title>helm - 标签 - Yuyu&#39;s Blog</title>
+        <link>https://yzxiu.github.io/tags/helm/</link>
+        <description>helm - 标签 - Yuyu&#39;s Blog</description>
+        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Sun, 28 Apr 2024 10:08:47 &#43;0800</lastBuildDate><atom:link href="https://yzxiu.github.io/tags/helm/" rel="self" type="application/rss+xml" /><item>
+    <title>helm</title>
+    <link>https://yzxiu.github.io/2024-04-28-100847-helm/</link>
+    <pubDate>Sun, 28 Apr 2024 10:08:47 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2024-04-28-100847-helm/</guid>
+    <description><![CDATA[概述 helm简单使用 1 2 3 4 5 6 7 8 9 10 11 # 添加仓库 helm repo add openebs https://openebs.github.io/openebs # 更新仓库 helm repo update # 下载压缩包 helm pull openebs/openebs # 下载特定版本压缩包 helm pull openebs/openebs --version 小结]]></description>
+</item>
+</channel>
+</rss>

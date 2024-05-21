@@ -1,0 +1,15 @@
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title>parted - 标签 - Yuyu&#39;s Blog</title>
+        <link>https://yzxiu.github.io/tags/parted/</link>
+        <description>parted - 标签 - Yuyu&#39;s Blog</description>
+        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Mon, 20 May 2024 09:29:27 &#43;0800</lastBuildDate><atom:link href="https://yzxiu.github.io/tags/parted/" rel="self" type="application/rss+xml" /><item>
+    <title>parted 将磁盘分为两个分区</title>
+    <link>https://yzxiu.github.io/2024-05-20-092927-disk-partition/</link>
+    <pubDate>Mon, 20 May 2024 09:29:27 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2024-05-20-092927-disk-partition/</guid>
+    <description><![CDATA[以下内容为ChatGPT生成 您想使用parted命令将磁盘分为两个分区吗？如果是的话，您可以按照以下步骤进行操作： 打开终端窗口。 输入以下命令]]></description>
+</item>
+</channel>
+</rss>

@@ -98,6 +98,21 @@
         alt="/images/avataaars.svg"
         title="/images/avataaars.svg" /></a></div><div class="links"><a href="https://github.com/yzxiu" title="GitHub" target="_blank" rel="noopener noreffer me"><i class="fab fa-github fa-fw" aria-hidden="true"></i></a><a href="https://twitter.com/xxxx" title="Twitter" target="_blank" rel="noopener noreffer me"><i class="fab fa-twitter fa-fw" aria-hidden="true"></i></a><a href="https://www.instagram.com/xxxx" title="Instagram" target="_blank" rel="noopener noreffer me"><i class="fab fa-instagram fa-fw" aria-hidden="true"></i></a><a href="https://facebook.com/xxxx" title="facebook" target="_blank" rel="noopener noreffer me"><i class="fab fa-facebook fa-fw" aria-hidden="true"></i></a><a href="https://t.me/xxxx" title="Telegram" target="_blank" rel="noopener noreffer me"><i class="fab fa-telegram-plane fa-fw" aria-hidden="true"></i></a><a href="mailto:xxxx@xxxx.com" title="Email" rel="me"><i class="far fa-envelope fa-fw" aria-hidden="true"></i></a><a href="/index.xml" title="RSS" target="_blank" rel="noopener noreffer me"><i class="fas fa-rss fa-fw" aria-hidden="true"></i></a></div></div>
 <article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
+        <a href="/2023-02-06-docker-ceph-nautilus/">Docker安装Ceph-Nautilus</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2023-02-06">2023-02-06</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/ceph/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>ceph</a></span></div><div class="content">概述 安装ceph-nautilus(14.2.22)测试环境，用于调试/学习ceph-csi 安装ceph-nautilus 环境 centos-41 192.168.4.41 CentOS Linux release 7.8.2003 (Core)</div><div class="post-footer">
+        <a href="/2023-02-06-docker-ceph-nautilus/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/ceph-csi/">ceph-csi</a>,&nbsp;<a href="/tags/ceph-nautilus/">ceph-nautilus</a></div></div>
+</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
+        <a href="/2023-02-01-client-go-7-reconcile/">client-go解析(7) - Reconcile</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2023-02-01">2023-02-01</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/client-go/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>client-go</a></span></div><div class="content">概述 使用过 kubebuilder 开发Operator项目的话，对 Reconcile 函数应该不陌生。 由于 kubebuilder(controller-runtime)的高度封装，</div><div class="post-footer">
+        <a href="/2023-02-01-client-go-7-reconcile/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/client-go/">client-go</a>,&nbsp;<a href="/tags/informer/">informer</a>,&nbsp;<a href="/tags/reconcile/">reconcile</a></div></div>
+</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
+        <a href="/2023-01-31-client-go-6-informer-factory/">client-go解析(6) - Factory</a>
+    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2023-01-31">2023-01-31</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/client-go/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>client-go</a></span></div><div class="content">概述 sharedIndexInformer 一般不单独使用，通常都是使用 factory 来管理 sharedIndexInformer。 本文主要了解几种常见的 factory 以及它们如何构造和持有 sharedIndexInformer SharedInformerFactory 1 2 3 4</div><div class="post-footer">
+        <a href="/2023-01-31-client-go-6-informer-factory/">阅读全文</a><div class="post-tags">
+                <i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/client-go/">client-go</a>,&nbsp;<a href="/tags/informer/">informer</a>,&nbsp;<a href="/tags/factory/">factory</a></div></div>
+</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
         <a href="/2023-01-16-client-go-5-informer/">client-go解析(5) - informer & sharedIndexInformer</a>
     </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2023-01-16">2023-01-16</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/client-go/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>client-go</a></span></div><div class="content">概述 NewSharedIndexInformer() 是出镜率非常高的函数，最终创建了一个 sharedIndexInformer。 我们这里暂且将常说的 “informer” 等同于 shared</div><div class="post-footer">
         <a href="/2023-01-16-client-go-5-informer/">阅读全文</a><div class="post-tags">
@@ -112,21 +127,6 @@
     </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2023-01-14">2023-01-14</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/client-go/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>client-go</a></span></div><div class="content">概述 cache.Reflector 可以说是k8s最重要的组件，它串联起k8s的整个流程。 在服务端(apiserver) ，使用 reflector 向 etcd 获取资源数据。 在连接端(informe</div><div class="post-footer">
         <a href="/2023-01-14-client-go-3-reflector/">阅读全文</a><div class="post-tags">
                 <i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/client-go/">client-go</a>,&nbsp;<a href="/tags/cache.reflector/">cache.Reflector</a></div></div>
-</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/2023-01-12-client-go-2-cache-store/">client-go解析(2) - cache.Store</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2023-01-12">2023-01-12</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/client-go/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>client-go</a></span></div><div class="content">概述 如果把k8s当成资源管理系统, 那cache.Store无疑是最核心的接口, 用于缓存,存储资源 。 reflector 依赖于 cache.Store 的实现做存储，根据不同的实现有不</div><div class="post-footer">
-        <a href="/2023-01-12-client-go-2-cache-store/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/client-go/">client-go</a>,&nbsp;<a href="/tags/cache.store/">cache.Store</a></div></div>
-</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/2023-01-12-client-go-1/">client-go解析(1)</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2023-01-12">2023-01-12</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/client-go/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>client-go</a></span></div><div class="content">概述 k8s许多重要的基础类型，都在client-go中定义。 如 cache.Store、cache.Reflector等。 接下来分析这些重要的</div><div class="post-footer">
-        <a href="/2023-01-12-client-go-1/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/client-go/">client-go</a></div></div>
-</article><article class="single summary" itemscope itemtype="http://schema.org/Article"><h1 class="single-title" itemprop="name headline">
-        <a href="/2022-12-02-containerd-12-containerd-network/">Containerd解析(12) - network</a>
-    </h1><div class="post-meta"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>Yuyu</a></span>&nbsp;<span class="post-publish">发布于 <time datetime="2022-12-02">2022-12-02</time></span>&nbsp;<span class="post-category">收录于 <a href="/categories/containerd/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>containerd</a></span></div><div class="content">概述 分析containerd网络，从不同的上层应用： nerdctl run -d &ndash;name runcdev -p 8080:80 nginx kubectl run nginx &ndash;image=nginx 根据containerd 的 Scope and principles The following table specifies the various components of containerd and general features of container runtimes. The</div><div class="post-footer">
-        <a href="/2022-12-02-containerd-12-containerd-network/">阅读全文</a><div class="post-tags">
-                <i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/containerd/">containerd</a>,&nbsp;<a href="/tags/network/">network</a>,&nbsp;<a href="/tags/hook/">hook</a></div></div>
 </article><ul class="pagination"><li class="page-item ">
                     <span class="page-link">
                         <a href="/">1</a>
@@ -142,6 +142,10 @@
                 </li><li class="page-item ">
                     <span class="page-link">
                         <a href="/page/4/">4</a>
+                    </span>
+                </li><li class="page-item ">
+                    <span class="page-link">
+                        <a href="/page/5/">5</a>
                     </span>
                 </li></ul></div></div>
             </main><footer class="footer">

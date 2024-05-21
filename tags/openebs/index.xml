@@ -1,0 +1,15 @@
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title>openebs - 标签 - Yuyu&#39;s Blog</title>
+        <link>https://yzxiu.github.io/tags/openebs/</link>
+        <description>openebs - 标签 - Yuyu&#39;s Blog</description>
+        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><lastBuildDate>Sun, 28 Apr 2024 18:14:18 &#43;0800</lastBuildDate><atom:link href="https://yzxiu.github.io/tags/openebs/" rel="self" type="application/rss+xml" /><item>
+    <title>openebs-mayastor安装与使用</title>
+    <link>https://yzxiu.github.io/2024-04-28-181418-openebs-mayastor/</link>
+    <pubDate>Sun, 28 Apr 2024 18:14:18 &#43;0800</pubDate>
+    <author>Yuyu</author>
+    <guid>https://yzxiu.github.io/2024-04-28-181418-openebs-mayastor/</guid>
+    <description><![CDATA[概述 k8s环境： name ip role sys disk1 disk2 node1 192.168.4.55 master ubuntu22.04 5.15.0-105 64g 20g node2 192.168.4.56 node ubuntu22.04 5.15.0-105 64g 20g node3 192.168.4.57 node ubuntu22.04 5.15.0-105 64g 20g node4 192.168.4.58 node ubuntu22.04 5.15.0-105 64g null node1 ~ node3 有两块硬盘，vda 为64g，用作根目录，vdb为2]]></description>
+</item>
+</channel>
+</rss>
