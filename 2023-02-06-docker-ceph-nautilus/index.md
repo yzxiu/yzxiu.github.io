@@ -459,7 +459,7 @@ ceph version 14.2.22 (ca74598065096e6fcbd8433c8779a2be0c889351) nautilus (stable
 [centos-41] ~ ceph auth get client.kubernetes
 
 [client.kubernetes]
-        key = AQCUVOJj5pZkKhAAeMa0Z+YMtbDk5xmHKN1C4Q==
+        key = AQBnz11fclrxChAAf8TFw8ROzmr8ifftAHQbTw==
         caps mgr = "profile rbd pool=kubernetes"
         caps mon = "profile rbd"
         caps osd = "profile rbd pool=kubernetes"

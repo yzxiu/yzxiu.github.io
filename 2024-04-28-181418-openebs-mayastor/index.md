@@ -232,6 +232,60 @@ k mayastor get pools
 
 
 
+
+
+
+
+
+## 问题记录
+
+1. 
+
+由于某些原因，存储卷已经挂载到目标节点上：
+
+```bash
+Disk /dev/nvme2n2: 7.102 GiB, 8584674304 bytes, 16766942 sectors
+Disk model: Mayastor NVMe controller                
+Units: sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 131072 bytes
+```
+
+但是没有继续mount到指定目录，如：
+
+```
+/var/lib/kubelet/plugins/kubernetes.io/csi/io.openebs.csi-mayastor/583bce23822c5277d79c6ff8baf082cc6cca290e252ba079a2c59e928e44e07c/globalmount
+```
+
+pod报错如下：
+
+```
+Failed to publish volume 634cad9c-472a-4109-b182-6806798f0617: volume is staged as "ro" but publish requires "rw"
+
+Failed to stage volume 634cad9c-472a-4109-b182-6806798f0617: device attach timeout
+
+```
+
+手动删除pod，pod调度到原来的节点，问题依然存在。
+
+
+
+思路是将 pod 调度到别的node，让 mayastor 组建自动处理。
+
+可以将原来的 node 做 cordon，`k cordon dev2`
+
+将pod删除，pod调度到其他节点，mayastor 将存储卷挂载到其他节点上。
+
+在将 node uncordon，`k uncordon dev2`。
+
+
+
+
+
+
+
+
+
 ## 小结
 
 
